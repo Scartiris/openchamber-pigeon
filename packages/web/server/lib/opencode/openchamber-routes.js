@@ -381,11 +381,15 @@ export const registerOpenChamberRoutes = (app, dependencies) => {
   app.get('/api/openchamber/models-metadata', async (_req, res) => {
     try {
       const { getModelsMetadata } = await import('./models-metadata.js');
-      const { metadata, fromCache, stale } = await getModelsMetadata({
+      const { metadata } = await getModelsMetadata({
         url: modelsDevApiUrl,
         ttlMs: modelsMetadataCacheTtl,
       });
-      res.setHeader('Cache-Control', fromCache && !stale ? 'public, max-age=60' : 'public, max-age=300');
+      // pigeon fork: the models.dev catalogue is ~4.6 MB (465 KB gzipped) and the
+      // upstream 60 s window made every page reload re-download it, which is ruinous
+      // on a lossy international link. The catalogue changes slowly, so cache it for
+      // a day; clients still get a fresh copy daily and can force a reload themselves.
+      res.setHeader('Cache-Control', 'public, max-age=86400');
       res.json(metadata);
     } catch (error) {
       console.warn('Failed to fetch models.dev metadata via server:', error);
