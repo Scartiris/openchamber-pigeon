@@ -30,10 +30,30 @@ export const createStaticRoutesRuntime = (dependencies) => {
       console.log(`Serving static files from ${distPath}`);
       app.use(express.static(distPath, {
         setHeaders(res, filePath) {
-          // Service workers should never be long-cached; iOS is especially sensitive.
-          if (typeof filePath === 'string' && filePath.endsWith(`${path.sep}sw.js`)) {
-            res.setHeader('Cache-Control', 'no-store');
+          if (typeof filePath !== 'string') {
+            return;
           }
+
+          // Service workers should never be long-cached; iOS is especially sensitive.
+          if (filePath.endsWith(`${path.sep}sw.js`)) {
+            res.setHeader('Cache-Control', 'no-store');
+            return;
+          }
+
+          // The bundler emits content-hashed filenames under `assets/`
+          // (`index-DaXfguwy.js`): a change in content changes the name, so these
+          // are immutable and can be cached indefinitely. Without this they fall
+          // back to Express's `public, max-age=0`, which makes the browser
+          // revalidate every cached chunk on every load — a round trip per chunk,
+          // and this bundle has hundreds of lazily imported chunks.
+          if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+            return;
+          }
+
+          // Everything else (`index.html`, manifests, ...) must be revalidated so a
+          // new build is picked up on the next load instead of being pinned.
+          res.setHeader('Cache-Control', 'no-cache');
         },
       }));
 
