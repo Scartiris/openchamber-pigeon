@@ -377,7 +377,6 @@ const useFileReferenceInteractions = ({
       candidate.removeAttribute('data-openchamber-file-link');
       candidate.removeAttribute('data-openchamber-file-ref');
       candidate.removeAttribute('data-openchamber-file-path');
-      candidate.removeAttribute('data-openchamber-doc-link');
       if (candidate.getAttribute('title') === 'Open file' || candidate.getAttribute('title') === documentPreviewTitle) {
         candidate.removeAttribute('title');
       }
@@ -482,9 +481,6 @@ const useFileReferenceInteractions = ({
           candidate.setAttribute('data-openchamber-file-link', 'true');
           candidate.setAttribute('data-openchamber-file-ref', latestRawCandidate);
           candidate.setAttribute('data-openchamber-file-path', latestResolved.resolvedPath);
-          if (previewableDocument) {
-            candidate.setAttribute('data-openchamber-doc-link', 'true');
-          }
           candidate.setAttribute('title', previewableDocument ? documentPreviewTitle : 'Open file');
           if (candidate.tagName.toLowerCase() !== 'a') {
             candidate.setAttribute('role', 'button');

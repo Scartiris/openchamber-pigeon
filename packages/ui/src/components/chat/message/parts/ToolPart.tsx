@@ -1145,7 +1145,6 @@ type ToolDocumentLinkProps = {
     className?: string;
     onClick?: (event: React.MouseEvent<HTMLElement>) => void;
     onKeyDown?: (event: React.KeyboardEvent<HTMLElement>) => void;
-    'data-openchamber-doc-link'?: 'true';
 };
 
 // Documents with a dedicated preview surface (pdf/office) open in the
@@ -1164,7 +1163,6 @@ const getToolDocumentLinkProps = (path: string, docLink?: ToolDocumentLink): Too
         tabIndex: 0,
         title: docLink.title,
         className: 'cursor-pointer underline-offset-2 hover:underline',
-        'data-openchamber-doc-link': 'true',
         onClick: (event) => {
             // The whole tool row toggles on click; the link must not bubble.
             event.stopPropagation();
