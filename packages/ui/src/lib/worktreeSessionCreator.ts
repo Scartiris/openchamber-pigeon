@@ -188,8 +188,8 @@ const createInstantWorktreeDraft = async (options?: {
 
   const activeProject = useProjectsStore.getState().getActiveProject();
   if (!activeProject?.path) {
-    toast.error('No active project', {
-      description: 'Please select a project first.',
+    toast.error('没有活动项目', {
+      description: '请先选择一个项目。',
     });
     return null;
   }
@@ -204,8 +204,8 @@ const createInstantWorktreeDraft = async (options?: {
   }
 
   if (!isGitRepo) {
-    toast.error('Not a Git repository', {
-      description: 'Worktrees can only be created in Git repositories.',
+    toast.error('不是 Git 仓库', {
+      description: '只能在 Git 仓库中创建工作树。',
     });
     return null;
   }
@@ -259,14 +259,14 @@ const createInstantWorktreeDraft = async (options?: {
 
     return metadata.path;
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to create worktree';
+    const message = error instanceof Error ? error.message : '创建工作树失败';
     const requestId = useSessionUIStore.getState().newSessionDraft.pendingWorktreeRequestId;
     if (requestId) {
       rejectPendingDraftWorktreeRequest(requestId, error instanceof Error ? error : new Error(message));
       useSessionUIStore.getState().resolvePendingDraftWorktreeTarget(requestId, null);
     }
     useSessionUIStore.getState().setDraftBootstrapPendingDirectory(null);
-    toast.error('Failed to create worktree', {
+    toast.error('创建工作树失败', {
       description: message,
     });
     return null;
@@ -339,8 +339,8 @@ export async function createWorktreeSessionForNewBranch(
     }
 
     if (!isGitRepo) {
-      toast.error('Not a Git repository', {
-        description: 'Worktrees can only be created in Git repositories.',
+      toast.error('不是 Git 仓库', {
+        description: '只能在 Git 仓库中创建工作树。',
       });
       return null;
     }
@@ -382,7 +382,7 @@ export async function createWorktreeSessionForNewBranch(
       return { id: session.id, branch: metadata.branch || base, path: metadata.path };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create worktree session';
-      toast.error('Failed to create worktree', { description: message });
+      toast.error('创建工作树失败', { description: message });
       return null;
     }
   } finally {

@@ -2042,7 +2042,7 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
     } catch (error) {
       console.error("Failed to fork session:", error)
       const { toast } = await import("sonner")
-      toast.error("Failed to fork session")
+      toast.error("无法派生会话")
     }
   },
 

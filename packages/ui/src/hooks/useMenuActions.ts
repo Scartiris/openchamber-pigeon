@@ -118,14 +118,14 @@ export const useMenuActions = (
       .then(() => {
         const { available, error } = useUpdateStore.getState();
         if (error) {
-          toast.error('Failed to check for updates', {
+          toast.error('无法检查更新', {
             description: error,
           });
           return;
         }
 
         if (!available) {
-          toast.success('You are on the latest version');
+          toast.success('已是最新版本');
         }
       })
       .finally(() => {
@@ -324,7 +324,7 @@ export const useMenuActions = (
 
         case 'download-logs': {
           void showOpenCodeStatus().catch(() => {
-            toast.error('Failed to collect OpenCode status');
+            toast.error('无法获取 OpenCode 状态');
           });
           break;
         }

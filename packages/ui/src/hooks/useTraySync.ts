@@ -582,7 +582,7 @@ export const useTraySync = (): void => {
       switch (action.type) {
         case 'respond-permission':
           void respondToPermission(action.sessionId, action.id, action.response).catch(() => {
-            toast.error('Failed to respond to permission request');
+            toast.error('无法响应权限请求');
           });
           break;
       }

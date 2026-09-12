@@ -75,14 +75,14 @@ const MAGIC_PROMPT_DEFINITIONS: readonly MagicPromptDefinition[] = [
     id: 'git.commit.generate.visible',
     title: 'Commit Generation Visible Prompt',
     group: 'Git',
-    description: 'Visible user message for commit message generation.',
+    description: '用于生成提交信息的可见用户消息。',
     template: 'You are generating a Conventional Commits subject line from the diffs of the selected files.',
   },
   {
     id: 'git.commit.generate.instructions',
     title: 'Commit Generation Instructions',
     group: 'Git',
-    description: 'Hidden instructions for commit message generation.',
+    description: '用于生成提交信息的隐藏指令。',
     placeholders: [
       { key: 'selected_files', description: 'Bullet list of currently selected file paths.' },
       { key: 'recent_commits', description: 'Subjects of the most recent commits on the current branch.' },
@@ -111,14 +111,14 @@ Selected files:
     id: 'git.pr.generate.visible',
     title: 'PR Generation Visible Prompt',
     group: 'Git',
-    description: 'Visible user message for PR title/body generation.',
+    description: '用于生成 PR 标题与正文的可见用户消息。',
     template: 'You are drafting GitHub Pull Request title and body using session context, commit list, and changed files.',
   },
   {
     id: 'git.pr.generate.instructions',
     title: 'PR Generation Instructions',
     group: 'Git',
-    description: 'Hidden instructions for PR title/body generation.',
+    description: '用于生成 PR 标题与正文的隐藏指令。',
     placeholders: [
       { key: 'base_branch', description: 'Base branch name.' },
       { key: 'head_branch', description: 'Head branch name.' },
@@ -154,7 +154,7 @@ Files changed across these commits:
     id: 'github.pr.review.visible',
     title: 'PR Review Visible Prompt',
     group: 'GitHub',
-    description: 'Visible user message when creating PR review requests from GitHub context.',
+    description: '从 GitHub 上下文创建 PR 审查请求时发送的可见用户消息。',
     placeholders: [
       { key: 'pr_number', description: 'Pull request number.' },
     ],
@@ -164,7 +164,7 @@ Files changed across these commits:
     id: 'github.pr.review.instructions',
     title: 'PR Review Instructions',
     group: 'GitHub',
-    description: 'Hidden instructions attached when generating a PR review response.',
+    description: '生成 PR 审查回复时附加的隐藏指令。',
     template: `You are drafting a pull request review comment that will be posted back to the PR author. You are not the implementer; do not propose to write code or run commands.
 
 Before drafting:
@@ -214,7 +214,7 @@ Nice-to-have:
     id: 'github.issue.review.visible',
     title: 'Issue Review Visible Prompt',
     group: 'GitHub',
-    description: 'Visible user message when creating issue review requests from GitHub context.',
+    description: '从 GitHub 上下文创建 Issue 审查请求时发送的可见用户消息。',
     placeholders: [
       { key: 'issue_number', description: 'Issue number.' },
     ],
@@ -224,7 +224,7 @@ Nice-to-have:
     id: 'github.issue.review.instructions',
     title: 'Issue Review Instructions',
     group: 'GitHub',
-    description: 'Hidden instructions attached when generating an issue review response.',
+    description: '生成 Issue 审查回复时附加的隐藏指令。',
     template: `Review this issue using the provided issue context.
 
 Process:
@@ -269,7 +269,7 @@ Do not implement changes until I confirm; end with: "Next actions: <1 sentence>"
     id: 'linear.issue.review.visible',
     title: 'Linear Issue Review Visible Prompt',
     group: 'Linear',
-    description: 'Visible user message when creating a session from a Linear issue.',
+    description: '从 Linear Issue 创建会话时发送的可见用户消息。',
     placeholders: [
       { key: 'identifier', description: 'Linear issue identifier, such as ENG-12.' },
     ],
@@ -279,7 +279,7 @@ Do not implement changes until I confirm; end with: "Next actions: <1 sentence>"
     id: 'linear.issue.review.instructions',
     title: 'Linear Issue Review Instructions',
     group: 'Linear',
-    description: 'Hidden instructions attached when generating a Linear issue review response.',
+    description: '生成 Linear Issue 审查回复时附加的隐藏指令。',
     template: `Review this Linear issue using the provided issue context.
 
 Process:
@@ -324,14 +324,14 @@ Do not implement changes until I confirm; end with: "Next actions: <1 sentence>"
     id: 'github.pr.checks.review.visible',
     title: 'PR Failed Checks Visible Prompt',
     group: 'GitHub',
-    description: 'Visible user message for PR failed checks analysis.',
+    description: '用于分析 PR 失败检查的可见用户消息。',
     template: 'Review these PR failed checks and propose likely fixes. Do not implement until I confirm.',
   },
   {
     id: 'github.pr.checks.review.instructions',
     title: 'PR Failed Checks Instructions',
     group: 'GitHub',
-    description: 'Hidden instructions for PR failed checks analysis.',
+    description: '用于分析 PR 失败检查的隐藏指令。',
     template: `Use the attached checks payload.
 - Summarize what is failing.
 - Prioritize check annotations/errors over generic status text.
@@ -343,14 +343,14 @@ Do not implement changes until I confirm; end with: "Next actions: <1 sentence>"
     id: 'github.pr.comments.review.visible',
     title: 'PR Comments Review Visible Prompt',
     group: 'GitHub',
-    description: 'Visible user message for PR comments analysis.',
+    description: '用于分析 PR 评论的可见用户消息。',
     template: 'Review these PR comments and propose the required changes and next actions. Do not implement until I confirm.',
   },
   {
     id: 'github.pr.comments.review.instructions',
     title: 'PR Comments Review Instructions',
     group: 'GitHub',
-    description: 'Hidden instructions for PR comments analysis.',
+    description: '用于分析 PR 评论的隐藏指令。',
     template: `Use the attached comments payload.
 - Identify required vs optional changes.
 - Call out intent/implementation mismatch if present.
@@ -361,14 +361,14 @@ Do not implement changes until I confirm; end with: "Next actions: <1 sentence>"
     id: 'github.pr.comment.single.visible',
     title: 'Single PR Comment Visible Prompt',
     group: 'GitHub',
-    description: 'Visible user message for single PR comment analysis.',
+    description: '用于分析单条 PR 评论的可见用户消息。',
     template: 'Address this comment from PR and propose required changes. Do not implement until I confirm.',
   },
   {
     id: 'github.pr.comment.single.instructions',
     title: 'Single PR Comment Instructions',
     group: 'GitHub',
-    description: 'Hidden instructions for single PR comment analysis.',
+    description: '用于分析单条 PR 评论的隐藏指令。',
     template: `Use the attached single-comment payload.
 - Explain what the reviewer is asking for.
 - Identify exact code areas likely impacted.
@@ -379,7 +379,7 @@ Do not implement changes until I confirm; end with: "Next actions: <1 sentence>"
     id: 'git.conflict.resolve.visible',
     title: 'Merge/Rebase Conflict Visible Prompt',
     group: 'Git',
-    description: 'Visible user message for merge/rebase conflict resolution help.',
+    description: '用于协助解决合并/变基冲突的可见用户消息。',
     placeholders: [
       { key: 'operation_label', description: 'Operation label in lower-case (merge/rebase).' },
       { key: 'head_ref', description: 'Head reference for preserving intent.' },
@@ -390,7 +390,7 @@ Do not implement changes until I confirm; end with: "Next actions: <1 sentence>"
     id: 'git.conflict.resolve.instructions',
     title: 'Merge/Rebase Conflict Instructions',
     group: 'Git',
-    description: 'Hidden instructions for merge/rebase conflict resolution help.',
+    description: '用于协助解决合并/变基冲突的隐藏指令。',
     placeholders: [
       { key: 'operation_label', description: 'Operation label in lower-case (merge/rebase).' },
       { key: 'directory', description: 'Repository directory path.' },
@@ -422,7 +422,7 @@ Important:
     id: 'git.integrate.cherrypick.resolve.visible',
     title: 'Cherry-pick Conflict Visible Prompt',
     group: 'Git',
-    description: 'Visible user message for cherry-pick conflict resolution help.',
+    description: '用于协助解决 cherry-pick 冲突的可见用户消息。',
     placeholders: [
       { key: 'current_commit', description: 'Current commit hash being applied.' },
       { key: 'target_branch', description: 'Target branch name.' },
@@ -433,7 +433,7 @@ Important:
     id: 'git.integrate.cherrypick.resolve.instructions',
     title: 'Cherry-pick Conflict Instructions',
     group: 'Git',
-    description: 'Hidden instructions for cherry-pick conflict resolution help.',
+    description: '用于协助解决 cherry-pick 冲突的隐藏指令。',
     placeholders: [
       { key: 'repo_root', description: 'Repository root path.' },
       { key: 'temp_worktree_path', description: 'Temporary worktree path.' },
@@ -466,7 +466,7 @@ Important:
     id: 'plan.todo.visible',
     title: 'Todo Planning Visible Prompt',
     group: 'Planning',
-    description: 'Visible user message when sending a todo into a new planning session.',
+    description: '把待办发送到新规划会话时使用的可见用户消息。',
     placeholders: [
       { key: 'todo_text', description: 'Todo text selected by the user.' },
     ],
@@ -476,7 +476,7 @@ Important:
     id: 'plan.todo.instructions',
     title: 'Todo Planning Instructions',
     group: 'Planning',
-    description: 'Hidden instructions for sending a project todo into a new planning session.',
+    description: '把项目待办发送到新规划会话时使用的隐藏指令。',
     placeholders: [
       { key: 'todo_text', description: 'Todo text selected by the user.' },
     ],
@@ -503,7 +503,7 @@ Final plan:
     id: 'plan.improve.visible',
     title: 'Improve Plan Visible Prompt',
     group: 'Planning',
-    description: 'Visible user message when sending a saved plan into an improve flow.',
+    description: '把已保存的计划送入改进流程时使用的可见用户消息。',
     placeholders: [
       { key: 'plan_title', description: 'Current plan title.' },
     ],
@@ -513,7 +513,7 @@ Final plan:
     id: 'plan.improve.instructions',
     title: 'Improve Plan Instructions',
     group: 'Planning',
-    description: 'Hidden instructions for improving a saved plan from project context.',
+    description: '基于项目上下文改进已保存计划时使用的隐藏指令。',
     placeholders: [
       { key: 'plan_title', description: 'Current plan title.' },
       { key: 'plan_path', description: 'Absolute path to the saved plan file.' },
@@ -543,7 +543,7 @@ Final step:
     id: 'plan.implement.visible',
     title: 'Implement Plan Visible Prompt',
     group: 'Planning',
-    description: 'Visible user message when sending a saved plan into an implement flow.',
+    description: '把已保存的计划送入实施流程时使用的可见用户消息。',
     placeholders: [
       { key: 'plan_title', description: 'Current plan title.' },
     ],
@@ -553,7 +553,7 @@ Final step:
     id: 'plan.implement.instructions',
     title: 'Implement Plan Instructions',
     group: 'Planning',
-    description: 'Hidden instructions for implementing a saved plan from project context.',
+    description: '基于项目上下文实施已保存计划时使用的隐藏指令。',
     placeholders: [
       { key: 'plan_title', description: 'Current plan title.' },
       { key: 'plan_path', description: 'Absolute path to the saved plan file.' },
@@ -573,7 +573,7 @@ Do not expand scope beyond the plan. If during implementation you find the plan 
     id: 'session.summary.visible',
     title: 'Session Summary Visible Prompt',
     group: 'Session',
-    description: 'Visible user message sent by the /summary command.',
+    description: '/summary 命令发送的可见用户消息。',
     placeholders: [
       { key: 'topic_line', description: 'Pre-formatted topic clause (e.g. " focused on: <topic>") or empty string.' },
     ],
@@ -583,7 +583,7 @@ Do not expand scope beyond the plan. If during implementation you find the plan 
     id: 'session.summary.instructions',
     title: 'Session Summary Instructions',
     group: 'Session',
-    description: 'Hidden instructions attached to the /summary command. Produces a non-destructive summary usable for handing off to a new session.',
+    description: '附加到 /summary 命令的隐藏指令。生成不会破坏内容的摘要，可用于交接给新会话。',
     placeholders: [
       { key: 'topic_block', description: 'Pre-formatted topic focus paragraph, or empty string when no topic hint was given.' },
     ],
@@ -611,14 +611,14 @@ Respond in the same language the user used most in the conversation.`,
     id: 'session.review.visible',
     title: 'Workspace Review Visible Prompt',
     group: 'Session',
-    description: 'Visible user message sent by the /workspace-review command.',
+    description: '/workspace-review 命令发送的可见用户消息。',
     template: 'Review the changes made in this workspace.',
   },
   {
     id: 'session.review.instructions',
     title: 'Workspace Review Instructions',
     group: 'Session',
-    description: 'Hidden instructions attached to the /workspace-review command. Reviews the workspace diff for intent, correctness, and adequacy, with severity-classified findings.',
+    description: '附加到 /workspace-review 命令的隐藏指令。审查工作区差异的意图、正确性与充分性，并按严重程度归类问题。',
     template: `Review the changes in this workspace and judge whether they are correct and adequate — not just whether they contain catastrophic bugs.
 
 The diff is the source of truth. Read the relevant code around the diff too, not only the diff itself, so you understand the change in context.
@@ -681,14 +681,14 @@ Keep the review concise and practical. Respond in the same language the user use
     id: 'session.reviewHandoff.visible',
     title: 'Review Handoff Visible Prompt',
     group: 'Session',
-    description: 'Visible user message sent by the /handoff-review command.',
+    description: '/handoff-review 命令发送的可见用户消息。',
     template: 'Prepare a handoff for another agent to review this work.',
   },
   {
     id: 'session.reviewHandoff.instructions',
     title: 'Review Handoff Instructions',
     group: 'Session',
-    description: 'Hidden instructions attached to the /handoff-review command. Produces a handoff for a separate review agent.',
+    description: '附加到 /handoff-review 命令的隐藏指令。为独立的审查智能体生成交接内容。',
     template: `Produce a review handoff for another agent. Do not compact or mutate session history. Your output is an assistant message that OpenChamber will send to a separate reviewer agent.
 
 Include:
@@ -709,7 +709,7 @@ Formatting:
     id: 'session.reviewSession.visible',
     title: 'Review Session Starter Prompt',
     group: 'Session',
-    description: 'Visible user message sent to the generated review session.',
+    description: '发送给所生成审查会话的可见用户消息。',
     placeholders: [
       { key: 'handoff', description: 'The generated implementation handoff.' },
     ],
@@ -723,7 +723,7 @@ Focus on correctness, regressions, missing implementation, missing tests, and wh
     id: 'session.reviewSessionWithoutHandoff.visible',
     title: 'Review Session Starter Prompt Without Handoff',
     group: 'Session',
-    description: 'Visible user message sent to a generated review session when no implementation handoff is generated first.',
+    description: '在未先生成实施交接的情况下，发送给所生成审查会话的可见用户消息。',
     template: `Please review the current workspace changes.
 
 There is no generated implementation handoff. Infer the likely user intent from the current diff, recent session context if available, changed files, and surrounding code. Judge whether the implementation is correct for that inferred intent, and call out uncertainty explicitly when intent cannot be recovered.
@@ -734,7 +734,7 @@ Focus on correctness, regressions, missing implementation, missing tests, and wh
     id: 'session.reviewFeedbackToImplementer.visible',
     title: 'Review Feedback Transfer Prompt',
     group: 'Session',
-    description: 'Visible user message sent from a review session back to the implementing agent.',
+    description: '从审查会话发回实施智能体的可见用户消息。',
     placeholders: [
       { key: 'review_feedback', description: 'Reviewer assistant feedback text.' },
     ],
@@ -748,7 +748,7 @@ Please review the feedback, resolve the relevant issues, and explain what you ch
     id: 'session.implementationResponseToReviewer.visible',
     title: 'Implementation Response Transfer Prompt',
     group: 'Session',
-    description: 'Visible user message sent from the implementing agent back to the review session.',
+    description: '从实施智能体发回审查会话的可见用户消息。',
     placeholders: [
       { key: 'implementation_response', description: 'Implementing assistant response text.' },
     ],
@@ -762,14 +762,14 @@ Please review the latest state again and report any remaining issues.
     id: 'session.plan.visible',
     title: 'Feature Planning Visible Prompt',
     group: 'Session',
-    description: 'Visible user message sent by the /plan-feature command.',
+    description: '/plan-feature 命令发送的可见用户消息。',
     template: 'I want to start planning a feature.',
   },
   {
     id: 'session.plan.instructions',
     title: 'Feature Planning Instructions',
     group: 'Session',
-    description: 'Hidden instructions attached to the /plan-feature command. Runs a guided, batched-question dialogue that researches the code before producing an implementation plan.',
+    description: '附加到 /plan-feature 命令的隐藏指令。通过分批提问的引导式对话先调研代码，再产出实施计划。',
     template: `The user wants to plan a feature through a guided, back-and-forth conversation. They will describe an idea — often briefly and informally. Your job is to turn that idea into a concrete, validated implementation plan, without guessing.
 
 Run this as a dialogue, not a one-shot answer.
@@ -796,7 +796,7 @@ Respond in the same language the user uses.`,
     id: 'session.craftGoal.visible',
     title: 'Goal Crafting Visible Prompt',
     group: 'Session',
-    description: 'Visible user message sent by the /craft-goal command.',
+    description: '/craft-goal 命令发送的可见用户消息。',
     placeholders: [
       { key: 'idea_block', description: 'Optional initial task or idea supplied after the command.' },
     ],
@@ -806,7 +806,7 @@ Respond in the same language the user uses.`,
     id: 'session.craftGoal.instructions',
     title: 'Goal Crafting Instructions',
     group: 'Session',
-    description: 'Hidden instructions attached to the /craft-goal command. Guides discovery and produces a ready-to-use Goal objective.',
+    description: '附加到 /craft-goal 命令的隐藏指令。引导需求澄清，产出可直接使用的 Goal 目标。',
     template: `The user wants help turning a task, idea, or desired outcome into a strong Goal for an autonomous, multi-turn working session.
 
 A Goal is a persistent completion contract, not an implementation plan and not a larger one-shot prompt. Help the user define what "done" means clearly enough that another agent can work toward it, verify it against evidence, continue through uncertain intermediate steps, and stop honestly when completion is blocked.
@@ -865,7 +865,7 @@ Respond in the same language the user uses.`,
     id: 'session.scheduleTask.visible',
     title: 'Scheduled Task Visible Prompt',
     group: 'Session',
-    description: 'Visible user message sent by the /schedule-task command.',
+    description: '/schedule-task 命令发送的可见用户消息。',
     placeholders: [
       { key: 'idea_block', description: 'Optional initial automation idea supplied after the command.' },
     ],
@@ -875,7 +875,7 @@ Respond in the same language the user uses.`,
     id: 'session.scheduleTask.instructions',
     title: 'Scheduled Task Instructions',
     group: 'Session',
-    description: 'Hidden instructions attached to the /schedule-task command. Guides the dialogue that defines a scheduled task and optionally creates it through the openchamber tool.',
+    description: '附加到 /schedule-task 命令的隐藏指令。引导对话以定义计划任务，并可通过 openchamber 工具创建它。',
     template: `The user wants to set up a scheduled task: a saved prompt that OpenChamber runs automatically on a schedule (daily, weekly, one time, or cron) in a chosen project, with a chosen model and optional Goal Mode.
 
 Run this as a guided dialogue, not a one-shot answer.
@@ -904,14 +904,14 @@ Respond in the same language the user uses.`,
     id: 'session.catchup.visible',
     title: 'Catch Up Visible Prompt',
     group: 'Session',
-    description: 'Visible user message sent by the /catch-up command.',
+    description: '/catch-up 命令发送的可见用户消息。',
     template: 'Catch me up on where this project is right now.',
   },
   {
     id: 'session.catchup.instructions',
     title: 'Catch Up Instructions',
     group: 'Session',
-    description: 'Hidden instructions attached to the /catch-up command. Inspects git state and branches on it: in-progress diff, open PR review state, or recent commits.',
+    description: '附加到 /catch-up 命令的隐藏指令。检查 Git 状态并据此分支处理：进行中的差异、未合并 PR 的审查状态或最近的提交。',
     template: `The user is returning to this project after stepping away and wants to quickly get their bearings — a quick, easy-to-digest "here's where you are and where to pick up", not a status report. Investigate the actual repository state first, then orient them conversationally. Do not assume; check.
 
 Quietly inspect git state first, and do this work silently — the user wants the takeaway, not a play-by-play of the commands you ran. Look at: the current branch and whether it is the repo's default branch (main/master, or whatever this repo uses), uncommitted changes (status and diff), recent commits, and where the branch stands relative to its remote.
@@ -939,14 +939,14 @@ Respond in the same language the user uses.`,
     id: 'session.debug.visible',
     title: 'Debugging Visible Prompt',
     group: 'Session',
-    description: 'Visible user message sent by the /debug command.',
+    description: '/debug 命令发送的可见用户消息。',
     template: 'I want to debug an issue.',
   },
   {
     id: 'session.debug.instructions',
     title: 'Debugging Instructions',
     group: 'Session',
-    description: 'Hidden instructions attached to the /debug command. Runs a guided root-cause investigation before proposing a fix.',
+    description: '附加到 /debug 命令的隐藏指令。在给出修复方案前先做引导式根因排查。',
     template: `The user wants help debugging an issue. Drive this as a focused root-cause investigation — not a plan, and not an immediate fix.
 
 Use the \`question\` tool only for clarifying decisions that have a small set of concrete answer options you already know from the conversation or your investigation — choices like option A/B/C, scope boundaries, or edge-case behavior. Ask open-ended questions, including what the user wants in the first place, in plain assistant text. Never invent speculative options just to fit the question tool.
@@ -969,14 +969,14 @@ Respond in the same language the user uses.`,
     id: 'session.weigh.visible',
     title: 'Weigh Options Visible Prompt',
     group: 'Session',
-    description: 'Visible user message sent by the /weigh command.',
+    description: '/weigh 命令发送的可见用户消息。',
     template: 'Help me decide how to approach this.',
   },
   {
     id: 'session.weigh.instructions',
     title: 'Weigh Options Instructions',
     group: 'Session',
-    description: 'Hidden instructions attached to the /weigh command. Investigates the code, then compares distinct approaches with trade-offs and a recommendation — no plan, no code.',
+    description: '附加到 /weigh 命令的隐藏指令。先调研代码，再对比不同方案的取舍并给出建议——不出计划、不写代码。',
     template: `The user knows WHAT they want to do but not HOW to approach it. Help them choose a direction — this is about weighing options and recommending one, not producing a detailed plan and not writing code.
 
 Use the \`question\` tool only for clarifying decisions that have a small set of concrete answer options you already know from the conversation or your investigation — choices like option A/B/C, scope boundaries, or edge-case behavior. Ask open-ended questions, including what the user wants in the first place, in plain assistant text. Never invent speculative options just to fit the question tool.
@@ -1000,14 +1000,14 @@ Respond in the same language the user uses.`,
     id: 'session.explore.visible',
     title: 'Codebase Tour Visible Prompt',
     group: 'Session',
-    description: 'Visible user message sent by the /explore command.',
+    description: '/explore 命令发送的可见用户消息。',
     template: 'Give me a high-level tour of this codebase.',
   },
   {
     id: 'session.explore.instructions',
     title: 'Codebase Tour Instructions',
     group: 'Session',
-    description: 'Hidden instructions attached to the /explore command. Investigates the repository and gives a structured orientation rather than a file-by-file dump.',
+    description: '附加到 /explore 命令的隐藏指令。调研仓库并给出结构化的导览，而不是逐文件罗列。',
     template: `The user wants to get oriented in this codebase — a high-level tour, as if you were onboarding a new contributor. Investigate first, then explain; do not guess from file or symbol names alone.
 
 Explore the actual repository: entry points, the top-level structure, how it is built and run, and the main modules and how they connect. Read enough real code to be accurate.
@@ -1027,14 +1027,14 @@ Respond in the same language the user uses.`,
     id: 'session.fusion.visible',
     title: 'Fusion Visible Prompt',
     group: 'Session',
-    description: 'Visible user message for multi-run fusion sessions.',
+    description: '用于多路运行融合会话的可见用户消息。',
     template: 'Create the best combined answer from the multi-run results.',
   },
   {
     id: 'session.fusion.instructions',
     title: 'Fusion Instructions',
     group: 'Session',
-    description: 'Hidden instructions used before multi-run source outputs in fusion sessions.',
+    description: '在融合会话中，多路运行的源输出之前使用的隐藏指令。',
     template: `You are performing fusion over multiple model outputs from the same original task.
 
 Goal: produce the strongest possible final answer by combining complementary information, resolving conflicts, removing duplicates, and preserving useful nuance.

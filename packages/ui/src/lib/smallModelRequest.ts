@@ -4,9 +4,9 @@ import { runtimeFetch } from '@/lib/runtime-fetch';
 const SMALL_MODEL_TOAST_ID = 'small-model-unavailable';
 
 const notifySmallModelUnavailable = (): void => {
-  toast.error('Small Model unavailable', {
+  toast.error('小模型不可用', {
     id: SMALL_MODEL_TOAST_ID,
-    description: 'Choose another model in Settings → Sessions → Small Model and try again.',
+    description: '请到「设置 → 会话 → 小模型」中改选其他模型后重试。',
   });
 };
 

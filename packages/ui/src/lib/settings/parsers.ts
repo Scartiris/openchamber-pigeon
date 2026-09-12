@@ -176,10 +176,10 @@ export const parseShortcutOverrides = fromSchema(
 );
 
 const DEFAULT_NOTIFICATION_TEMPLATES: NotificationTemplates = {
-  completion: { title: 'Task Complete', message: 'Your task has finished.' },
-  error: { title: 'Error Occurred', message: 'An error occurred while processing your task.' },
-  question: { title: 'Input Needed', message: 'Please provide input to continue.' },
-  subtask: { title: 'Subtask Complete', message: 'A subtask has finished.' },
+  completion: { title: '任务完成', message: '你的任务已完成。' },
+  error: { title: '发生错误', message: '处理你的任务时发生错误。' },
+  question: { title: '需要输入', message: '请提供输入以继续。' },
+  subtask: { title: '子任务完成', message: '一个子任务已完成。' },
 };
 
 const notificationTemplateSchema = z.object({

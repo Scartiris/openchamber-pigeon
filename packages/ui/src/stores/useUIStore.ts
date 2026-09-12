@@ -178,9 +178,9 @@ export type EventStreamStatus =
 
 const LEGACY_DEFAULT_NOTIFICATION_TEMPLATES = {
   completion: { title: '{agent_name} is ready', message: '{last_message}' },
-  error: { title: 'Tool error', message: '{last_message}' },
+  error: { title: '工具错误', message: '{last_message}' },
   question: { title: '{agent_name} needs input', message: '{last_message}' },
-  subtask: { title: 'Subtask complete', message: '{last_message}' },
+  subtask: { title: '子任务完成', message: '{last_message}' },
 } as const;
 
 const EMPTY_NOTIFICATION_TEMPLATES = {
