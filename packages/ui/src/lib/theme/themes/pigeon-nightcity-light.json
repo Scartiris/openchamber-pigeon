@@ -73,7 +73,7 @@
       "base": {
         "background": "#f4f5fd",
         "foreground": "#171a3a",
-        "comment": "#6b7196",
+        "comment": "#5d6388",
         "keyword": "#4a3a9e",
         "string": "#8a4a12",
         "number": "#1f6b7a",
@@ -83,7 +83,7 @@
         "operator": "#9a2f5a"
       },
       "tokens": {
-        "commentDoc": "#7a80a3",
+        "commentDoc": "#6a7093",
         "stringEscape": "#5a3a12",
         "keywordImport": "#9a2f5a",
         "storageModifier": "#4a3a9e",

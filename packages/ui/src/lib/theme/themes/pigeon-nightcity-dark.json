@@ -74,7 +74,7 @@
       "base": {
         "background": "#0a0820",
         "foreground": "#d9dcf4",
-        "comment": "#5c6693",
+        "comment": "#767fb0",
         "keyword": "#b39bf5",
         "string": "#f2a97e",
         "number": "#7fd6e6",
@@ -84,7 +84,7 @@
         "operator": "#ef92b5"
       },
       "tokens": {
-        "commentDoc": "#6a739e",
+        "commentDoc": "#7f88b8",
         "stringEscape": "#f6e2c8",
         "keywordImport": "#ef92b5",
         "storageModifier": "#b39bf5",
