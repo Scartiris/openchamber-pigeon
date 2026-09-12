@@ -236,6 +236,36 @@ describe('GET /api/doc-preview/config', () => {
     expect(res.statusCode).toBe(415);
   });
 
+  it('refuses a path whose realpath leaves the workspace', async () => {
+    // The lexical check runs before symlinks are resolved, so a link inside the
+    // workspace that points outside it has to be caught by the canonical
+    // containment re-check.
+    const outsideDir = await mkdtemp(path.join(tmpdir(), 'doc-preview-outside-'));
+    const outsideFile = path.join(outsideDir, 'escape.docx');
+    const insidePath = path.join(workspace, 'escape.docx');
+    await writeFile(outsideFile, 'docx');
+    await writeFile(insidePath, 'docx');
+
+    try {
+      const registry = await setup({
+        fsOverrides: {
+          realpath: async (value) => (
+            path.resolve(value) === path.resolve(insidePath) ? outsideFile : realpath(value)
+          ),
+        },
+      });
+
+      const res = await invoke(
+        registry.getRoute('GET', '/api/doc-preview/config'),
+        createRequest({ query: { path: 'escape.docx' } }),
+      );
+      expect(res.statusCode).toBe(400);
+      expect(res.body.error).toContain('outside');
+    } finally {
+      await rm(outsideDir, { recursive: true, force: true });
+    }
+  });
+
   it('describes PDFs for the native viewer without touching the document server', async () => {
     await writeFile(path.join(workspace, 'report.pdf'), '%PDF-1.4');
     const registry = await setup();

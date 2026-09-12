@@ -726,8 +726,11 @@ export type DocumentPreviewKind = 'pdf' | 'word' | 'cell' | 'slide';
  * Files the preview panel can render. Office and OpenDocument formats go
  * through the OnlyOffice document server; PDF stays on the browser's native
  * viewer, which needs no conversion and no server round trip.
+ *
+ * Exported so a test can hold it against the server's own table — the two are
+ * written in different languages and nothing else keeps them in step.
  */
-const DOCUMENT_PREVIEW_EXTENSIONS: Record<string, DocumentPreviewKind> = {
+export const DOCUMENT_PREVIEW_EXTENSIONS: Record<string, DocumentPreviewKind> = {
   pdf: 'pdf',
   docx: 'word',
   docm: 'word',
