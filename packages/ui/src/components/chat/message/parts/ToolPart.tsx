@@ -7,6 +7,7 @@ import { SimpleMarkdownRenderer } from '../../MarkdownRenderer';
 import { QuestionMarkdown } from '../../QuestionMarkdown';
 import { MessageFilesDisplay } from '../../FileAttachment';
 import { getToolMetadata, isDocumentPreviewable } from '@/lib/toolHelpers';
+import { hasContextPanelSurface } from '@/lib/runtimeSurface';
 import type { ToolPart as ToolPartType, ToolState as ToolStateUnion, FilePart } from '@opencode-ai/sdk/v2';
 import { toolDisplayStyles } from '@/lib/typography';
 import { WorkerHighlightedCode } from '@/components/code/WorkerHighlightedCode';
@@ -1149,9 +1150,11 @@ type ToolDocumentLinkProps = {
 
 // Documents with a dedicated preview surface (pdf/office) open in the
 // right-hand preview panel instead of the text editor, so their path in the
-// tool card becomes an inline link. Everything else keeps the plain span.
+// tool card becomes an inline link. Everything else keeps the plain span —
+// including in shells that never mount the context panel, where the link would
+// open nothing.
 const getToolDocumentLinkProps = (path: string, docLink?: ToolDocumentLink): ToolDocumentLinkProps | null => {
-    if (!docLink || !isDocumentPreviewable(path)) return null;
+    if (!docLink || !isDocumentPreviewable(path) || !hasContextPanelSurface()) return null;
     const absolutePath = toAbsoluteFilePath(docLink.directory, path);
     const openDocument = () => {
         useUIStore.getState().openContextDocument(docLink.directory, absolutePath);
@@ -2109,8 +2112,10 @@ const ToolPartContent: React.FC<ToolPartProps> = ({
         if (!quickOpenTarget) return;
         const { absolutePath, line, toolDiff, toolName } = quickOpenTarget;
         // Previewable documents (pdf/office) have no text editor representation;
-        // they open in the right-hand document preview in every runtime.
-        if (isDocumentPreviewable(absolutePath)) {
+        // they open in the right-hand document preview. Where there is no
+        // context panel (VS Code webview, mobile shell) the previous behaviour
+        // is kept: the runtime editor, or the files view.
+        if (isDocumentPreviewable(absolutePath) && hasContextPanelSurface()) {
             useUIStore.getState().openContextDocument(currentDirectory, absolutePath);
             mobileActions?.openFiles();
             return;

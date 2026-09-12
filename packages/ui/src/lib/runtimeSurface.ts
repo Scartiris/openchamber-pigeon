@@ -81,6 +81,19 @@ export const resolveHostedSurface = (): HostedSurface => {
 export const isMobileSurfaceRuntime = (): boolean => detectHostedSurface() === 'mobile';
 
 /**
+ * Whether the running shell mounts the right-hand context panel.
+ *
+ * The panel is the only host of the document preview surface, so entry points
+ * that route a document into it must stay quiet in shells that never render one
+ * (the VS Code webview and the dedicated mobile shell): the tab would be created
+ * off screen and the click would look broken. Those shells keep their previous
+ * behaviour instead.
+ */
+export const hasContextPanelSurface = (): boolean => (
+  !isMobileSurfaceRuntime() && !isVSCodeRuntime()
+);
+
+/**
  * The surface is stamped once at boot, so a browser window that crosses the
  * phone threshold after load would otherwise keep the wrong app shell (the
  * app trees, stores, and sync bootstrap differ, so an in-place switch is not

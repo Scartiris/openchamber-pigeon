@@ -17,7 +17,7 @@ import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import type { EditorAPI } from '@/lib/api/types';
 import { isDesktopLocalOriginActive, isDesktopShell, isVSCodeRuntime } from '@/lib/desktop';
-import { isMobileSurfaceRuntime } from '@/lib/runtimeSurface';
+import { isMobileSurfaceRuntime, hasContextPanelSurface } from '@/lib/runtimeSurface';
 import { ensureOutsideFileGrantForDesktop } from '@/lib/outsideFileGrants';
 import { getDirectoryForFilePath, isFilePathWithinDirectory, toAbsoluteFilePath } from '@/lib/path-utils';
 import {
@@ -474,8 +474,10 @@ const useFileReferenceInteractions = ({
           }
 
           // Documents the preview surface can render (pdf/office) open there
-          // instead of the text editor, which would reject them as binary.
-          const previewableDocument = isDocumentPreviewable(latestResolved.resolvedPath);
+          // instead of the text editor, which would reject them as binary — but
+          // only in shells that actually have the context panel.
+          const previewableDocument = isDocumentPreviewable(latestResolved.resolvedPath)
+            && hasContextPanelSurface();
 
           candidate.setAttribute('data-openchamber-file-link', 'true');
           candidate.setAttribute('data-openchamber-file-ref', latestRawCandidate);
@@ -500,9 +502,10 @@ const useFileReferenceInteractions = ({
       }
 
       const contextDirectory = getContextDirectory(effectiveDirectory, resolved.resolvedPath);
-      // Previewable documents go to the right-hand document preview surface in
-      // every runtime — the text editor cannot render them.
-      if (isDocumentPreviewable(resolved.resolvedPath)) {
+      // Previewable documents go to the right-hand document preview surface —
+      // the text editor cannot render them. Shells without a context panel keep
+      // their previous behaviour (the runtime editor, or the file view).
+      if (isDocumentPreviewable(resolved.resolvedPath) && hasContextPanelSurface()) {
         useUIStore.getState().openContextDocument(contextDirectory, resolved.resolvedPath);
         return;
       }

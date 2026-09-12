@@ -26,10 +26,17 @@ Office and PDF previews in the right-hand context panel (`mode: 'doc'`).
 | anything else | not previewable — callers fall back to the text editor or the download action. |
 
 Entry points that open this surface: file paths in assistant markdown, file paths
-in tool cards, the file tree / file view binary states, and the command palette.
+in tool cards, and the "open document preview" action in the file view's binary
+state. All of them are gated on `hasContextPanelSurface()` (`@/lib/runtimeSurface`),
+because the panel is the only host of this surface.
 
 ## Deliberate limits
 
+- **Only in shells with a context panel.** The VS Code webview and the dedicated
+  mobile shell never mount `ContextPanel`, so there the document entry points keep
+  their previous behaviour (runtime editor / files view + download) instead of
+  creating a tab nobody can see. Mobile document preview is a follow-up, not a
+  silent dead click.
 - **One live editor at a time.** The context panel mounts only the *active*
   document tab; switching tabs destroys the previous editor (`destroyEditor()`)
   and the next switch recreates it from the document server's converted copy.

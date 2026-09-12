@@ -81,6 +81,7 @@ import { useMessageTTS } from '@/hooks/useMessageTTS';
 import { ensurePierreThemeRegistered } from '@/lib/shiki/appThemeRegistry';
 import { getDefaultTheme } from '@/lib/theme/themes';
 import { isBrowserClientRuntime, openDesktopFileInApp, openDesktopPath } from '@/lib/desktop';
+import { hasContextPanelSurface } from '@/lib/runtimeSurface';
 import { useOpenInAppsStore } from '@/stores/useOpenInAppsStore';
 import { useKeybind, useKeybinds } from '@/hooks/useKeybind';
 import { isEditableEventTarget } from '@/hooks/keyboard-shortcut-dom';
@@ -3935,7 +3936,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full', visible = t
             <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
               <div className="typography-ui-header text-foreground">{t('filesView.editor.cannotPreviewBinary')}</div>
               <div className="max-w-md typography-ui text-muted-foreground">{t('filesView.editor.binaryFileDescription')}</div>
-              {isDocumentPreviewable(selectedFile.path) ? (
+              {isDocumentPreviewable(selectedFile.path) && hasContextPanelSurface() ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -4365,7 +4366,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full', visible = t
             <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
               <div className="typography-ui-header text-foreground">{t('filesView.editor.cannotPreviewBinary')}</div>
               <div className="max-w-md typography-ui text-muted-foreground">{t('filesView.editor.binaryFileDescription')}</div>
-              {isDocumentPreviewable(selectedFile.path) ? (
+              {isDocumentPreviewable(selectedFile.path) && hasContextPanelSurface() ? (
                 <Button
                   type="button"
                   variant="outline"
