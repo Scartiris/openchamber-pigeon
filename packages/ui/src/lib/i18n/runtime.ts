@@ -1,8 +1,11 @@
 export type Locale = 'en' | 'de' | 'fr' | 'zh-CN' | 'zh-TW' | 'uk' | 'es' | 'pt-BR' | 'ko' | 'pl' | 'ja' | 'tr';
 
-export const LOCALES = ['en', 'de', 'fr', 'zh-CN', 'zh-TW', 'uk', 'es', 'pt-BR', 'ko', 'pl', 'ja', 'tr'] as const satisfies readonly Locale[];
+// pigeon fork: this build ships as a Simplified-Chinese-only UI.
+// `LOCALES` is the list offered by the appearance settings picker; the other
+// locale dictionaries stay in the repository so upstream i18n work still merges.
+export const LOCALES = ['zh-CN'] as const satisfies readonly Locale[];
 
-export const DEFAULT_LOCALE: Locale = 'en';
+export const DEFAULT_LOCALE: Locale = 'zh-CN';
 
 export const LOCALE_LABEL_KEYS: Record<Locale, 'common.language.english' | 'common.language.french' | 'common.language.simplifiedChinese' | 'common.language.traditionalChinese' | 'common.language.ukrainian' | 'common.language.spanish' | 'common.language.brazilianPortuguese' | 'common.language.korean' | 'common.language.polish' | 'common.language.german' | 'common.language.japanese' | 'common.language.turkish'> = {
   en: 'common.language.english',
@@ -25,51 +28,13 @@ type StoredLocale = {
   locale?: unknown;
 };
 
+/**
+ * pigeon fork: the UI is locked to Simplified Chinese, so every entry point
+ * (stored preference, VS Code host language, host-provided hints) resolves to
+ * Chinese rather than silently falling back to another language.
+ */
 export function normalizeLocale(value: string | undefined | null): Locale {
-  if (!value) {
-    return DEFAULT_LOCALE;
-  }
-
-  const normalized = value.toLowerCase().replace(/_/g, '-');
-  if (normalized === 'zh-cn' || normalized === 'zh-hans' || normalized.startsWith('zh-hans-')) {
-    return 'zh-CN';
-  }
-  if (normalized === 'zh-tw' || normalized === 'zh-hant' || normalized.startsWith('zh-hant-')) {
-    return 'zh-TW';
-  }
-  if (normalized.startsWith('zh')) {
-    return 'zh-CN';
-  }
-  if (normalized.startsWith('en')) {
-    return 'en';
-  }
-  if (normalized === 'fr' || normalized.startsWith('fr-')) {
-    return 'fr';
-  }
-  if (normalized === 'uk' || normalized.startsWith('uk-') || normalized === 'ua' || normalized.startsWith('ua-')) {
-    return 'uk';
-  }
-  if (normalized === 'es' || normalized.startsWith('es-')) {
-    return 'es';
-  }
-  if (normalized === 'pt' || normalized === 'pt-br' || normalized.startsWith('pt-br-')) {
-    return 'pt-BR';
-  }
-  if (normalized === 'ko' || normalized.startsWith('ko-')) {
-    return 'ko';
-  }
-  if (normalized === 'ja' || normalized.startsWith('ja-')) {
-    return 'ja';
-  }
-  if (normalized === 'de' || normalized.startsWith('de-')) {
-    return 'de';
-  }
-  if (normalized === 'pl' || normalized.startsWith('pl-')) {
-    return 'pl';
-  }
-  if (normalized === 'tr' || normalized.startsWith('tr-')) {
-    return 'tr';
-  }
+  void value;
   return DEFAULT_LOCALE;
 }
 

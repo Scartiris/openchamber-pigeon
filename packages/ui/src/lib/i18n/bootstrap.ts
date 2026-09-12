@@ -1,4 +1,4 @@
-import { LOCALE_STORAGE_KEY, normalizeLocale, type Locale } from './runtime';
+import { DEFAULT_LOCALE, LOCALE_STORAGE_KEY, normalizeLocale, type Locale } from './runtime';
 
 type BootstrapMessages = {
   startingApi: string;
@@ -266,20 +266,21 @@ const BOOTSTRAP_MESSAGES: Record<Locale, BootstrapMessages> = {
   tr: TR_MESSAGES,
 };
 
+// pigeon fork: the pre-React bootstrap screen is Chinese-only as well.
 export const readStoredLocaleForBootstrap = (): Locale => {
   if (typeof window === 'undefined') {
-    return 'en';
+    return DEFAULT_LOCALE;
   }
 
   try {
     const raw = window.localStorage.getItem(LOCALE_STORAGE_KEY);
     if (!raw) {
-      return 'en';
+      return DEFAULT_LOCALE;
     }
 
     const parsed = JSON.parse(raw) as { locale?: unknown };
-    return typeof parsed.locale === 'string' ? normalizeLocale(parsed.locale) : 'en';
+    return typeof parsed.locale === 'string' ? normalizeLocale(parsed.locale) : DEFAULT_LOCALE;
   } catch {
-    return 'en';
+    return DEFAULT_LOCALE;
   }
 };

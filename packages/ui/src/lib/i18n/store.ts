@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 import { dict as enDict, type I18nKey } from './messages/en';
+import { dict as zhCnDict } from './messages/zh-CN';
 import { DEFAULT_LOCALE, detectInitialLocale, type Locale, writeStoredLocale } from './runtime';
 
 export type I18nParams = Record<string, string | number | boolean | null | undefined>;
@@ -13,11 +14,13 @@ type I18nState = {
   setLocale: (locale: Locale) => void;
 };
 
-const dictionaries = new Map<Locale, I18nDictionary>([[DEFAULT_LOCALE, enDict]]);
+// pigeon fork: the Chinese dictionary is the built-in default, so the first paint
+// is already Chinese and no other locale can be reached through the cache.
+const dictionaries = new Map<Locale, I18nDictionary>([[DEFAULT_LOCALE, zhCnDict]]);
 
 export function resetI18nDictionaryCacheForTests(): void {
   dictionaries.clear();
-  dictionaries.set(DEFAULT_LOCALE, enDict);
+  dictionaries.set(DEFAULT_LOCALE, zhCnDict);
 }
 
 async function loadDictionary(locale: Locale): Promise<I18nDictionary> {
@@ -55,7 +58,7 @@ async function loadDictionary(locale: Locale): Promise<I18nDictionary> {
 
 export const useI18nStore = create<I18nState>()((set, get) => ({
   locale: DEFAULT_LOCALE,
-  dictionary: enDict,
+  dictionary: zhCnDict,
   loadingLocale: null,
   setLocale: (locale) => {
     const current = get();

@@ -83,7 +83,7 @@ export function getWebviewHtml(options: WebviewHtmlOptions): string {
   // bottomLeft=(8.432, 74), bottomRight=(91.568, 74), bottom=(50, 98)
   // topFaceCenterY = (2 + 26 + 50 + 26) / 4 = 26
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -199,59 +199,21 @@ export function getWebviewHtml(options: WebviewHtmlOptions): string {
     // until the user picks one; the splash below picks its strings from it too.
     window.__OPENCHAMBER_HOST_LANGUAGE__ = ${JSON.stringify(vscode.env.language)};
 
-    // OpenChamber's own saved locale wins; before one exists, VS Code's display
-    // language decides, so a fresh install in a supported language never boots
-    // in English.
+    // pigeon fork: the webview ships as a Simplified-Chinese-only UI, so the
+    // splash ignores stored/host language preferences instead of booting English.
     function resolveBootstrapLanguage() {
-      try {
-        var rawLocale = window.localStorage.getItem('openchamber.i18n.v1');
-        if (rawLocale) {
-          var parsedLocale = JSON.parse(rawLocale);
-          if (parsedLocale && typeof parsedLocale.locale === 'string') return parsedLocale.locale.toLowerCase();
-        }
-      } catch {}
-      return String(window.__OPENCHAMBER_HOST_LANGUAGE__ || '').toLowerCase();
+      return 'zh-cn';
     }
 
     function getBootstrapMessages() {
-      var locale = 'en';
-      var detected = resolveBootstrapLanguage();
-      if (detected.indexOf('fr') === 0) {
-        locale = 'fr';
-      } else if (detected.indexOf('tr') === 0) {
-        locale = 'tr';
-      }
-
-      if (locale === 'fr') {
-        return {
-          startingApi: 'Démarrage de l’API OpenCode…',
-          initializing: 'Initialisation…',
-          connecting: 'Connexion…',
-          connected: 'Connecté !',
-          connectionError: 'Erreur de connexion',
-          reconnecting: 'Reconnexion…',
-          cliNotFound: 'L’interface en ligne de commande OpenCode est introuvable. Veuillez l’installer d’abord.',
-        };
-      }
-      if (locale === 'tr') {
-        return {
-          startingApi: 'OpenCode API başlatılıyor…',
-          initializing: 'Başlatılıyor…',
-          connecting: 'Bağlanıyor…',
-          connected: 'Bağlandı!',
-          connectionError: 'Bağlantı hatası',
-          reconnecting: 'Yeniden bağlanıyor…',
-          cliNotFound: 'OpenCode CLI bulunamadı. Lütfen önce kurun.',
-        };
-      }
       return {
-        startingApi: 'Starting OpenCode API…',
-        initializing: 'Initializing…',
-        connecting: 'Connecting…',
-        connected: 'Connected!',
-        connectionError: 'Connection error',
-        reconnecting: 'Reconnecting…',
-        cliNotFound: 'OpenCode CLI not found. Please install it first.',
+        startingApi: '正在启动 OpenCode API…',
+        initializing: '正在初始化…',
+        connecting: '正在连接…',
+        connected: '已连接！',
+        connectionError: '连接错误',
+        reconnecting: '正在重新连接…',
+        cliNotFound: '未找到 OpenCode CLI。请先安装它。',
       };
     }
 
@@ -304,25 +266,10 @@ export function getWebviewHtml(options: WebviewHtmlOptions): string {
       const baseUrl = devServerUrl;
 
       const statusEl = document.getElementById('loading-status');
-      const getDevMessages = () => {
-        const detected = resolveBootstrapLanguage();
-        if (detected.indexOf('fr') === 0) {
-          return {
-            startingDevServer: (host) => 'Démarrage du serveur de développement de la webview (' + host + ')...',
-            waitingDevServer: (host, attempt) => 'En attente du serveur de développement de la webview (' + host + ')... tentative ' + attempt,
-          };
-        }
-        if (detected.indexOf('tr') === 0) {
-          return {
-            startingDevServer: (host) => 'Webview dev sunucusu başlatılıyor (' + host + ')...',
-            waitingDevServer: (host, attempt) => 'Webview dev sunucusu bekleniyor (' + host + ')... deneme ' + attempt,
-          };
-        }
-        return {
-          startingDevServer: (host) => 'Starting webview dev server (' + host + ')...',
-          waitingDevServer: (host, attempt) => 'Waiting for webview dev server (' + host + ')... attempt ' + attempt,
-        };
-      };
+      const getDevMessages = () => ({
+        startingDevServer: (host) => '正在启动 webview 开发服务器 (' + host + ')...',
+        waitingDevServer: (host, attempt) => '正在等待 webview 开发服务器 (' + host + ')... 第 ' + attempt + ' 次尝试',
+      });
       const setStatus = (text) => {
         if (statusEl) {
           statusEl.textContent = text;

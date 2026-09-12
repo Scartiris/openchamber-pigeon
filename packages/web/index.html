@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="h-full">
+<html lang="zh-CN" class="h-full">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
@@ -173,7 +173,7 @@
               continue;
             }
 
-            const fallbackTitle = `Session ${recentSessions.length + 1}`;
+            const fallbackTitle = `会话 ${recentSessions.length + 1}`;
             const title = truncate(normalizePwaName(item.title, fallbackTitle), 48);
 
             seen.add(sessionId);
@@ -193,9 +193,9 @@
       const buildShortcuts = (recentSessions) => {
         const shortcuts = [
           {
-            name: 'Appearance Settings',
-            short_name: 'Settings',
-            description: 'Open appearance settings',
+            name: '外观设置',
+            short_name: '设置',
+            description: '打开外观设置',
             url: `${baseUrl}/?settings=appearance`,
             icons: [{ src: `${baseUrl}/pwa-192.png`, sizes: '192x192', type: 'image/png' }],
           },
@@ -206,7 +206,7 @@
           shortcuts.push({
             name: sessionTitle,
             short_name: sessionTitle,
-            description: 'Open recent session',
+            description: '打开最近的会话',
             url: `${baseUrl}/?session=${encodeURIComponent(session.sessionId)}`,
             icons: [{ src: `${baseUrl}/pwa-192.png`, sizes: '192x192', type: 'image/png' }],
           });
@@ -225,7 +225,7 @@
         return {
           name: appName,
           short_name: shortName,
-          description: 'Web interface companion for OpenCode AI coding agent',
+          description: 'OpenCode AI 编程智能体的网页端界面',
           id: `${baseUrl}/`,
           start_url: `${baseUrl}/`,
           scope: `${baseUrl}/`,
@@ -246,7 +246,7 @@
           ],
           shortcuts: buildShortcuts(recentSessions),
           categories: ['developer', 'tools', 'productivity'],
-          lang: 'en',
+          lang: 'zh-CN',
         };
       };
 
@@ -424,8 +424,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="OpenChamber" />
 
-    <title>OpenChamber - AI Coding Assistant</title>
-    <meta name="description" content="Web interface companion for OpenCode AI coding agent" />
+    <title>OpenChamber - AI 编程助手</title>
+    <meta name="description" content="OpenCode AI 编程智能体的网页端界面" />
     <meta name="application-name" content="OpenChamber" />
     <meta name="apple-mobile-web-app-title" content="OpenChamber" />
 
@@ -515,7 +515,7 @@
       <!-- Loading fallback while React initializes -->
       <div id="initial-loading">
         <div style="display: flex; align-items: center; justify-content: center;">
-          <svg width="120" height="120" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="OpenChamber loading icon">
+          <svg width="120" height="120" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="OpenChamber 加载图标">
             <!-- Isometric cube: edge=48, centerY=50 -->
             <!-- Points: top(50,2), left(8.432,26), right(91.568,26), center(50,50), bottomLeft(8.432,74), bottomRight(91.568,74), bottom(50,98) -->
 

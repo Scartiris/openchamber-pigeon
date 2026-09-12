@@ -1,0 +1,437 @@
+{
+  "$comment": "zh-CN 字典中「刻意保留英文」的键。用于 scripts/i18n-zh-coverage.mjs 判定汉化覆盖率：除本清单外的任何键，只要其中文值仍与英文完全相同，就会被判为未汉化。新增条目必须先人工确认属于品牌名/协议名/代码占位符/按键名/标识符格式。",
+  "entries": [
+    {
+      "key": "branchPickerDialog.badge.head",
+      "en": "HEAD"
+    },
+    {
+      "key": "chat.chatInput.linked.pr.number",
+      "en": "PR #{number}"
+    },
+    {
+      "key": "chat.modelControls.bash",
+      "en": "Bash"
+    },
+    {
+      "key": "chat.modelControls.modality.pdf",
+      "en": "PDF"
+    },
+    {
+      "key": "chat.modelControls.modeValue.none",
+      "en": "—"
+    },
+    {
+      "key": "chat.modelControls.topP",
+      "en": "Top P"
+    },
+    {
+      "key": "chat.modelControls.webFetch",
+      "en": "WebFetch"
+    },
+    {
+      "key": "chat.workStatus.section.mcp",
+      "en": "MCP"
+    },
+    {
+      "key": "chat.workStatus.telemetry.tokens.inOut",
+      "en": "{input} ↑ · {output} ↓"
+    },
+    {
+      "key": "common.language.english",
+      "en": "English"
+    },
+    {
+      "key": "contextPanel.mode.linear",
+      "en": "Linear"
+    },
+    {
+      "key": "desktopHostSwitcher.field.urlPlaceholder",
+      "en": "https://host:port"
+    },
+    {
+      "key": "directoryExplorerDialog.shortcut.enter",
+      "en": "Enter"
+    },
+    {
+      "key": "directoryTree.field.newDirectoryPlaceholder",
+      "en": "new_directory"
+    },
+    {
+      "key": "gitView.history.actions.cherryPick",
+      "en": "Cherry-pick"
+    },
+    {
+      "key": "gitView.pr.numberLabel",
+      "en": "PR #{number}"
+    },
+    {
+      "key": "gitView.stashes.itemNumber",
+      "en": "#{number}"
+    },
+    {
+      "key": "gitView.sync.syncCounts",
+      "en": "{behind}↓ {ahead}↑"
+    },
+    {
+      "key": "header.github.accountSource.cli",
+      "en": "CLI"
+    },
+    {
+      "key": "header.github.accountSource.oauth",
+      "en": "OAuth"
+    },
+    {
+      "key": "layout.rightSidebar.git",
+      "en": "Git"
+    },
+    {
+      "key": "mobile.connect.url.placeholder",
+      "en": "http://192.168.1.74:2606"
+    },
+    {
+      "key": "mobile.menu.mcp",
+      "en": "MCP"
+    },
+    {
+      "key": "multirun.launcher.groupName.placeholder",
+      "en": "feature-auth, bugfix-login"
+    },
+    {
+      "key": "multirun.launcher.setupCommands.commandPlaceholder",
+      "en": "bun install"
+    },
+    {
+      "key": "onboarding.localSetup.windows.stepInstallWslSuffix",
+      "en": ""
+    },
+    {
+      "key": "onboarding.remoteConnection.field.serverAddressPlaceholder",
+      "en": "https://your-server.example.com:4096"
+    },
+    {
+      "key": "planView.file.defaultName",
+      "en": "plan"
+    },
+    {
+      "key": "quota.window.api",
+      "en": "API"
+    },
+    {
+      "key": "session.githubIntegration.selected.prNumber",
+      "en": "PR #{number}"
+    },
+    {
+      "key": "session.newWorktree.branchNamePlaceholder",
+      "en": "feature/my-awesome-feature"
+    },
+    {
+      "key": "session.newWorktree.prNumber",
+      "en": "PR #{number}"
+    },
+    {
+      "key": "session.newWorktree.worktreeDirectoryPlaceholder",
+      "en": "my-worktree-directory"
+    },
+    {
+      "key": "sessions.scheduledTasks.dialog.schedule.weekdayShort.unknown",
+      "en": "?"
+    },
+    {
+      "key": "sessions.scheduledTasks.editor.cronExpression.placeholder",
+      "en": "*/5 * * * *"
+    },
+    {
+      "key": "sessions.scheduledTasks.editor.scheduleType.cron",
+      "en": "Cron"
+    },
+    {
+      "key": "sessions.sidebar.header.projectSort.aToZ",
+      "en": "A → Z"
+    },
+    {
+      "key": "sessions.sidebar.header.projectSort.zToA",
+      "en": "Z → A"
+    },
+    {
+      "key": "settings.agents.page.field.agentNamePlaceholder",
+      "en": "agent-name"
+    },
+    {
+      "key": "settings.agents.page.field.topP",
+      "en": "Top P"
+    },
+    {
+      "key": "settings.agents.page.permissionsEditor.effectiveHint",
+      "en": "→ {action}"
+    },
+    {
+      "key": "settings.commands.page.field.commandNamePlaceholder",
+      "en": "command-name"
+    },
+    {
+      "key": "settings.github.page.accountSource.cli",
+      "en": "CLI"
+    },
+    {
+      "key": "settings.github.page.accountSource.oauth",
+      "en": "OAuth"
+    },
+    {
+      "key": "settings.gitIdentities.editor.field.hostPlaceholder",
+      "en": "github.com"
+    },
+    {
+      "key": "settings.gitIdentities.editor.field.signingKeyPlaceholder",
+      "en": "~/.ssh/id_ed25519.pub"
+    },
+    {
+      "key": "settings.gitIdentities.editor.field.sshKeyPathPlaceholder",
+      "en": "~/.ssh/id_ed25519"
+    },
+    {
+      "key": "settings.integrations.github.title",
+      "en": "GitHub"
+    },
+    {
+      "key": "settings.integrations.linear.title",
+      "en": "Linear"
+    },
+    {
+      "key": "settings.magicPrompts.sidebar.group.git",
+      "en": "Git"
+    },
+    {
+      "key": "settings.magicPrompts.sidebar.group.github",
+      "en": "GitHub"
+    },
+    {
+      "key": "settings.magicPrompts.sidebar.group.linear",
+      "en": "Linear"
+    },
+    {
+      "key": "settings.mcp.page.advanced.headerNamePlaceholder",
+      "en": "Header-Name"
+    },
+    {
+      "key": "settings.mcp.page.connection.serverUrlPlaceholder",
+      "en": "https://mcp.example.com/mcp"
+    },
+    {
+      "key": "settings.mcp.page.env.keyPlaceholder",
+      "en": "API_KEY"
+    },
+    {
+      "key": "settings.mcp.page.env.valuePlaceholder",
+      "en": "value"
+    },
+    {
+      "key": "settings.mcp.page.server.namePlaceholder",
+      "en": "my-mcp-server"
+    },
+    {
+      "key": "settings.notifications.page.template.defaults.error.message",
+      "en": "{last_message}"
+    },
+    {
+      "key": "settings.notifications.page.template.defaults.question.message",
+      "en": "{last_message}"
+    },
+    {
+      "key": "settings.openchamber.keyboardShortcuts.action.switch_context_surface.suffix",
+      "en": " + 1…0"
+    },
+    {
+      "key": "settings.openchamber.keyboardShortcuts.action.switch_session_tab.suffix",
+      "en": " + 1…9"
+    },
+    {
+      "key": "settings.openchamber.opencodeCli.field.binaryPathPlaceholder",
+      "en": "/Users/you/.bun/bin/opencode"
+    },
+    {
+      "key": "settings.openchamber.opencodeCli.title",
+      "en": "OpenCode CLI"
+    },
+    {
+      "key": "settings.openchamber.visual.field.bash",
+      "en": "Bash"
+    },
+    {
+      "key": "settings.openchamber.visual.option.fileEditorKeymap.vim",
+      "en": "Vim"
+    },
+    {
+      "key": "settings.openchamber.visual.option.mermaidRendering.ascii.label",
+      "en": "ASCII"
+    },
+    {
+      "key": "settings.openchamber.visual.option.mermaidRendering.svg.label",
+      "en": "SVG"
+    },
+    {
+      "key": "settings.openchamber.visual.option.messageTransport.sse.label",
+      "en": "SSE"
+    },
+    {
+      "key": "settings.openchamber.visual.option.messageTransport.ws.label",
+      "en": "WebSocket"
+    },
+    {
+      "key": "settings.openchamber.visual.option.userMessageRendering.markdown.label",
+      "en": "Markdown"
+    },
+    {
+      "key": "settings.page.git.title",
+      "en": "Git"
+    },
+    {
+      "key": "settings.page.mcp.title",
+      "en": "MCP"
+    },
+    {
+      "key": "settings.plugins.registry.badge.update.label",
+      "en": "↑ {version}"
+    },
+    {
+      "key": "settings.plugins.registry.banner.updateAvailable.description",
+      "en": "{current} → {latest}"
+    },
+    {
+      "key": "settings.projects.shared.plansDirPlaceholder",
+      "en": ".openchamber/plans"
+    },
+    {
+      "key": "settings.providers.page.auth.apiKeyPlaceholder",
+      "en": "sk-..."
+    },
+    {
+      "key": "settings.providers.page.custom.field.baseURL.placeholder",
+      "en": "https://api.example.com/v1"
+    },
+    {
+      "key": "settings.providers.page.custom.field.protocol.anthropicMessages",
+      "en": "Anthropic Messages"
+    },
+    {
+      "key": "settings.providers.page.custom.field.protocol.openaiChat",
+      "en": "OpenAI Chat Completions"
+    },
+    {
+      "key": "settings.providers.page.custom.field.protocol.openaiResponses",
+      "en": "OpenAI Responses"
+    },
+    {
+      "key": "settings.providers.page.custom.field.providerID.placeholder",
+      "en": "my-provider"
+    },
+    {
+      "key": "settings.providers.page.custom.headers.keyPlaceholder",
+      "en": "X-Custom-Header"
+    },
+    {
+      "key": "settings.providers.page.custom.headers.valuePlaceholder",
+      "en": "value"
+    },
+    {
+      "key": "settings.providers.page.custom.models.idPlaceholder",
+      "en": "gpt-4o"
+    },
+    {
+      "key": "settings.providers.page.custom.models.namePlaceholder",
+      "en": "GPT-4o"
+    },
+    {
+      "key": "settings.remoteInstances.direct.field.urlPlaceholder",
+      "en": "https://host:port"
+    },
+    {
+      "key": "settings.remoteInstances.direct.import.placeholder",
+      "en": "openchamber://connect?..."
+    },
+    {
+      "key": "settings.remoteInstances.page.field.localHostPlaceholder",
+      "en": "127.0.0.1"
+    },
+    {
+      "key": "settings.remoteInstances.page.field.remoteHostPlaceholder",
+      "en": "127.0.0.1"
+    },
+    {
+      "key": "settings.remoteInstances.page.field.sshCommandPlaceholder",
+      "en": "ssh user@host"
+    },
+    {
+      "key": "settings.remoteInstances.page.patternDialog.destinationPlaceholder",
+      "en": "user@host"
+    },
+    {
+      "key": "settings.skills.catalog.conflicts.source.agents",
+      "en": "agents"
+    },
+    {
+      "key": "settings.skills.catalog.conflicts.source.opencode",
+      "en": "opencode"
+    },
+    {
+      "key": "settings.skills.page.field.skillNamePlaceholder",
+      "en": "skill-name"
+    },
+    {
+      "key": "settings.skills.sidebar.badge.agents",
+      "en": "agents"
+    },
+    {
+      "key": "settings.skills.sidebar.badge.claude",
+      "en": "claude"
+    },
+    {
+      "key": "settings.skills.sidebar.badge.opencode",
+      "en": "opencode"
+    },
+    {
+      "key": "settings.snippets.page.field.aliasesPlaceholder",
+      "en": "safe, careful"
+    },
+    {
+      "key": "settings.snippets.page.field.namePlaceholder",
+      "en": "snippet-name"
+    },
+    {
+      "key": "settings.view.home.cards.mcp.title",
+      "en": "MCP"
+    },
+    {
+      "key": "settings.view.nav.group.general",
+      "en": "OpenChamber"
+    },
+    {
+      "key": "settings.view.nav.group.opencode",
+      "en": "OpenCode"
+    },
+    {
+      "key": "settings.voice.page.provider.openai",
+      "en": "OpenAI"
+    },
+    {
+      "key": "settings.voice.page.provider.say",
+      "en": "Say"
+    },
+    {
+      "key": "terminalView.quickKeys.altLabel",
+      "en": "Alt"
+    },
+    {
+      "key": "terminalView.quickKeys.controlLabel",
+      "en": "Ctrl"
+    },
+    {
+      "key": "terminalView.quickKeys.escape",
+      "en": "Esc"
+    },
+    {
+      "key": "walkthrough.scope.pullRequest",
+      "en": "PR #{number}"
+    }
+  ]
+}
