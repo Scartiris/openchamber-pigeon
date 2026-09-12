@@ -38,7 +38,7 @@ const parseQueryParam = (params: URLSearchParams, key: string): string | null =>
 const normalizeMcpAuthErrorMessage = (error: unknown, fallback: string): string => {
   const message = error instanceof Error ? error.message : fallback;
   if (/oauth state required/i.test(message)) {
-    return 'Authorization session expired or was cleared during reload. Return to OpenChamber and click Authorize again.';
+    return 'Authorization session expired or was cleared during reload. 返回 OpenChamber and click Authorize again.';
   }
   return message;
 };
@@ -155,7 +155,7 @@ export const McpOAuthCallbackPage: React.FC = () => {
               type="button"
               onClick={() => returnToApp(returnToDesktop)}
             >
-              Return to OpenChamber
+              返回 OpenChamber
             </Button>
           </div>
         )}

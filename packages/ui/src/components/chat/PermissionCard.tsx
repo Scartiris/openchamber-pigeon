@@ -308,7 +308,7 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
           )}
           {(timeout || format) && (
             <div className="typography-meta text-muted-foreground">
-              {timeout && <span>Timeout: {timeout}ms</span>}
+              {timeout && <span>超时：{timeout}ms</span>}
               {timeout && format && <span> • </span>}
               {format && <span>响应格式： {format}</span>}
             </div>
@@ -360,11 +360,11 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
               <div className="flex items-center gap-2">
                 <Icon name="question" className="h-3.5 w-3.5 text-[var(--status-warning)]" />
                 <span className="typography-meta font-medium text-muted-foreground">
-                  Permission Required
+                  需要权限
                 </span>
                 {isFromSubagent ? (
                   <span className="typography-micro text-muted-foreground px-1.5 py-0.5 rounded bg-foreground/5">
-                    From subagent
+                    来自子代理
                   </span>
                 ) : null}
               </div>

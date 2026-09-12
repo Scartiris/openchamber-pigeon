@@ -4334,7 +4334,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full', visible = t
               : (
                 <div className="p-4 flex items-center gap-2 typography-ui text-muted-foreground">
                   <Icon name="loader-4" className="size-4 animate-spin" />
-                  Loading…
+                  加载中…
                 </div>
               )
           ) : fileError ? (

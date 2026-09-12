@@ -66,9 +66,9 @@ describe('PWA manifest route', () => {
       expect(fetchCalls).toHaveLength(2);
       expect(manifest.shortcuts).toEqual([
         {
-          name: 'Appearance Settings',
-          short_name: 'Settings',
-          description: 'Open appearance settings',
+          name: '外观设置',
+          short_name: '设置',
+          description: '打开外观设置',
           url: '/?settings=appearance',
           icons: [{ src: '/pwa-192.png', sizes: '192x192', type: 'image/png' }],
         },

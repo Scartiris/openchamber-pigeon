@@ -460,8 +460,8 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
                     </span>
                     {(branchInfo?.[branch]?.ahead || branchInfo?.[branch]?.behind) && (
                       <span className="typography-micro text-muted-foreground">
-                        {branchInfo[branch].ahead || 0} ahead ·{' '}
-                        {branchInfo[branch].behind || 0} behind
+                        {branchInfo[branch].ahead || 0} 领先 ·{' '}
+                        {branchInfo[branch].behind || 0} 落后
                       </span>
                     )}
                   </span>

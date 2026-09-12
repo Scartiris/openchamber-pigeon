@@ -144,7 +144,7 @@ const ModelPickerRowTooltip: React.FC<{
             {(metadata?.cost?.input !== undefined || metadata?.cost?.output !== undefined) ? (
               <div className="flex items-center justify-between gap-3 text-muted-foreground">
                 <span className="typography-meta font-medium">{labels.costPerMillion}</span>
-                <span className="typography-meta text-foreground">In {formatCost(metadata?.cost?.input)} · Out {formatCost(metadata?.cost?.output)}</span>
+                <span className="typography-meta text-foreground">输入 {formatCost(metadata?.cost?.input)} · 输出 {formatCost(metadata?.cost?.output)}</span>
               </div>
             ) : null}
           </div>

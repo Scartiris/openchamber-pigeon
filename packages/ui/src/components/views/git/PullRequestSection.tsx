@@ -843,7 +843,7 @@ export const PullRequestSection: React.FC<{
         {Array.isArray(run.annotations) && run.annotations.length > 0 ? (
           <div className="space-y-1">
             <div className="typography-micro text-muted-foreground">
-              Failed annotations{run.annotations.length > 20 ? ` (showing 20/${run.annotations.length})` : ''}
+              失败的标注{run.annotations.length > 20 ? ` (showing 20/${run.annotations.length})` : ''}
             </div>
             <div className="space-y-1">
               {run.annotations.slice(0, 20).map((annotation, idx) => (
@@ -1636,7 +1636,7 @@ export const PullRequestSection: React.FC<{
                   <Button variant="outline" size="sm" asChild className="w-fit">
                     <a href={repoUrl} target="_blank" rel="noopener noreferrer">
                       <Icon name="external-link" className="size-4" />
-                      Open Repo
+                      打开仓库
                     </a>
                   </Button>
                 ) : null}

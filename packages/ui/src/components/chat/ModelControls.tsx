@@ -2346,7 +2346,7 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                         ? (wasAdjusted ? 'text-interactive-selection-foreground' : 'text-interactive-selection-foreground/70')
                         : (wasAdjusted ? 'text-foreground' : 'text-muted-foreground'),
                 )}>
-                    Thinking: {displayLabel}
+                    思考：{displayLabel}
                 </span>
             );
         };
@@ -2841,7 +2841,7 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                                         )}
                                         {sortedAndFilteredAgents.length === 0 ? (
                                             <div className="px-2 py-4 text-center typography-meta text-muted-foreground">
-                                                No agents found
+                                                未找到智能体
                                             </div>
                                         ) : (
                                             sortedAndFilteredAgents.map((agent) => (

@@ -150,7 +150,7 @@ export const registerPwaManifestRoute = (app, dependencies) => {
         }
 
         seen.add(id);
-        const title = normalizeShortcutTitle(item.title, `Session ${rows.length + 1}`);
+        const title = normalizeShortcutTitle(item.title, `会话 ${rows.length + 1}`);
         const updatedAt = sessionUpdatedAt(item);
 
         rows.push({ id, title, updatedAt });
@@ -161,7 +161,7 @@ export const registerPwaManifestRoute = (app, dependencies) => {
       const shortcuts = rows.slice(0, 3).map((session) => ({
         name: session.title,
         short_name: session.title.length > 32 ? session.title.slice(0, 32) : session.title,
-        description: 'Open recent session',
+        description: '打开最近的会话',
         url: `/?session=${encodeURIComponent(session.id)}`,
         icons: [{ src: '/pwa-192.png', sizes: '192x192', type: 'image/png' }],
       }));
@@ -217,7 +217,7 @@ export const registerPwaManifestRoute = (app, dependencies) => {
     const manifest = {
       name: appName,
       short_name: shortName,
-      description: 'Web interface companion for OpenCode AI coding agent',
+      description: 'OpenCode AI 编程智能体的网页端界面',
       id: '/',
       start_url: '/',
       scope: '/',
@@ -238,16 +238,16 @@ export const registerPwaManifestRoute = (app, dependencies) => {
       ],
       shortcuts: [
         {
-          name: 'Appearance Settings',
-          short_name: 'Settings',
-          description: 'Open appearance settings',
+          name: '外观设置',
+          short_name: '设置',
+          description: '打开外观设置',
           url: '/?settings=appearance',
           icons: [{ src: '/pwa-192.png', sizes: '192x192', type: 'image/png' }],
         },
         ...recentSessionShortcuts,
       ],
       categories: ['developer', 'tools', 'productivity'],
-      lang: 'en',
+      lang: 'zh-CN',
     };
 
     res.setHeader('Cache-Control', 'no-store, must-revalidate');

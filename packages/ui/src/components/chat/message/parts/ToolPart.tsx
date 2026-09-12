@@ -972,7 +972,7 @@ const TaskSummaryEntriesList = React.memo(({
         <ToolScrollableSection maxHeightClass={isExpanded ? 'max-h-[40vh]' : 'max-h-56'} className="pt-0" disableHorizontal>
             <div className="w-full min-w-0 space-y-1">
                 {hiddenCount > 0 ? (
-                    <div className="typography-micro text-muted-foreground/70">+{hiddenCount} more…</div>
+                    <div className="typography-micro text-muted-foreground/70">+{hiddenCount} 条</div>
                 ) : null}
 
                 {visibleEntries.map((entry, idx) => {

@@ -1371,7 +1371,7 @@ export const GitView: React.FC<GitViewProps> = ({ isActive }) => {
         toast.warning(t('gitView.toast.branchCreatedLocally'), {
           description: (
             <span className="text-foreground/80 dark:text-foreground/70">
-              Upstream setup failed: {message}
+              上游设置失败：{message}
             </span>
           ),
         });

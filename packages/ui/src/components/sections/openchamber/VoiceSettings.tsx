@@ -900,7 +900,7 @@ export const VoiceSettings: React.FC = () => {
                             />
                         </SettingsControlGroup>
 
-                            {/* OpenAI API Key */}
+                            {/* OpenAI API 密钥 */}
                             {voiceProvider === 'openai' && (
                                 <div className="space-y-1.5">
                                     <span className={cn(SETTINGS_FIELD_LABEL_CLASS, !isOpenAIAvailable && "text-[var(--status-error)]")}>
@@ -964,7 +964,7 @@ export const VoiceSettings: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="space-y-1.5">
-                                        <span className={SETTINGS_FIELD_LABEL_CLASS}>API Key</span>
+                                        <span className={SETTINGS_FIELD_LABEL_CLASS}>API 密钥</span>
                                         <span className={SETTINGS_HELPER_CLASS}>
                                             Optional
                                         </span>
@@ -1240,7 +1240,7 @@ export const VoiceSettings: React.FC = () => {
                                     </div>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <span className={SETTINGS_FIELD_LABEL_CLASS}>API Key</span>
+                                    <span className={SETTINGS_FIELD_LABEL_CLASS}>API 密钥</span>
                                     <span className={SETTINGS_HELPER_CLASS}>
                                         Optional
                                     </span>
