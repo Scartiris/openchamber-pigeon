@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { SimpleMarkdownRenderer } from '../../MarkdownRenderer';
 import { QuestionMarkdown } from '../../QuestionMarkdown';
 import { MessageFilesDisplay } from '../../FileAttachment';
-import { getToolMetadata } from '@/lib/toolHelpers';
+import { getToolMetadata, isDocumentPreviewable } from '@/lib/toolHelpers';
 import type { ToolPart as ToolPartType, ToolState as ToolStateUnion, FilePart } from '@opencode-ai/sdk/v2';
 import { toolDisplayStyles } from '@/lib/typography';
 import { WorkerHighlightedCode } from '@/components/code/WorkerHighlightedCode';
@@ -1132,14 +1132,60 @@ const TOOL_NORMAL_ICON_STYLE: React.CSSProperties = { color: 'var(--tools-icon)'
 const TOOL_ERROR_TITLE_STYLE: React.CSSProperties = { color: 'var(--status-error)' };
 const TOOL_NORMAL_TITLE_STYLE: React.CSSProperties = { color: 'var(--tools-title)' };
 
-const renderPathLikeGitChanges = (path: string, grow = true) => {
+type ToolDocumentLink = {
+    directory: string;
+    title: string;
+};
+
+type ToolDocumentLinkProps = {
+    role?: 'button';
+    tabIndex?: number;
+    title?: string;
+    className?: string;
+    onClick?: (event: React.MouseEvent<HTMLElement>) => void;
+    onKeyDown?: (event: React.KeyboardEvent<HTMLElement>) => void;
+    'data-openchamber-doc-link'?: 'true';
+};
+
+// Documents with a dedicated preview surface (pdf/office) open in the
+// right-hand preview panel instead of the text editor, so their path in the
+// tool card becomes an inline link. Everything else keeps the plain span.
+const getToolDocumentLinkProps = (path: string, docLink?: ToolDocumentLink): ToolDocumentLinkProps | null => {
+    if (!docLink || !isDocumentPreviewable(path)) return null;
+    const absolutePath = toAbsoluteFilePath(docLink.directory, path);
+    const openDocument = () => {
+        useUIStore.getState().openContextDocument(docLink.directory, absolutePath);
+    };
+    return {
+        role: 'button',
+        tabIndex: 0,
+        title: docLink.title,
+        className: 'cursor-pointer underline-offset-2 hover:underline',
+        'data-openchamber-doc-link': 'true',
+        onClick: (event) => {
+            // The whole tool row toggles on click; the link must not bubble.
+            event.stopPropagation();
+            openDocument();
+        },
+        onKeyDown: (event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            event.stopPropagation();
+            openDocument();
+        },
+    };
+};
+
+const renderPathLikeGitChanges = (path: string, grow = true, docLink?: ToolDocumentLink) => {
+    const documentLinkProps = getToolDocumentLinkProps(path, docLink);
     const lastSlash = path.lastIndexOf('/');
     if (lastSlash === -1) {
         return (
             <span
-                className={cn('min-w-0 truncate typography-ui-label text-foreground', grow && 'flex-1')}
+                {...(documentLinkProps ?? {})}
+                className={cn('min-w-0 truncate typography-ui-label text-foreground', grow && 'flex-1', documentLinkProps?.className)}
                 style={{ direction: 'rtl', textAlign: 'left', unicodeBidi: 'plaintext' }}
-                title={path}
+                title={documentLinkProps?.title ?? path}
             >
                 {path}
             </span>
@@ -1152,7 +1198,11 @@ const renderPathLikeGitChanges = (path: string, grow = true) => {
     const displayDir = hasAbsoluteRoot ? dir.slice(1) : dir;
 
     return (
-        <span className={cn('min-w-0 flex items-baseline overflow-hidden typography-ui-label', grow && 'flex-1')} title={path}>
+        <span
+            {...(documentLinkProps ?? {})}
+            className={cn('min-w-0 flex items-baseline overflow-hidden typography-ui-label', grow && 'flex-1', documentLinkProps?.className)}
+            title={documentLinkProps?.title ?? path}
+        >
             {hasAbsoluteRoot ? <span className="flex-shrink-0 text-muted-foreground">/</span> : null}
             <span className="min-w-0 truncate text-muted-foreground" style={{ direction: 'rtl', textAlign: 'left', unicodeBidi: 'plaintext' }}>
                 {displayDir}
@@ -1165,12 +1215,17 @@ const renderPathLikeGitChanges = (path: string, grow = true) => {
     );
 };
 
-const renderAnimatedPathWithIcon = (path: string, animate = true, grow = true, showFileIcons = true, textClassName = TOOL_ROW_DESCRIPTION_CLASS) => {
+const renderAnimatedPathWithIcon = (path: string, animate = true, grow = true, showFileIcons = true, textClassName = TOOL_ROW_DESCRIPTION_CLASS, docLink?: ToolDocumentLink) => {
+    const documentLinkProps = getToolDocumentLinkProps(path, docLink);
     const lastSlash = path.lastIndexOf('/');
 
     if (lastSlash === -1) {
         return (
-            <span className={cn('min-w-0 inline-flex items-center gap-1 overflow-hidden', grow && 'flex-1')} title={path}>
+            <span
+                {...(documentLinkProps ?? {})}
+                className={cn('min-w-0 inline-flex items-center gap-1 overflow-hidden', grow && 'flex-1', documentLinkProps?.className)}
+                title={documentLinkProps?.title ?? path}
+            >
                 {showFileIcons ? <FileTypeIcon filePath={path} className="h-3.5 w-3.5 flex-shrink-0" /> : null}
                 <Text
                     variant={animate ? 'generate-effect' : 'static'}
@@ -1189,7 +1244,11 @@ const renderAnimatedPathWithIcon = (path: string, animate = true, grow = true, s
     const displayDir = hasAbsoluteRoot ? dir.slice(1) : dir;
 
     return (
-        <span className={cn('min-w-0 inline-flex items-center gap-1 overflow-hidden', grow && 'flex-1')} title={path}>
+        <span
+            {...(documentLinkProps ?? {})}
+            className={cn('min-w-0 inline-flex items-center gap-1 overflow-hidden', grow && 'flex-1', documentLinkProps?.className)}
+            title={documentLinkProps?.title ?? path}
+        >
             {showFileIcons ? <FileTypeIcon filePath={path} className="h-3.5 w-3.5 flex-shrink-0" /> : null}
             <span className={cn('min-w-0 inline-flex max-w-full items-baseline overflow-hidden', textClassName, grow && 'flex-1')}>
                 {hasAbsoluteRoot ? <span className="flex-shrink-0" style={{ color: 'var(--tools-description)' }}>/</span> : null}
@@ -1390,7 +1449,7 @@ const ToolExpandedContent: React.FC<ToolExpandedContentProps> = React.memo(({
                     </div>
                     <div className="space-y-1">
                         <div className="flex items-center gap-1 min-w-0">
-                            {renderPathLikeGitChanges(diagnosticSection.displayPath, false)}
+                            {renderPathLikeGitChanges(diagnosticSection.displayPath, false, { directory: currentDirectory, title: t('chat.fileLink.previewTitle') })}
                         </div>
                         <div className="space-y-1">
                             {diagnosticSection.diagnostics.map((diagnostic, index) => (
@@ -1497,7 +1556,7 @@ const ToolExpandedContent: React.FC<ToolExpandedContentProps> = React.memo(({
                         <div key={entry.id} className="w-full min-w-0">
                             <div className="mb-1 flex min-w-0 items-center gap-1 px-2 py-1">
                                 <div className="min-w-0 flex-1 typography-meta font-medium text-muted-foreground">
-                                    {renderPathLikeGitChanges(entry.title)}
+                                    {renderPathLikeGitChanges(entry.title, true, { directory: currentDirectory, title: t('chat.fileLink.previewTitle') })}
                                 </div>
                                 <Button
                                     variant="ghost"
@@ -2049,6 +2108,13 @@ const ToolPartContent: React.FC<ToolPartProps> = ({
     const openQuickTarget = () => {
         if (!quickOpenTarget) return;
         const { absolutePath, line, toolDiff, toolName } = quickOpenTarget;
+        // Previewable documents (pdf/office) have no text editor representation;
+        // they open in the right-hand document preview in every runtime.
+        if (isDocumentPreviewable(absolutePath)) {
+            useUIStore.getState().openContextDocument(currentDirectory, absolutePath);
+            mobileActions?.openFiles();
+            return;
+        }
         if (runtime?.editor) {
             if (runtime.runtime.isVSCode && toolDiff && (toolName === 'edit' || toolName === 'multiedit' || toolName === 'apply_patch')) {
                 const label = `${getRelativePath(absolutePath, currentDirectory)} (changes)`;
@@ -2217,11 +2283,11 @@ const ToolPartContent: React.FC<ToolPartProps> = ({
                                 </span>
                             )}
                             {!justificationText && normalizedPartTool === 'lsp' && descriptionPath ? (
-                                renderAnimatedPathWithIcon(descriptionPath, animateTailText, false, showToolFileIcons)
+                                renderAnimatedPathWithIcon(descriptionPath, animateTailText, false, showToolFileIcons, TOOL_ROW_DESCRIPTION_CLASS, { directory: currentDirectory, title: t('chat.fileLink.previewTitle') })
                             ) : null}
                             {!justificationText && normalizedPartTool !== 'lsp' && description && (
                                 descriptionPath && description === descriptionPath ? (
-                                    renderAnimatedPathWithIcon(descriptionPath, animateTailText, false, showToolFileIcons)
+                                    renderAnimatedPathWithIcon(descriptionPath, animateTailText, false, showToolFileIcons, TOOL_ROW_DESCRIPTION_CLASS, { directory: currentDirectory, title: t('chat.fileLink.previewTitle') })
                                 ) : (
                                     <Text
                                         variant={animateTailText ? 'generate-effect' : 'static'}

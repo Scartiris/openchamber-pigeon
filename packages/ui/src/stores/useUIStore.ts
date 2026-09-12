@@ -17,8 +17,14 @@ import { isVSCodeRuntime } from '@/lib/desktop';
 import { getRuntimeKey, isTransientRuntimeKey } from '@/lib/runtime-switch';
 
 export type PendingDiffScope = 'working' | 'staged' | 'turn' | 'branch' | 'commit' | 'pr';
-const contextPanelModeSchema = z.enum(['diff', 'walkthrough', 'file', 'context', 'plan', 'chat', 'browser', 'git', 'pr', 'linear', 'notes', 'terminal']);
+const contextPanelModeSchema = z.enum(['diff', 'walkthrough', 'file', 'context', 'plan', 'chat', 'browser', 'git', 'pr', 'linear', 'notes', 'terminal', 'doc']);
 export type ContextPanelMode = z.infer<typeof contextPanelModeSchema>;
+
+/** Narrowing guard derived from the schema, so persisted state and the tab
+    sanitizer can never disagree with the set of modes the panel can render. */
+const isContextPanelMode = (value: unknown): value is ContextPanelMode => (
+  contextPanelModeSchema.safeParse(value).success
+);
 const persistedPanelWidthsSchema = z.object({
   widthByMode: z.record(z.string(), z.number().finite().optional().catch(undefined)).catch({}),
   widthFractionByMode: z.record(z.string(), z.number().positive().max(1).optional().catch(undefined)).catch({}),
@@ -431,8 +437,11 @@ const sanitizeContextPanelTabs = (tabs: unknown): ContextPanelTab[] => {
 
     // Legacy 'preview' tabs are converted to 'browser' by the v14 migration;
     // anything still carrying an unknown mode here is discarded rather than
-    // resurrected into a tab the panel cannot render.
-    if (candidate.mode !== 'diff' && candidate.mode !== 'walkthrough' && candidate.mode !== 'file' && candidate.mode !== 'context' && candidate.mode !== 'plan' && candidate.mode !== 'chat' && candidate.mode !== 'browser' && candidate.mode !== 'git' && candidate.mode !== 'pr' && candidate.mode !== 'linear' && candidate.mode !== 'notes' && candidate.mode !== 'terminal') {
+    // resurrected into a tab the panel cannot render. The check is derived from
+    // the schema instead of a hand-written list: a mode missing from such a list
+    // is dropped on every re-sanitize, which silently erased older preview tabs
+    // the moment a second one was opened.
+    if (!isContextPanelMode(candidate.mode)) {
       continue;
     }
 
@@ -990,6 +999,7 @@ interface UIStore {
   openContextDiff: (directory: string, filePath: string, staged?: boolean, scope?: PendingDiffScope | null) => void;
   openContextFile: (directory: string, filePath: string) => void;
   openContextFileAtLine: (directory: string, filePath: string, line: number, column?: number) => void;
+  openContextDocument: (directory: string, filePath: string) => void;
   openContextOverview: (directory: string) => void;
   openContextPreview: (directory: string, url: string) => void;
   openContextBrowser: (directory: string, url?: string, options?: { reveal?: boolean }) => void;
@@ -1511,6 +1521,23 @@ export const useUIStore = create<UIStore>()(
           }
 
           get().openContextPanelTab(normalizedDirectory, { mode: 'context' });
+        },
+
+        // Document previews are per-file tabs: the dedupe key is the path, so
+        // clicking the same document twice focuses its tab instead of stacking
+        // duplicates, while different documents stay open side by side.
+        openContextDocument: (directory, filePath) => {
+          const normalizedDirectory = normalizeDirectoryPath((directory || '').trim());
+          const normalizedFilePath = normalizeContextTargetPath(filePath);
+          if (!normalizedDirectory || !normalizedFilePath) {
+            return;
+          }
+
+          get().openContextPanelTab(normalizedDirectory, {
+            mode: 'doc',
+            targetPath: normalizedFilePath,
+            dedupeKey: normalizedFilePath,
+          });
         },
 
         openContextPreview: (directory, url) => {

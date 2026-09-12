@@ -442,6 +442,52 @@ const resolveReadPathFromContext = async ({ req, targetPath, scope, resolveProje
   });
 };
 
+/**
+ * The managed chats root: relocatable through OPENCHAMBER_CHATS_DIR, otherwise
+ * a sibling of the config root.
+ */
+export const resolveChatsRoot = ({ path, openchamberUserConfigRoot, managedChatsRoot }) => (
+  typeof managedChatsRoot === 'string' && managedChatsRoot.trim()
+    ? path.resolve(managedChatsRoot.trim())
+    : path.join(openchamberUserConfigRoot, 'chats')
+);
+
+/**
+ * Roots that stay readable even outside the active workspace: the OpenChamber
+ * config root and the (possibly relocated) managed chats root.
+ */
+export const resolveManagedRoots = ({ path, openchamberUserConfigRoot, managedChatsRoot }) => [
+  path.resolve(openchamberUserConfigRoot),
+  resolveChatsRoot({ path, openchamberUserConfigRoot, managedChatsRoot }),
+];
+
+/**
+ * Reusable workspace-confinement resolver. Feature routes that need to read a
+ * user-supplied path (document preview, and anything added later) should use
+ * this instead of re-implementing the rules, so that "which paths may this
+ * request read" has exactly one definition.
+ */
+export const createReadPathResolver = ({
+  path,
+  os,
+  fsPromises,
+  normalizeDirectoryPath,
+  resolveProjectDirectory,
+  openchamberUserConfigRoot,
+  managedChatsRoot,
+}) => {
+  const managedRoots = resolveManagedRoots({ path, openchamberUserConfigRoot, managedChatsRoot });
+  return (args) => resolveReadPathFromContext({
+    ...args,
+    path,
+    os,
+    fsPromises,
+    normalizeDirectoryPath,
+    resolveProjectDirectory,
+    managedRoots,
+  });
+};
+
 const runCommandInDirectory = ({ shell, shellFlag, command, resolvedCwd, spawn, buildAugmentedPath, commandTimeoutMs }) => {
   return new Promise((resolve) => {
     let stdout = '';
@@ -528,10 +574,8 @@ export const registerFsRoutes = (app, dependencies) => {
   } = dependencies;
   // Chat worktrees may live outside every project workspace; both managed
   // roots stay valid filesystem targets.
-  const chatsRoot = typeof managedChatsRoot === 'string' && managedChatsRoot.trim()
-    ? path.resolve(managedChatsRoot.trim())
-    : path.join(openchamberUserConfigRoot, 'chats');
-  const managedRoots = [path.resolve(openchamberUserConfigRoot), chatsRoot];
+  const chatsRoot = resolveChatsRoot({ path, openchamberUserConfigRoot, managedChatsRoot });
+  const managedRoots = resolveManagedRoots({ path, openchamberUserConfigRoot, managedChatsRoot });
   const realpathCache = createRealpathCache({
     realpath: fsPromises.realpath.bind(fsPromises),
   });

@@ -20,6 +20,9 @@ const GitView = lazyWithChunkRecovery(() => import('@/components/views/GitView')
 // users never render this panel; keep it out of the main bundle.
 const LinearIssuesView = lazyWithChunkRecovery(() => import('@/components/views/LinearIssuesView').then((m) => ({ default: m.LinearIssuesView })));
 const PlanView = lazyWithChunkRecovery(() => import('@/components/views/PlanView').then((m) => ({ default: m.PlanView })));
+// Only mounted for the active document tab, so the editor bundle stays out of
+// the startup graph until someone actually previews a document.
+const DocumentPreviewView = lazyWithChunkRecovery(() => import('@/components/views/documents/DocumentPreviewView').then((m) => ({ default: m.DocumentPreviewView })));
 import { ProjectContextPanel } from './RightSidebarTabs';
 import { SidebarFilesTree } from './SidebarFilesTree';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
@@ -116,6 +119,7 @@ const getModeLabel = (
 ): string => {
   if (mode === 'chat') return t('contextPanel.mode.chat');
   if (mode === 'file') return t('contextPanel.mode.files');
+  if (mode === 'doc') return t('contextPanel.mode.doc');
   if (mode === 'diff') return t('contextPanel.mode.diff');
   if (mode === 'walkthrough') return t('contextPanel.mode.walkthrough');
   if (mode === 'plan') return t('contextPanel.mode.plan');
@@ -184,6 +188,10 @@ const getTabLabel = (
     return getFileNameFromPath(tab.targetPath) || t('contextPanel.mode.files');
   }
 
+  if (tab.mode === 'doc') {
+    return getFileNameFromPath(tab.targetPath) || t('contextPanel.mode.doc');
+  }
+
   if (tab.mode === 'diff') {
     return t('contextPanel.mode.diff');
   }
@@ -199,6 +207,12 @@ const getTabIcon = (
     return tab.targetPath
       ? <FileTypeIcon filePath={tab.targetPath} className="h-3.5 w-3.5" />
       : undefined;
+  }
+
+  if (tab.mode === 'doc') {
+    return tab.targetPath
+      ? <FileTypeIcon filePath={tab.targetPath} className="h-3.5 w-3.5" />
+      : <Icon name="file-text" className="h-3.5 w-3.5" />;
   }
 
   if (tab.mode === 'diff') {
@@ -934,7 +948,7 @@ export const ContextPanel: React.FC = () => {
   // The rail switches between surfaces (modes); the in-panel strip only lists
   // instances of the active multi-instance surface (open files, split chats,
   // browser targets).
-  const isMultiInstanceMode = activeTab?.mode === 'file' || activeTab?.mode === 'chat' || activeTab?.mode === 'browser';
+  const isMultiInstanceMode = activeTab?.mode === 'file' || activeTab?.mode === 'chat' || activeTab?.mode === 'browser' || activeTab?.mode === 'doc';
   const activeModeTabs = React.useMemo(
     () => (activeTab ? tabs.filter((tab) => tab.mode === activeTab.mode) : []),
     [activeTab, tabs],
@@ -983,6 +997,13 @@ export const ContextPanel: React.FC = () => {
   const terminalTab = React.useMemo(
     () => tabs.find((tab) => tab.mode === 'terminal') ?? null,
     [tabs],
+  );
+  // Document previews render one editor at a time: the document server keeps a
+  // converted copy per document, but every mounted editor costs it memory, so a
+  // background tab is torn down and re-created on switch instead of staying hot.
+  const activeDocumentTab = React.useMemo(
+    () => (activeTab?.mode === 'doc' ? activeTab : null),
+    [activeTab],
   );
   // Keep-alive: the walkthrough holds reading progress and scroll position that
   // a remount would silently throw away.
@@ -1307,7 +1328,19 @@ export const ContextPanel: React.FC = () => {
             </React.Suspense>
           </div>
         ) : null}
-        {activeTab?.mode !== 'chat' && !isFileTabActive && activeTab?.mode !== 'browser' && activeTab?.mode !== 'diff' && activeTab?.mode !== 'terminal' && activeTab?.mode !== 'walkthrough' ? activeNonChatContent : null}
+        {activeDocumentTab?.targetPath ? (
+          <div className="absolute inset-0">
+            <React.Suspense fallback={null}>
+              <DocumentPreviewView
+                key={activeDocumentTab.id}
+                filePath={activeDocumentTab.targetPath}
+                directory={directoryKey}
+                visible={isOpen}
+              />
+            </React.Suspense>
+          </div>
+        ) : null}
+        {activeTab?.mode !== 'chat' && !isFileTabActive && activeTab?.mode !== 'browser' && activeTab?.mode !== 'diff' && activeTab?.mode !== 'terminal' && activeTab?.mode !== 'walkthrough' && activeTab?.mode !== 'doc' ? activeNonChatContent : null}
       </div>
       </div>
     </aside>

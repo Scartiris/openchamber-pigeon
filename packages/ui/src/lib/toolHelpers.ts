@@ -719,6 +719,40 @@ export function isPdfFile(filePath: string): boolean {
   return ext === 'pdf';
 }
 
+/** How the document preview surface renders a file. */
+export type DocumentPreviewKind = 'pdf' | 'word' | 'cell' | 'slide';
+
+/**
+ * Files the preview panel can render. Office and OpenDocument formats go
+ * through the OnlyOffice document server; PDF stays on the browser's native
+ * viewer, which needs no conversion and no server round trip.
+ */
+const DOCUMENT_PREVIEW_EXTENSIONS: Record<string, DocumentPreviewKind> = {
+  pdf: 'pdf',
+  docx: 'word',
+  docm: 'word',
+  doc: 'word',
+  odt: 'word',
+  rtf: 'word',
+  xlsx: 'cell',
+  xlsm: 'cell',
+  xls: 'cell',
+  ods: 'cell',
+  csv: 'cell',
+  pptx: 'slide',
+  pptm: 'slide',
+  ppt: 'slide',
+  odp: 'slide',
+};
+
+export function getDocumentPreviewKind(filePath: string): DocumentPreviewKind | null {
+  return DOCUMENT_PREVIEW_EXTENSIONS[getFileExtension(filePath)] ?? null;
+}
+
+export function isDocumentPreviewable(filePath: string): boolean {
+  return getDocumentPreviewKind(filePath) !== null;
+}
+
 export function isSvgFile(filePath: string): boolean {
   return filePath.toLowerCase().endsWith('.svg');
 }

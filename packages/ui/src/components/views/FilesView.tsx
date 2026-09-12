@@ -50,7 +50,7 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useFileSearchStore } from '@/stores/useFileSearchStore';
 import { useDeviceInfo } from '@/lib/device';
 import { cn, getRevealLabelKey } from '@/lib/utils';
-import { getLanguageFromExtension, getImageMimeType, isBinaryFile, isDrawioFile, isImageFile, isPdfFile, isSvgFile, looksLikeBinaryText } from '@/lib/toolHelpers';
+import { getLanguageFromExtension, getImageMimeType, isBinaryFile, isDocumentPreviewable, isDrawioFile, isImageFile, isPdfFile, isSvgFile, looksLikeBinaryText } from '@/lib/toolHelpers';
 import { shouldAllowFileDraftSave, shouldScheduleFileAutosave } from '@/lib/fileEditorAutosave';
 import { LARGE_FILE_CHAR_THRESHOLD, initialFileTextMode, makeFileContentCacheKey, prepareFileEditorContent, serializeEditorContent, type FileLineEnding } from './fileEditorContent';
 import { getRuntimeUrlResolver } from '@/lib/runtime-url';
@@ -3935,6 +3935,17 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full', visible = t
             <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
               <div className="typography-ui-header text-foreground">{t('filesView.editor.cannotPreviewBinary')}</div>
               <div className="max-w-md typography-ui text-muted-foreground">{t('filesView.editor.binaryFileDescription')}</div>
+              {isDocumentPreviewable(selectedFile.path) ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => useUIStore.getState().openContextDocument(root, selectedFile.path)}
+                >
+                  <Icon name="file-text" className="mr-2 size-4" />
+                  {t('filesView.actions.openDocumentPreview')}
+                </Button>
+              ) : null}
               {files.downloadFile ? (
                 <Button
                   type="button"
@@ -4354,6 +4365,17 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full', visible = t
             <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
               <div className="typography-ui-header text-foreground">{t('filesView.editor.cannotPreviewBinary')}</div>
               <div className="max-w-md typography-ui text-muted-foreground">{t('filesView.editor.binaryFileDescription')}</div>
+              {isDocumentPreviewable(selectedFile.path) ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => useUIStore.getState().openContextDocument(root, selectedFile.path)}
+                >
+                  <Icon name="file-text" className="mr-2 size-4" />
+                  {t('filesView.actions.openDocumentPreview')}
+                </Button>
+              ) : null}
               {files.downloadFile ? (
                 <Button
                   type="button"

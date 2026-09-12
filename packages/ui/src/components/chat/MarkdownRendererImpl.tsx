@@ -50,6 +50,7 @@ import {
   type ParsedFileReference,
 } from './fileReferenceParser';
 import { fileReferenceExists } from './fileReferenceStat';
+import { isDocumentPreviewable } from '@/lib/toolHelpers';
 import { streamPerfCount, streamPerfObserve } from '@/stores/utils/streamDebug';
 import { detachedMarkdownDomCache, type DetachedMarkdownDomKey } from './markdown/detachedMarkdownDomCache';
 import { TimelineRevealGateContext } from './timelineRevealGate';
@@ -340,12 +341,15 @@ const useFileReferenceInteractions = ({
   editor,
   preferRuntimeEditor,
   enabled,
+  documentPreviewTitle,
 }: {
   containerRef: React.RefObject<HTMLDivElement | null>;
   effectiveDirectory: string;
   editor?: EditorAPI;
   preferRuntimeEditor?: boolean;
   enabled: boolean;
+  /** Tooltip for paths that open in the document preview instead of the editor. */
+  documentPreviewTitle: string;
 }) => {
   const annotationDebounceRef = React.useRef<number | null>(null);
 
@@ -373,7 +377,8 @@ const useFileReferenceInteractions = ({
       candidate.removeAttribute('data-openchamber-file-link');
       candidate.removeAttribute('data-openchamber-file-ref');
       candidate.removeAttribute('data-openchamber-file-path');
-      if (candidate.getAttribute('title') === 'Open file') {
+      candidate.removeAttribute('data-openchamber-doc-link');
+      if (candidate.getAttribute('title') === 'Open file' || candidate.getAttribute('title') === documentPreviewTitle) {
         candidate.removeAttribute('title');
       }
       if (candidate.tagName.toLowerCase() !== 'a') {
@@ -468,10 +473,17 @@ const useFileReferenceInteractions = ({
             return;
           }
 
+          // Documents the preview surface can render (pdf/office) open there
+          // instead of the text editor, which would reject them as binary.
+          const previewableDocument = isDocumentPreviewable(latestResolved.resolvedPath);
+
           candidate.setAttribute('data-openchamber-file-link', 'true');
           candidate.setAttribute('data-openchamber-file-ref', latestRawCandidate);
           candidate.setAttribute('data-openchamber-file-path', latestResolved.resolvedPath);
-          candidate.setAttribute('title', 'Open file');
+          if (previewableDocument) {
+            candidate.setAttribute('data-openchamber-doc-link', 'true');
+          }
+          candidate.setAttribute('title', previewableDocument ? documentPreviewTitle : 'Open file');
           if (candidate.tagName.toLowerCase() !== 'a') {
             candidate.setAttribute('role', 'button');
             candidate.setAttribute('tabindex', '0');
@@ -488,6 +500,13 @@ const useFileReferenceInteractions = ({
       }
 
       const contextDirectory = getContextDirectory(effectiveDirectory, resolved.resolvedPath);
+      // Previewable documents go to the right-hand document preview surface in
+      // every runtime — the text editor cannot render them.
+      if (isDocumentPreviewable(resolved.resolvedPath)) {
+        useUIStore.getState().openContextDocument(contextDirectory, resolved.resolvedPath);
+        return;
+      }
+
       if (preferRuntimeEditor && editor) {
         void editor.openFile(
           resolved.resolvedPath,
@@ -581,7 +600,7 @@ const useFileReferenceInteractions = ({
       container.removeEventListener('click', handleClick);
       container.removeEventListener('keydown', handleKeyDown);
     };
-  }, [containerRef, editor, effectiveDirectory, preferRuntimeEditor, enabled]);
+  }, [containerRef, editor, effectiveDirectory, preferRuntimeEditor, enabled, documentPreviewTitle]);
 };
 
 const useMermaidInlineInteractions = ({
@@ -1187,6 +1206,7 @@ const MarkdownRendererImpl: React.FC<MarkdownRendererProps> = ({
   const { editor, runtime } = useRuntimeAPIs();
   const containerRef = React.useRef<HTMLDivElement>(null);
   const effectiveDirectory = useEffectiveDirectory() ?? '';
+  const { t } = useI18n();
   const openContextPreview = useUIStore((state) => state.openContextPreview);
 
   const handlePreviewLoopback = React.useCallback((url: string) => {
@@ -1208,6 +1228,7 @@ const MarkdownRendererImpl: React.FC<MarkdownRendererProps> = ({
     editor,
     preferRuntimeEditor: runtime.isVSCode,
     enabled: enableFileReferences && !isStreaming,
+    documentPreviewTitle: t('chat.fileLink.previewTitle'),
   });
   useLinkInteractions({ containerRef });
 
@@ -1311,6 +1332,7 @@ const SimpleMarkdownRendererImpl: React.FC<{
   const currentTheme = useCurrentMermaidTheme();
   const containerRef = React.useRef<HTMLDivElement>(null);
   const effectiveDirectory = useEffectiveDirectory() ?? '';
+  const { t } = useI18n();
 
   const renderedContent = React.useMemo(
     () => (stripFrontmatter ? stripLeadingFrontmatter(content) : content),
@@ -1330,6 +1352,7 @@ const SimpleMarkdownRendererImpl: React.FC<{
     editor,
     preferRuntimeEditor: runtime.isVSCode,
     enabled: enableFileReferences,
+    documentPreviewTitle: t('chat.fileLink.previewTitle'),
   });
   useLinkInteractions({ containerRef, enabled: !disableLinkSafety });
 

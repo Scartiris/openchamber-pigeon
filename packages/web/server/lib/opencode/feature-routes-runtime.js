@@ -1,4 +1,6 @@
-import { registerFsRoutes } from '../fs/routes.js';
+import { createReadPathResolver, registerFsRoutes } from '../fs/routes.js';
+import { registerDocPreviewRoutes } from '../doc-preview/routes.js';
+import { createDocPreviewRuntime } from '../doc-preview/runtime.js';
 import { registerQuotaRoutes } from '../quota/routes.js';
 import { registerSmallModelRoutes } from '../small-model/routes.js';
 import { registerWalkthroughRoutes } from '../walkthrough/routes.js';
@@ -350,6 +352,30 @@ export const createFeatureRoutesRuntime = (dependencies) => {
       resolveGitBinaryForSpawn,
       openchamberUserConfigRoot,
       managedChatsRoot,
+    });
+
+    // Optional document preview surface. It shares the filesystem route's
+    // workspace confinement rules and stays inert unless a document server is
+    // configured through the environment.
+    registerDocPreviewRoutes(app, {
+      crypto,
+      fsPromises,
+      path,
+      docPreviewRuntime: createDocPreviewRuntime({
+        crypto,
+        fsPromises,
+        path,
+        openchamberDataDir,
+      }),
+      resolveReadPathFromContext: createReadPathResolver({
+        path,
+        os,
+        fsPromises,
+        normalizeDirectoryPath,
+        resolveProjectDirectory,
+        openchamberUserConfigRoot,
+        managedChatsRoot,
+      }),
     });
   };
 

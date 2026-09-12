@@ -4,6 +4,7 @@ import type { ContextPanelMode } from '@/stores/useUIStore';
 
 export type ContextSurfaceId =
   | 'editor'
+  | 'doc'
   | 'git'
   | 'pr'
   | 'linear'
@@ -101,6 +102,17 @@ export const CONTEXT_SURFACES: readonly ContextSurfaceDescriptor[] = [
     icon: 'file-edit',
     labelKey: 'contextPanel.mode.files',
     availability: 'always',
+  },
+  {
+    // Document previews are content-driven: the rail icon appears once a
+    // document tab exists, so an empty preview surface is never offered.
+    id: 'doc',
+    descriptionKey: 'contextRail.surface.doc.description',
+    defaultWidthFraction: 3 / 5,
+    mode: 'doc',
+    icon: 'file-text',
+    labelKey: 'contextPanel.mode.doc',
+    availability: 'has-content',
   },
   {
     id: 'terminal',

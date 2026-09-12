@@ -1217,6 +1217,9 @@ export const dict = {
   'contextPanel.mode.context': 'Context',
   'contextPanel.mode.preview': 'Preview',
   'contextPanel.mode.browser': 'Browser',
+  // Document preview
+  'contextPanel.mode.doc': 'Document',
+  'contextRail.surface.doc.description': 'Preview Word, Excel, PowerPoint and PDF documents',
   'contextRail.configure.open': 'Configure panels',
   'contextRail.configure.dialogTitle': 'Rail panels',
   'contextRail.configure.dialogDescription': 'Choose which panels the rail shows. Hidden panels keep their data and stay reachable from the command palette.',
@@ -3370,6 +3373,21 @@ export const dict = {
   'settings.mcp.page.connection.kindLink': 'Link',
   'settings.mcp.page.connection.hintCommand': 'Runs on this machine. Paste a whole command and it is split into one argument per line.',
   'settings.mcp.page.connection.hintLink': 'Connects to a server someone else hosts. Paste its https address.',
+  // Document preview
+  'documentPreview.actions.download': 'Download original',
+  'documentPreview.actions.fullscreen': 'Fullscreen',
+  'documentPreview.actions.exitFullscreen': 'Exit fullscreen',
+  'documentPreview.actions.reload': 'Reload',
+  'documentPreview.actions.copyPath': 'Copy path',
+  'documentPreview.actions.openInEditor': 'Open as text',
+  'documentPreview.state.loading': 'Loading preview…',
+  'documentPreview.error.notConfigured': 'Document preview is not configured on this server.',
+  'documentPreview.error.unavailable': 'The document server is unavailable. You can still download the original.',
+  'documentPreview.error.failed': 'Could not open this document.',
+  'documentPreview.error.tooLarge': 'This file is too large to preview.',
+  'documentPreview.error.unsupported': 'This file type cannot be previewed.',
+  'chat.fileLink.previewTitle': 'Click to preview',
+  'filesView.actions.openDocumentPreview': 'Open document preview',
 } as const;
 
 export type I18nKey = keyof typeof dict;
