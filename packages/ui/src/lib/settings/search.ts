@@ -72,8 +72,32 @@ const SETTINGS_SEARCH_ITEMS: readonly SettingsSearchItem[] = [
     isAvailable: (ctx) => !ctx.isVSCode,
   },
   {
-    id: 'appearance.dock-badge',
+    id: 'appearance.chat-backdrop',
     page: 'appearance',
+    titleKey: 'settings.openchamber.visual.field.chatBackdropEnabled',
+    descriptionKey: 'settings.openchamber.visual.field.chatBackdropEnabledHint',
+    keywords: ['wallpaper', 'backdrop', 'background', 'video', 'anime', 'night', '背景', '壁纸', '动态'],
+  },
+  {
+    id: 'appearance.chat-backdrop-intensity',
+    page: 'appearance',
+    titleKey: 'settings.openchamber.visual.field.chatBackdropIntensity',
+    keywords: ['wallpaper', 'backdrop', 'background', 'intensity', 'opacity', '强度', '背景'],
+  },
+  {
+    id: 'appearance.chat-backdrop-scrim',
+    page: 'appearance',
+    titleKey: 'settings.openchamber.visual.field.chatBackdropScrim',
+    keywords: ['wallpaper', 'backdrop', 'scrim', 'dim', 'contrast', 'veil', '遮罩', '背景'],
+  },
+  {
+    id: 'appearance.chat-backdrop-motion',
+    page: 'appearance',
+    titleKey: 'settings.openchamber.visual.field.chatBackdropMotion',
+    keywords: ['wallpaper', 'backdrop', 'motion', 'breathing', 'animation', '呼吸', '动效'],
+  },
+  {
+    id: 'appearance.dock-badge',    page: 'appearance',
     titleKey: 'settings.openchamber.visual.field.dockBadge',
     descriptionKey: 'settings.openchamber.visual.field.dockBadgeHint',
     keywords: ['dock', 'badge', 'unread', 'unseen', 'counter', 'count', 'notification', 'macos'],

@@ -1,0 +1,177 @@
+{
+  "metadata": {
+    "id": "pigeon-nightcity-dark",
+    "name": "Pigeon Night City",
+    "description": "Sampled from the chat backdrop: deep indigo sky, warm city lights and the cyan rim light on the subject. Made to sit in front of the video.",
+    "author": "Pigeon",
+    "version": "1.0.0",
+    "variant": "dark",
+    "tags": [
+      "dark",
+      "blue",
+      "night",
+      "anime",
+      "pigeon"
+    ]
+  },
+  "colors": {
+    "primary": {
+      "base": "#efb45f",
+      "hover": "#f7c377",
+      "active": "#ffd08f",
+      "foreground": "#160f04",
+      "muted": "#efb45f80",
+      "emphasis": "#ffd08f"
+    },
+    "surface": {
+      "background": "#0a0820",
+      "foreground": "#d9dcf4",
+      "muted": "#0e0c2a",
+      "mutedForeground": "#8d93bd",
+      "elevated": "#12102f",
+      "elevatedForeground": "#d9dcf4",
+      "overlay": "#04030f99",
+      "subtle": "#0f0d27"
+    },
+    "interactive": {
+      "border": "#262450",
+      "borderHover": "#4a4880",
+      "borderFocus": "#efb45f",
+      "selection": "#5a6ae02b",
+      "selectionForeground": "#e6e8fb",
+      "focus": "#efb45f",
+      "focusRing": "#efb45f55",
+      "cursor": "#d9dcf4",
+      "hover": "#ffffff12",
+      "active": "#ffffff1f"
+    },
+    "status": {
+      "error": "#e4645f",
+      "errorForeground": "#160406",
+      "errorBackground": "#e4645f20",
+      "errorBorder": "#e4645f50",
+      "warning": "#e0a13c",
+      "warningForeground": "#160f04",
+      "warningBackground": "#e0a13c20",
+      "warningBorder": "#e0a13c50",
+      "success": "#6fbf8f",
+      "successForeground": "#04160c",
+      "successBackground": "#6fbf8f20",
+      "successBorder": "#6fbf8f50",
+      "info": "#5aa9e6",
+      "infoForeground": "#040d16",
+      "infoBackground": "#5aa9e620",
+      "infoBorder": "#5aa9e650"
+    },
+    "pr": {
+      "open": "#7fbf6a",
+      "draft": "#8d93bd",
+      "blocked": "#e0a13c",
+      "merged": "#b39bf5",
+      "closed": "#e4645f"
+    },
+    "syntax": {
+      "base": {
+        "background": "#0a0820",
+        "foreground": "#d9dcf4",
+        "comment": "#5c6693",
+        "keyword": "#b39bf5",
+        "string": "#f2a97e",
+        "number": "#7fd6e6",
+        "function": "#8cc8ff",
+        "variable": "#e9c489",
+        "type": "#62c6da",
+        "operator": "#ef92b5"
+      },
+      "tokens": {
+        "commentDoc": "#6a739e",
+        "stringEscape": "#f6e2c8",
+        "keywordImport": "#ef92b5",
+        "storageModifier": "#b39bf5",
+        "functionCall": "#8cc8ff",
+        "method": "#8cc8ff",
+        "variableProperty": "#dcc27f",
+        "variableOther": "#e9c489",
+        "variableGlobal": "#f2a97e",
+        "variableLocal": "#141230",
+        "parameter": "#f6e2c8",
+        "constant": "#7fd6e6",
+        "class": "#8f9bf0",
+        "className": "#8f9bf0",
+        "interface": "#62c6da",
+        "struct": "#8f9bf0",
+        "enum": "#8f9bf0",
+        "typeParameter": "#62c6da",
+        "namespace": "#62c6da",
+        "module": "#ef92b5",
+        "tag": "#b39bf5",
+        "jsxTag": "#b39bf5",
+        "tagAttribute": "#dcc27f",
+        "tagAttributeValue": "#f2a97e",
+        "boolean": "#b39bf5",
+        "decorator": "#8cc8ff",
+        "label": "#ef92b5",
+        "punctuation": "#8b90b8",
+        "macro": "#b39bf5",
+        "preprocessor": "#ef92b5",
+        "regex": "#f2a97e",
+        "url": "#f2a97e",
+        "key": "#dcc27f",
+        "exception": "#ef92b5"
+      },
+      "highlights": {
+        "diffAdded": "#5aa87a",
+        "diffAddedBackground": "#5aa87a20",
+        "diffRemoved": "#d9787f",
+        "diffRemovedBackground": "#d9787f20",
+        "diffModified": "#6fa8dc",
+        "diffModifiedBackground": "#6fa8dc20",
+        "lineNumber": "#2c2a55",
+        "lineNumberActive": "#d9dcf4"
+      }
+    },
+    "markdown": {
+      "heading1": "#d9dcf4",
+      "heading2": "#d9dcf4",
+      "heading3": "#d9dcf4",
+      "heading4": "#d9dcf4",
+      "link": "#8cc8ff",
+      "linkHover": "#a6d8ff",
+      "inlineCode": "#7fd6e6",
+      "inlineCodeBackground": "#141233",
+      "blockquote": "#8d93bd",
+      "blockquoteBorder": "#2c2a55",
+      "listMarker": "#efb45f99"
+    },
+    "chat": {
+      "userMessage": "#d9dcf4",
+      "userMessageBackground": "#191549",
+      "assistantMessage": "#d9dcf4",
+      "assistantMessageBackground": "#0a0820",
+      "timestamp": "#8d93bd",
+      "divider": "#2c2a55"
+    },
+    "tools": {
+      "background": "#0e0c2a80",
+      "border": "#2c2a5599",
+      "headerHover": "#ffffff0d",
+      "icon": "#b3b8d8",
+      "title": "#d9dcf4",
+      "description": "#9aa0c4",
+      "edit": {
+        "added": "#5aa87a",
+        "addedBackground": "#5aa87a25",
+        "removed": "#d9787f",
+        "removedBackground": "#d9787f25",
+        "lineNumber": "#2c2a55"
+      }
+    }
+  },
+  "config": {
+    "transitions": {
+      "fast": "150ms ease",
+      "normal": "250ms ease",
+      "slow": "350ms ease"
+    }
+  }
+}

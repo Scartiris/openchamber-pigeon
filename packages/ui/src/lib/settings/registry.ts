@@ -20,6 +20,12 @@
 import type { ProjectEntry, TerminalShell } from '@/lib/api/types';
 import type { DesktopWindowControlsPosition, DesktopWindowControlsStyle } from '@/lib/desktop';
 import { getDirectoryShowHidden, setDirectoryShowHidden } from '@/lib/directoryShowHidden';
+import {
+  CHAT_BACKDROP_INTENSITY_MAX,
+  CHAT_BACKDROP_INTENSITY_MIN,
+  CHAT_BACKDROP_SCRIM_MAX,
+  CHAT_BACKDROP_SCRIM_MIN,
+} from '@/lib/chatBackdrop';
 import type { DraftStarterRef } from '@/lib/draftStarters';
 import { sanitizeStarterRefs } from '@/lib/draftStarters';
 import { getFilesViewShowGitignored, setFilesViewShowGitignored } from '@/lib/filesViewShowGitignored';
@@ -213,6 +219,28 @@ export const SETTINGS_REGISTRY = {
   themeVariant: field({ scope: 'profile', derived: true, parse: parseOneOf(['light', 'dark']) }),
   lightThemeId: field({ scope: 'profile', perSurface: true, parse: parseNonEmptyString }),
   darkThemeId: field({ scope: 'profile', perSurface: true, parse: parseNonEmptyString }),
+
+  // ── Chat backdrop (profile: a taste about the room, not about the machine) ──
+  chatBackdropEnabled: field({
+    scope: 'profile',
+    parse: parseBoolean,
+    ui: uiStore('chatBackdropEnabled', (value) => useUIStore.getState().setChatBackdropEnabled(value)),
+  }),
+  chatBackdropIntensity: field({
+    scope: 'profile',
+    parse: parseIntegerInRange(CHAT_BACKDROP_INTENSITY_MIN, CHAT_BACKDROP_INTENSITY_MAX),
+    ui: uiStore('chatBackdropIntensity', (value) => useUIStore.getState().setChatBackdropIntensity(value)),
+  }),
+  chatBackdropScrim: field({
+    scope: 'profile',
+    parse: parseIntegerInRange(CHAT_BACKDROP_SCRIM_MIN, CHAT_BACKDROP_SCRIM_MAX),
+    ui: uiStore('chatBackdropScrim', (value) => useUIStore.getState().setChatBackdropScrim(value)),
+  }),
+  chatBackdropMotion: field({
+    scope: 'profile',
+    parse: parseBoolean,
+    ui: uiStore('chatBackdropMotion', (value) => useUIStore.getState().setChatBackdropMotion(value)),
+  }),
 
   // ── Workspace pointers and instance facts ──
   lastDirectory: field({ scope: 'instance', adopt: 'bootstrap-only', parse: parseNonEmptyString }),

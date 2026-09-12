@@ -87,6 +87,7 @@ import { resolveChatPromptReadOnly } from './chatPromptReadOnly';
 import { getRuntimeKey } from '@/lib/runtime-switch';
 import { createFirstVisibleSessionPerformanceTracker } from '@/sync/session-load-performance';
 import { isChatDirectoryPath } from '@/lib/chatDirectories';
+import { ChatBackdrop, useChatBackdrop } from './ChatBackdrop';
 
 const EMPTY_MESSAGES: Array<{ info: Message; parts: Part[] }> = [];
 const IDLE_SESSION_STATUS = { type: 'idle' as const };
@@ -942,6 +943,14 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
     }, [currentSessionId, sessionMessageLoadState.complete, sessionMessageLoadState.cursor, sessionMessageLoadState.status, sessionMessages.length]);
 
     const { isMobile } = useDeviceInfo();
+    // Pigeon: the video backdrop is a desktop reading surface — on a phone the
+    // footage would eat the screen it is meant to sit behind. The setting is
+    // left untouched, so the same profile on a desktop still gets it.
+    const chatBackdrop = useChatBackdrop();
+    const showChatBackdrop = chatBackdrop.enabled && !isMobile;
+    // The class drives the translucency, so it must follow what actually
+    // renders; otherwise a phone gets see-through surfaces over nothing.
+    const chatBackdropRootClassName = showChatBackdrop ? chatBackdrop.rootClassName : '';
     const isVSCode = isVSCodeRuntime();
     const chatSurfaceMode = useChatSurfaceMode();
     const draftOpen = Boolean(newSessionDraft?.open);
@@ -1486,10 +1495,21 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
 		// The auto-open effect runs on the next tick. Use a neutral background
 		// until then instead of flashing the standard empty state.
 		if (autoOpenDraft && !initError) {
-			return <div className="flex h-full flex-col bg-background" />;
+			return (
+				<div
+					className={cn('relative isolate flex h-full flex-col oc-chat-surface', chatBackdropRootClassName)}
+					style={chatBackdrop.style}
+				>
+					{showChatBackdrop ? <ChatBackdrop motion={chatBackdrop.motion} /> : null}
+				</div>
+			);
 		}
 		return (
-			<div className="flex flex-col h-full bg-background">
+			<div
+				className={cn('relative isolate flex flex-col h-full oc-chat-surface', chatBackdropRootClassName)}
+				style={chatBackdrop.style}
+			>
+				{showChatBackdrop ? <ChatBackdrop motion={chatBackdrop.motion} /> : null}
 				<ChatEmptyState />
 			</div>
 		);
@@ -1541,7 +1561,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
                     )}
                     aria-hidden={isDesktopExpandedInput}
                 >
-                    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden bg-background pt-6" style={CHAT_SCROLL_STYLE}>
+                    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden oc-chat-surface pt-6" style={CHAT_SCROLL_STYLE}>
                         <div className="space-y-4">
                             {HYDRATING_SKELETON_ITEMS.map((item) => (
                                 <div key={item.id} className="group w-full">
@@ -1624,9 +1644,14 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
     })();
 
 	return (
-		<div ref={workStatusRowRef} className="flex h-full min-h-0 bg-background">
+		<div
+			ref={workStatusRowRef}
+			className={cn('flex h-full min-h-0 bg-background', chatBackdropRootClassName)}
+			style={chatBackdrop.style}
+		>
 		<ChatColumnSessionContext.Provider value={chatColumnSession}>
-		<div data-composer-bound className="relative flex min-w-0 flex-1 flex-col h-full bg-background">
+		<div data-composer-bound className="relative isolate flex min-w-0 flex-1 flex-col h-full oc-chat-surface">
+			{showChatBackdrop ? <ChatBackdrop motion={chatBackdrop.motion} /> : null}
 			{returnToParentButton}
 			{sessionSurface}
 
@@ -1638,10 +1663,10 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
                         ? 'absolute inset-x-0 bottom-0'
                         : 'relative',
                     isDesktopExpandedInput
-                        ? 'flex-1 min-h-0 bg-background'
+                        ? 'flex-1 min-h-0 oc-chat-surface'
                         : draftLayoutVisible && !useCompactDraftLayout
-                            ? 'flex-1 items-center justify-center bg-background pb-[6vh]'
-                        : !floatingComposer && 'bg-background'
+                            ? 'flex-1 items-center justify-center oc-chat-surface pb-[6vh]'
+                        : !floatingComposer && 'oc-chat-surface'
                 )}
             >
                 {!draftLayoutVisible && !isDesktopExpandedInput && sessionMessages.length > 0 && (
