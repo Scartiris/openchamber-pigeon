@@ -103,7 +103,7 @@ export const ChatBackdrop = React.memo(({ motion }: ChatBackdropProps) => {
       document.removeEventListener('visibilitychange', syncPlayback);
       video.pause();
     };
-  }, []);
+  }, [reducedMotion]);
 
   return (
     <div className="oc-chat-backdrop" aria-hidden="true">
@@ -123,6 +123,9 @@ export const ChatBackdrop = React.memo(({ motion }: ChatBackdropProps) => {
           muted
           loop
           playsInline
+          // Declarative so a remount while the OS reduced-motion setting flips
+          // starts playing again; the effect above only owns visibility.
+          autoPlay
           preload="auto"
           disablePictureInPicture
         />
