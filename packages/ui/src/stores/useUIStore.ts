@@ -319,6 +319,12 @@ const buildDefaultContextPanelTabDedupeKey = (mode: ContextPanelMode, targetPath
     return targetPath || mode;
   }
 
+  // Documents are per-file tabs too: without this, a caller that omits an
+  // explicit dedupeKey would collapse every document onto the single id `doc`.
+  if (mode === 'doc') {
+    return targetPath || mode;
+  }
+
   return mode;
 };
 
@@ -438,9 +444,9 @@ const sanitizeContextPanelTabs = (tabs: unknown): ContextPanelTab[] => {
     // Legacy 'preview' tabs are converted to 'browser' by the v14 migration;
     // anything still carrying an unknown mode here is discarded rather than
     // resurrected into a tab the panel cannot render. The check is derived from
-    // the schema instead of a hand-written list: a mode missing from such a list
-    // is dropped on every re-sanitize, which silently erased older preview tabs
-    // the moment a second one was opened.
+    // the schema rather than repeated as a hand-written list, so a new mode
+    // cannot be accepted by the schema and then dropped here — which is what
+    // happened to the first version of the document preview mode.
     if (!isContextPanelMode(candidate.mode)) {
       continue;
     }

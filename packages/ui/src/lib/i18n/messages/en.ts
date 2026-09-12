@@ -3378,8 +3378,6 @@ export const dict = {
   'documentPreview.actions.fullscreen': 'Fullscreen',
   'documentPreview.actions.exitFullscreen': 'Exit fullscreen',
   'documentPreview.actions.reload': 'Reload',
-  'documentPreview.actions.copyPath': 'Copy path',
-  'documentPreview.actions.openInEditor': 'Open as text',
   'documentPreview.state.loading': 'Loading preview…',
   'documentPreview.error.notConfigured': 'Document preview is not configured on this server.',
   'documentPreview.error.unavailable': 'The document server is unavailable. You can still download the original.',

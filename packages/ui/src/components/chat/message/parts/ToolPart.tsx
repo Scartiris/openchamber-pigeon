@@ -2117,7 +2117,6 @@ const ToolPartContent: React.FC<ToolPartProps> = ({
         // is kept: the runtime editor, or the files view.
         if (isDocumentPreviewable(absolutePath) && hasContextPanelSurface()) {
             useUIStore.getState().openContextDocument(currentDirectory, absolutePath);
-            mobileActions?.openFiles();
             return;
         }
         if (runtime?.editor) {

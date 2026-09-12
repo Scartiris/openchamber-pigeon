@@ -13,6 +13,7 @@ import {
 } from '@/lib/runtime-auth';
 import { getRuntimeUrlResolver } from '@/lib/runtime-url';
 import { getRuntimeApiBaseUrl } from '@/lib/runtime-switch';
+import { getOutsideFileGrant } from '@/lib/outsideFileGrants';
 import { cn } from '@/lib/utils';
 
 /**
@@ -72,7 +73,7 @@ let editorPlaceholderSeq = 0;
 
 const loadDocsApi = (documentServerUrl: string): Promise<void> => {
   const globalScope = window as unknown as DocsApiGlobal;
-  if (globalScope.DocsAPI) {
+  if (globalScope.DocsAPI?.DocEditor) {
     return Promise.resolve();
   }
   if (!docsApiPromise) {
@@ -80,7 +81,17 @@ const loadDocsApi = (documentServerUrl: string): Promise<void> => {
       const script = document.createElement('script');
       script.src = `${documentServerUrl.replace(/\/+$/, '')}${DOCS_API_PATH}`;
       script.async = true;
-      script.onload = () => resolve();
+      // A 200 that is not the API (a proxy or SPA fallback serving index.html
+      // for an unknown path) would otherwise resolve the promise without
+      // DocsAPI and every later retry would short-circuit on it.
+      script.onload = () => {
+        if ((window as unknown as DocsApiGlobal).DocsAPI?.DocEditor) {
+          resolve();
+          return;
+        }
+        docsApiPromise = null;
+        reject(new Error('The document server API loaded but did not define DocsAPI'));
+      };
       script.onerror = () => {
         docsApiPromise = null;
         reject(new Error('Failed to load the document server API'));
@@ -159,11 +170,23 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
   const [reloadNonce, setReloadNonce] = React.useState(0);
   const placeholderRef = React.useRef<HTMLDivElement | null>(null);
   const editorRef = React.useRef<{ destroyEditor?: () => void } | null>(null);
-  const placeholderIdRef = React.useRef('');
-  if (!placeholderIdRef.current) {
+  const [placeholderId] = React.useState(() => {
     editorPlaceholderSeq += 1;
-    placeholderIdRef.current = `oc-document-preview-${editorPlaceholderSeq}`;
-  }
+    return `oc-document-preview-${editorPlaceholderSeq}`;
+  });
+  // Documents outside the workspace are readable only with a short-lived grant
+  // that whoever opened this tab has already minted (the markdown link handler
+  // on desktop calls ensureOutsideFileGrantForDesktop first). The grant lives in
+  // a path-keyed cache, so it is read here instead of being threaded through the
+  // context-panel tab. Re-read on reload, because grants expire.
+  const outsideFileGrant = React.useMemo(
+    () => getOutsideFileGrant(filePath),
+    [filePath, reloadNonce],
+  );
+  const outsideWorkspaceQuery = React.useMemo(
+    () => (outsideFileGrant ? { allowOutsideWorkspace: 'true', outsideFileGrant } : {}),
+    [outsideFileGrant],
+  );
 
   React.useEffect(() => {
     if (!filePath) {
@@ -181,6 +204,7 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
             path: filePath,
             directory: directory ?? undefined,
             theme: themeVariant,
+            ...outsideWorkspaceQuery,
           },
           cache: 'no-store',
         });
@@ -227,10 +251,15 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [directory, filePath, reloadNonce, themeVariant]);
+  }, [directory, filePath, outsideWorkspaceQuery, reloadNonce, themeVariant]);
 
   React.useEffect(() => {
-    if (state.status !== 'onlyoffice') {
+    // Only the visible tab keeps an editor alive: hiding the panel (or the
+    // surface) destroys it and showing it again recreates it, which keeps one
+    // live editor's worth of memory on the document server instead of one per
+    // open document. Creating an editor into a hidden 0-width placeholder is
+    // also what makes it come back blank after the panel is reopened.
+    if (state.status !== 'onlyoffice' || !visible) {
       return;
     }
 
@@ -248,8 +277,11 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
           return;
         }
 
-        editorRef.current = new DocEditor(placeholderIdRef.current, state.editorConfig);
-      } catch {
+        editorRef.current = new DocEditor(placeholderId, state.editorConfig);
+      } catch (error) {
+        // Swallowing this silently leaves the user with a generic failure and
+        // nothing in the console to diagnose the document server with.
+        console.warn('Failed to start the document editor:', error);
         if (!cancelled) {
           setState({ status: 'error', reason: 'failed' });
         }
@@ -265,18 +297,21 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
       }
       editorRef.current = null;
     };
-  }, [state]);
+  }, [placeholderId, state, visible]);
 
   const isPdf = state.status === 'pdf';
-  const assetReady = useRuntimeAssetReady(isPdf);
+  // The download action has to work for every state, including the error card
+  // that exists precisely to offer the original when the preview cannot render.
+  const assetReady = useRuntimeAssetReady(state.status !== 'loading');
 
   const pdfSrc = React.useMemo(() => {
     if (!isPdf || !assetReady) return '';
     return getRuntimeUrlResolver().authenticatedAsset('/api/fs/raw', {
       path: filePath,
       directory: directory ?? undefined,
+      ...outsideWorkspaceQuery,
     });
-  }, [assetReady, directory, filePath, isPdf]);
+  }, [assetReady, directory, filePath, isPdf, outsideWorkspaceQuery]);
 
   const downloadUrl = React.useMemo(() => {
     if (!assetReady) return '';
@@ -284,8 +319,9 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
       path: filePath,
       directory: directory ?? undefined,
       download: 'true',
+      ...outsideWorkspaceQuery,
     });
-  }, [assetReady, directory, filePath]);
+  }, [assetReady, directory, filePath, outsideWorkspaceQuery]);
 
   const fileName = React.useMemo(() => filePath.split(/[/\\]/).pop() || filePath, [filePath]);
 
@@ -305,6 +341,13 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
     }
     return t('documentPreview.error.failed');
   }, [state, t]);
+
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
+  React.useEffect(() => {
+    const handleChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', handleChange);
+    return () => document.removeEventListener('fullscreenchange', handleChange);
+  }, []);
 
   const handleToggleFullscreen = React.useCallback(() => {
     const element = placeholderRef.current?.parentElement ?? placeholderRef.current;
@@ -356,8 +399,8 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
             size="sm"
             className="h-7 w-7 p-0"
             onClick={handleToggleFullscreen}
-            title={document.fullscreenElement ? t('documentPreview.actions.exitFullscreen') : t('documentPreview.actions.fullscreen')}
-            aria-label={document.fullscreenElement ? t('documentPreview.actions.exitFullscreen') : t('documentPreview.actions.fullscreen')}
+            title={isFullscreen ? t('documentPreview.actions.exitFullscreen') : t('documentPreview.actions.fullscreen')}
+            aria-label={isFullscreen ? t('documentPreview.actions.exitFullscreen') : t('documentPreview.actions.fullscreen')}
           >
             <Icon name="fullscreen" className="h-3.5 w-3.5" />
           </Button>
@@ -407,7 +450,7 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
 
         <div
           ref={placeholderRef}
-          id={placeholderIdRef.current}
+          id={placeholderId}
           className={cn(
             'absolute inset-0 h-full w-full',
             state.status === 'onlyoffice' && visible ? 'block' : 'hidden',

@@ -502,10 +502,18 @@ const useFileReferenceInteractions = ({
       }
 
       const contextDirectory = getContextDirectory(effectiveDirectory, resolved.resolvedPath);
+      const outsideWorkspace = !isFilePathWithinDirectory(resolved.resolvedPath, effectiveDirectory);
+
       // Previewable documents go to the right-hand document preview surface —
       // the text editor cannot render them. Shells without a context panel keep
       // their previous behaviour (the runtime editor, or the file view).
       if (isDocumentPreviewable(resolved.resolvedPath) && hasContextPanelSurface()) {
+        // The surface reads through the same guarded route as the file viewer,
+        // so a document outside the workspace root needs its grant minted
+        // before the tab opens; the surface picks it up from the grant cache.
+        if (outsideWorkspace) {
+          await ensureOutsideFileGrantForDesktop(resolved.resolvedPath, effectiveDirectory);
+        }
         useUIStore.getState().openContextDocument(contextDirectory, resolved.resolvedPath);
         return;
       }
@@ -523,7 +531,7 @@ const useFileReferenceInteractions = ({
         return;
       }
 
-      if (!isFilePathWithinDirectory(resolved.resolvedPath, effectiveDirectory)) {
+      if (outsideWorkspace) {
         await ensureOutsideFileGrantForDesktop(resolved.resolvedPath, effectiveDirectory);
       }
 

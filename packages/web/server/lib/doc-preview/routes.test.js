@@ -302,11 +302,19 @@ describe('GET /api/doc-preview/config', () => {
 });
 
 describe('GET /doc-preview/raw', () => {
-  const mintToken = async ({ filePath, secret = SECRET, exp = Date.now() + 60_000 }) => signRawToken({
-    crypto,
-    secret,
-    payload: { p: filePath, m: 1, s: 1, e: exp },
-  });
+  const mintToken = async ({ filePath, secret = SECRET, exp = Date.now() + 60_000, mtimeMs, size }) => {
+    const stats = await stat(filePath).catch(() => null);
+    return signRawToken({
+      crypto,
+      secret,
+      payload: {
+        p: filePath,
+        m: mtimeMs ?? Math.trunc(stats?.mtimeMs ?? 0),
+        s: size ?? Math.trunc(stats?.size ?? 0),
+        e: exp,
+      },
+    });
+  };
 
   it('rejects missing, tampered and expired tokens', async () => {
     const registry = await setup();
@@ -322,6 +330,18 @@ describe('GET /doc-preview/raw', () => {
     }))).statusCode).toBe(403);
   });
 
+  it('answers not-configured and touches nothing when the sidecar is absent', async () => {
+    const registry = await setup({ env: { OPENCHAMBER_DOC_PREVIEW_JWT_SECRET: '' } });
+    const res = await invoke(
+      registry.getRoute('GET', '/doc-preview/raw'),
+      createRequest({ query: { token: 'garbage' } }),
+    );
+    expect(res.statusCode).toBe(501);
+    // The capability secret must not be created for an unauthenticated request
+    // against a deployment that does not use the feature at all.
+    await expect(stat(path.join(dataDir, 'doc-preview-secret'))).rejects.toThrow();
+  });
+
   it('serves the signed file with preview headers', async () => {
     const registry = await setup();
     const filePath = path.join(workspace, 'report.docx');
@@ -335,6 +355,39 @@ describe('GET /doc-preview/raw', () => {
     expect(res.getHeader('cache-control')).toBe('no-store');
     expect(res.getHeader('x-content-type-options')).toBe('nosniff');
     expect(res.getHeader('content-disposition')).toContain('report.docx');
+  });
+
+  it('refuses a token minted for a different version of the file', async () => {
+    const registry = await setup();
+    const filePath = path.join(workspace, 'report.docx');
+    await writeFile(filePath, 'docx-bytes');
+
+    const staleSize = await invoke(
+      registry.getRoute('GET', '/doc-preview/raw'),
+      createRequest({ query: { token: await mintToken({ filePath, size: 3 }) } }),
+    );
+    expect(staleSize.statusCode).toBe(409);
+
+    const staleMtime = await invoke(
+      registry.getRoute('GET', '/doc-preview/raw'),
+      createRequest({ query: { token: await mintToken({ filePath, mtimeMs: 1 }) } }),
+    );
+    expect(staleMtime.statusCode).toBe(409);
+  });
+
+  // Control characters are legal in POSIX filenames but not on Windows, and the
+  // header-injection risk this guards against only exists where such a file can
+  // be created in the first place.
+  it.skipIf(process.platform === 'win32')('sanitises control characters out of the inline filename', async () => {
+    const registry = await setup();
+    const filePath = path.join(workspace, `odd\u0007.docx`);
+    await writeFile(filePath, 'docx');
+    const res = await invoke(
+      registry.getRoute('GET', '/doc-preview/raw'),
+      createRequest({ query: { token: await mintToken({ filePath }) } }),
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.getHeader('content-disposition')).not.toMatch(/[\u0000-\u001f\u007f]/);
   });
 
   it('refuses a path that no longer realpaths to itself', async () => {

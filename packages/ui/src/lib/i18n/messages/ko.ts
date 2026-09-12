@@ -3378,8 +3378,6 @@ export const dict: Record<I18nKey, string> = {
   'documentPreview.actions.fullscreen': '전체 화면',
   'documentPreview.actions.exitFullscreen': '전체 화면 종료',
   'documentPreview.actions.reload': '새로고침',
-  'documentPreview.actions.copyPath': '경로 복사',
-  'documentPreview.actions.openInEditor': '텍스트로 열기',
   'documentPreview.state.loading': '미리보기 불러오는 중…',
   'documentPreview.error.notConfigured': '이 서버에는 문서 미리보기가 설정되어 있지 않습니다.',
   'documentPreview.error.unavailable': '문서 서버를 사용할 수 없습니다. 원본은 계속 다운로드할 수 있습니다.',

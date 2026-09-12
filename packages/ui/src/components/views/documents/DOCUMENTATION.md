@@ -38,14 +38,20 @@ because the panel is the only host of this surface.
   creating a tab nobody can see. Mobile document preview is a follow-up, not a
   silent dead click.
 - **One live editor at a time.** The context panel mounts only the *active*
-  document tab; switching tabs destroys the previous editor (`destroyEditor()`)
-  and the next switch recreates it from the document server's converted copy.
-  Keeping every open document hot would multiply the document server's memory
-  use by the number of open tabs, which is not affordable on a small host.
+  document tab; switching tabs, switching to another surface (Git and back), or
+  hiding the panel destroys the editor (`destroyEditor()`) and the next visit
+  recreates it from the document server's converted copy. Keeping every open
+  document hot would multiply the document server's memory use by the number of
+  open tabs, which is not affordable on a small host.
 - **Fullscreen is two-level**: the panel's own expand action (header button) and
-  the browser Fullscreen API from this surface's toolbar.
+  the browser Fullscreen API from this surface's toolbar (which fills the editor
+  area, not the whole window).
 - **Download** streams the original bytes from `/api/fs/raw?download=true`; it is
   never a converted copy, so what the user downloads always matches the file.
+- **Documents outside the workspace** are read with the same short-lived grant
+  the file viewer uses: whoever opens the tab mints it first and the surface
+  picks it up from the grant cache (desktop only — the grant flow is a desktop
+  capability).
 - **No editing.** `permissions.edit` is false and the editor runs in `view` mode.
   Enabling editing later means relaxing both and adding a save callback endpoint.
 - **Degrades loudly.** `not-configured` / `document-server-unavailable` / failed

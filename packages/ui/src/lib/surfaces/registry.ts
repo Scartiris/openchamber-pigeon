@@ -104,17 +104,6 @@ export const CONTEXT_SURFACES: readonly ContextSurfaceDescriptor[] = [
     availability: 'always',
   },
   {
-    // Document previews are content-driven: the rail icon appears once a
-    // document tab exists, so an empty preview surface is never offered.
-    id: 'doc',
-    descriptionKey: 'contextRail.surface.doc.description',
-    defaultWidthFraction: 3 / 5,
-    mode: 'doc',
-    icon: 'file-text',
-    labelKey: 'contextPanel.mode.doc',
-    availability: 'has-content',
-  },
-  {
     id: 'terminal',
     descriptionKey: 'contextRail.surface.terminal.description',
     defaultWidthFraction: 3 / 5,
@@ -160,6 +149,23 @@ export const CONTEXT_SURFACES: readonly ContextSurfaceDescriptor[] = [
     mode: 'chat',
     icon: 'chat-4',
     labelKey: 'contextPanel.mode.chat',
+    availability: 'has-content',
+  },
+  {
+    // Document previews are content-driven: the rail icon appears once a
+    // document tab exists, so an empty preview surface is never offered.
+    //
+    // Appended last on purpose. Rail digits are positional
+    // (`visibleSurfaces[digit - 1]`), so inserting this anywhere else would
+    // renumber the other surfaces' shortcuts for as long as a document tab
+    // happens to be open — a shortcut that moves as a side effect of previewing
+    // a file.
+    id: 'doc',
+    descriptionKey: 'contextRail.surface.doc.description',
+    defaultWidthFraction: 3 / 5,
+    mode: 'doc',
+    icon: 'file-text',
+    labelKey: 'contextPanel.mode.doc',
     availability: 'has-content',
   },
 ];

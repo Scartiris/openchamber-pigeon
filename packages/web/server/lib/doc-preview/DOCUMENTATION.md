@@ -13,7 +13,7 @@ know how to render what these routes return.
 |---|---|---|
 | `GET /api/doc-preview/health` | UI session (bearer/cookie) | Whether office previews can render right now, plus the browser-facing document server origin. |
 | `GET /api/doc-preview/config?path=&directory=&theme=` | UI session | Resolves one file inside the active workspace and returns a render descriptor. |
-| `GET /doc-preview/raw?token=` | HMAC capability token | Streams document bytes to the document server. |
+| `GET /doc-preview/raw?token=` | HMAC capability token | Serves document bytes to the document server (read into memory, bounded by `MAX_PREVIEW_BYTES`). |
 
 `/doc-preview/raw` is deliberately **outside `/api`**: the document server fetches
 it container-to-container with no cookie and no `Authorization` header, so the UI
@@ -63,9 +63,15 @@ server refuses the download).
 
 `GET /doc-preview/raw` is authenticated by an HMAC-SHA256 token signed with a
 local secret. The payload pins `{ p: canonical path, m: mtimeMs, s: size, e: expiry }`;
-the TTL is 10 minutes and only the exact canonical path is signed. At fetch time
-the route re-runs `realpath` and refuses when it no longer equals the signed path,
-which also closes the symlink gap in `GET /api/fs/raw`.
+the TTL is 10 minutes and only the exact canonical path is signed.
+
+At fetch time the route re-runs `realpath` and refuses when it no longer equals
+the signed path (which also closes the symlink gap in `GET /api/fs/raw`), and it
+refuses with `409` when the file's size or mtime no longer match the token. That
+second check matters because the editor's `document.key` is derived from
+`path|mtimeMs|size`: serving newer bytes under an old key would hand the document
+server a document that disagrees with its own cache entry. A client that hits the
+409 reloads the configuration and gets a fresh key.
 
 Minting happens only after `resolveReadPathFromContext` (the same workspace
 confinement `/api/fs/raw` uses) plus a canonical containment re-check against the

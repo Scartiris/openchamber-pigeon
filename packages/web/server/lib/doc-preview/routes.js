@@ -86,7 +86,10 @@ const isPathWithinRoot = (target, root, path) => {
 };
 
 const encodeFileName = (fileName) => {
-  const asciiOnly = fileName.replace(/[^\u0000-\u007F]/g, '');
+  // Everything outside printable ASCII goes: the fallback lands in a quoted
+  // header parameter, where a stray quote, backslash or control character
+  // (a legal character in a POSIX filename) would make setHeader throw.
+  const asciiOnly = fileName.replace(/[^\u0020-\u007E]/g, '');
   return {
     fallback: (asciiOnly || 'document').replace(/["\\]/g, '_'),
     encoded: encodeURIComponent(fileName),
@@ -220,6 +223,12 @@ export const registerDocPreviewRoutes = (app, dependencies) => {
       },
     });
 
+    // The document server downloads the document from this base URL, so it is
+    // the one value an unvalidated request header could otherwise steer. The
+    // caller already receives the token in this same response, so it is not a
+    // privilege boundary — but a deployment that reaches the document server
+    // over a private network must set OPENCHAMBER_DOC_PREVIEW_DOCUMENT_BASE_URL
+    // explicitly rather than rely on the Host header.
     const requestBase = `${req.protocol}://${req.get('host')}`;
     const documentBaseUrl = docPreviewRuntime.getDocumentBaseUrl() || requestBase;
     const documentUrl = `${documentBaseUrl}/doc-preview/raw?token=${encodeURIComponent(rawToken)}`;
@@ -247,6 +256,9 @@ export const registerDocPreviewRoutes = (app, dependencies) => {
       documentType: kind,
       editorConfig: {
         mode: 'view',
+        // The fork ships Simplified Chinese only (LOCALES = ['zh-CN']), so the
+        // editor language is not a per-request choice; theme is, because the
+        // app's light/dark switch is.
         lang: 'zh-CN',
         user: { id: 'openchamber', name: 'OpenChamber' },
         customization: {
@@ -285,22 +297,28 @@ export const registerDocPreviewRoutes = (app, dependencies) => {
   });
 
   app.get('/doc-preview/raw', async (req, res) => {
-    const rawSecret = await docPreviewRuntime.readRawSecret();
-    const verified = verifyRawToken({
-      crypto,
-      secret: rawSecret,
-      token: asString(req.query?.token),
-    });
-    if (!verified.ok) {
-      if (verified.reason === 'signature') {
-        console.warn('Rejected a document preview request with an invalid token');
-      }
-      return res.status(403).json({ error: 'Preview link is invalid or expired' });
+    // Answer before touching the secret or the filesystem: an unauthenticated
+    // caller with a garbage token must not be able to make this server create
+    // its capability secret, and a disabled feature has nothing to serve.
+    if (!docPreviewRuntime?.isConfigured()) {
+      return notConfigured(res);
     }
 
-    const canonicalPath = verified.payload.p;
-
     try {
+      const rawSecret = await docPreviewRuntime.readRawSecret();
+      const verified = verifyRawToken({
+        crypto,
+        secret: rawSecret,
+        token: asString(req.query?.token),
+      });
+      if (!verified.ok) {
+        if (verified.reason === 'signature') {
+          console.warn('Rejected a document preview request with an invalid token');
+        }
+        return res.status(403).json({ error: 'Preview link is invalid or expired' });
+      }
+
+      const canonicalPath = verified.payload.p;
       const currentPath = await fsPromises.realpath(canonicalPath);
       if (currentPath !== canonicalPath) {
         // The signed path no longer resolves to itself: a symlink was swapped
@@ -314,6 +332,15 @@ export const registerDocPreviewRoutes = (app, dependencies) => {
       }
       if (stats.size > MAX_PREVIEW_BYTES) {
         return res.status(413).json({ error: 'File too large to preview' });
+      }
+
+      // The token pins the version the editor configuration was built for, and
+      // the document server caches its conversion under that version's key.
+      // Serving different bytes under the same key would show a document that
+      // does not match its own cache entry, so the client has to reload the
+      // configuration (and get a new key) instead.
+      if (Math.trunc(stats.mtimeMs) !== verified.payload.m || Math.trunc(stats.size) !== verified.payload.s) {
+        return res.status(409).json({ error: 'Document changed since the preview was opened' });
       }
 
       const extension = getExtension(canonicalPath);

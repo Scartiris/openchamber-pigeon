@@ -3378,8 +3378,6 @@ export const dict: Record<I18nKey, string> = {
   'documentPreview.actions.fullscreen': '全螢幕',
   'documentPreview.actions.exitFullscreen': '退出全螢幕',
   'documentPreview.actions.reload': '重新載入',
-  'documentPreview.actions.copyPath': '複製路徑',
-  'documentPreview.actions.openInEditor': '以文字開啟',
   'documentPreview.state.loading': '正在載入預覽…',
   'documentPreview.error.notConfigured': '此伺服器未設定文件預覽服務。',
   'documentPreview.error.unavailable': '文件服務無法使用，仍可下載原件。',

@@ -3376,8 +3376,6 @@ export const dict = {
   'documentPreview.actions.fullscreen': 'Plein écran',
   'documentPreview.actions.exitFullscreen': 'Quitter le plein écran',
   'documentPreview.actions.reload': 'Recharger',
-  'documentPreview.actions.copyPath': 'Copier le chemin',
-  'documentPreview.actions.openInEditor': 'Ouvrir en texte',
   'documentPreview.state.loading': 'Chargement de l’aperçu…',
   'documentPreview.error.notConfigured': 'L’aperçu des documents n’est pas configuré sur ce serveur.',
   'documentPreview.error.unavailable': 'Le serveur de documents est indisponible. Vous pouvez toujours télécharger l’original.',

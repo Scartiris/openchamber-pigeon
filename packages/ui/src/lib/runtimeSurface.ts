@@ -84,14 +84,26 @@ export const isMobileSurfaceRuntime = (): boolean => detectHostedSurface() === '
  * Whether the running shell mounts the right-hand context panel.
  *
  * The panel is the only host of the document preview surface, so entry points
- * that route a document into it must stay quiet in shells that never render one
- * (the VS Code webview and the dedicated mobile shell): the tab would be created
- * off screen and the click would look broken. Those shells keep their previous
- * behaviour instead.
+ * that route a document into it must stay quiet in shells that never render one:
+ * the VS Code webview, the dedicated mobile shell, and the embedded session-chat
+ * iframe the panel itself hosts (a subagent chat is a separate app tree with no
+ * panel of its own). In those shells the tab would be created off screen and the
+ * click would look broken, so they keep their previous behaviour instead.
+ *
+ * The embedded-chat test mirrors `isEmbeddedSessionChat()` in
+ * `@/components/layout/contextPanelEmbeddedChat` (the canonical owner of that
+ * decision); it is repeated here as a URL check to keep this lib from importing
+ * a component module.
  */
-export const hasContextPanelSurface = (): boolean => (
-  !isMobileSurfaceRuntime() && !isVSCodeRuntime()
-);
+export const hasContextPanelSurface = (): boolean => {
+  if (isMobileSurfaceRuntime() || isVSCodeRuntime()) {
+    return false;
+  }
+  if (typeof window === 'undefined') {
+    return true;
+  }
+  return new URLSearchParams(window.location.search).get('ocPanel') !== 'session-chat';
+};
 
 /**
  * The surface is stamped once at boot, so a browser window that crosses the
