@@ -392,12 +392,21 @@
   pointer-events: none;
 }
 
+/* Bleeds past the column by 14px on every side: the blur samples outside the
+   element, so without the overhang the edges of the picture would fade out
+   whenever the breathing animation is switched off. */
 .oc-chat-backdrop-media {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  inset: -14px;
+  width: calc(100% + 28px);
+  height: calc(100% + 28px);
   object-fit: cover;
-  object-position: center 42%;
+  /* Pushes the subject out of the middle: text sits over the calm half. */
+  object-position: 28% 44%;
   opacity: var(--oc-chat-backdrop-intensity, 1);
+  /* A backdrop behind prose is read, not watched — the blur is what keeps a
+     face from sitting sharp behind the composer. */
+  filter: blur(2px) saturate(1.06);
 }
 
 .oc-chat-backdrop-motion {

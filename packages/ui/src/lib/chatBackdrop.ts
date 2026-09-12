@@ -18,7 +18,7 @@ export const CHAT_BACKDROP_POSTER_SRC = '/ambient/chat-backdrop.poster.jpg';
 
 export const CHAT_BACKDROP_INTENSITY_MIN = 0;
 export const CHAT_BACKDROP_INTENSITY_MAX = 100;
-export const CHAT_BACKDROP_INTENSITY_DEFAULT = 70;
+export const CHAT_BACKDROP_INTENSITY_DEFAULT = 90;
 
 /** Capped at 80: the light-theme boost in CSS adds up to 20 percentage points. */
 export const CHAT_BACKDROP_SCRIM_MIN = 0;
