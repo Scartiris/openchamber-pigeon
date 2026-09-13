@@ -20,6 +20,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates \
+      fontconfig \
       fonts-liberation \
       fonts-noto-cjk \
       libreoffice-calc \
@@ -29,6 +30,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY server.py /usr/local/bin/office-convert.py
+COPY fonts.conf /etc/fonts/local.conf
+RUN fc-cache -f
 
 # Run unprivileged: LibreOffice is a large desktop application pointed at
 # user-supplied documents, and nothing here needs root.

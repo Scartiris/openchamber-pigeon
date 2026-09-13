@@ -80,9 +80,29 @@ install -d -o 10001 -g 10001 /opt/openchamber-pigeon/data/office-convert-cache
 
 ## Fonts
 
-The image installs `fonts-noto-cjk` and `fonts-liberation`. Documents that ask
-for fonts nobody has (the common `仿宋_GB2312` / `方正小标宋` pair in Chinese
-government templates, for instance) are rendered with LibreOffice's substitution
-— Noto Serif CJK for serif faces, Noto Sans CJK for sans — so text stays legible
-instead of turning into boxes. To pin specific substitutions, add a font
-replacement table to the profile at build time.
+The image installs `fonts-noto-cjk` and `fonts-liberation`, and ships
+`fonts.conf` as `/etc/fonts/local.conf` so the font names Chinese documents
+actually use resolve to the *Simplified Chinese* faces:
+
+| Document asks for | Rendered with |
+|---|---|
+| `宋体` / `SimSun` / `NSimSun` / `新宋体` | Noto Serif CJK SC |
+| `仿宋` / `仿宋_GB2312` / `FangSong` | Noto Serif CJK SC |
+| `楷体` / `KaiTi` / `方正小标宋简体` | Noto Serif CJK SC (no kai face ships) |
+| `黑体` / `SimHei` | Noto Sans CJK SC |
+| `微软雅黑` / `Microsoft YaHei` | Noto Sans CJK SC |
+
+Without those rules fontconfig falls back to the first Noto CJK face it finds,
+which is the *Japanese* one: different glyph variants for a number of
+characters, and the serif/sans distinction the document was written with is
+lost. Check what a name resolves to with:
+
+```sh
+docker run --rm --entrypoint fc-match pigeon-office-convert:1 宋体
+docker run --rm --entrypoint fc-match pigeon-office-convert:1 黑体
+```
+
+A document that names a font with no substitute at all still renders — the text
+stays legible rather than turning into boxes — but the substitution is
+LibreOffice's own choice, not this table's. A converted preview is a rendering,
+never the file; the workbench always offers the original for download.
