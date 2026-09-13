@@ -41,6 +41,7 @@ import { SnippetsSidebar } from '@/components/sections/snippets/SnippetsSidebar'
 import { SnippetsPage } from '@/components/sections/snippets/SnippetsPage';
 import { GitPage } from '@/components/sections/git-identities/GitPage';
 import { IntegrationsPage } from '@/components/sections/integrations/IntegrationsPage';
+import { PigeonBrainPage } from '@/components/sections/pigeon-brain/PigeonBrainPage';
 import type { OpenChamberSection } from '@/components/sections/openchamber/types';
 import { OpenChamberPage } from '@/components/sections/openchamber/OpenChamberPage';
 import { AboutSettings } from '@/components/sections/openchamber/AboutSettings';
@@ -664,6 +665,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
         return <SnippetsPage />;
       case 'git':
         return <GitPage />;
+      case 'pigeon-brain':
+        return <PigeonBrainPage />;
       case 'integrations':
         return <IntegrationsPage />;
       case 'general':

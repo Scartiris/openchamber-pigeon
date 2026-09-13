@@ -111,6 +111,7 @@ import { createBrowserControlBroker } from './lib/browser-control/broker.js';
 import { createDevServerScanner } from './lib/dev-servers/routes.js';
 import { createDevTunnelRuntime } from './lib/dev-tunnel/runtime.js';
 import { registerBrowserControlRoutes } from './lib/browser-control/routes.js';
+import { registerPigeonBrainRoutes } from './lib/pigeon-brain/routes.js';
 import { createSystemPromptRuntime } from './lib/system-prompt/runtime.js';
 import { createOpenChamberSessionService } from './lib/openchamber-sessions/routes.js';
 import { createScheduledTaskService } from './lib/scheduled-tasks/service.js';
@@ -1906,6 +1907,10 @@ async function main(options = {}) {
   relayService.registerRoutes(app);
 
   registerBrowserControlRoutes(app, { express, broker: browserControlBroker });
+
+  // 记忆库管理界面的同源反代。`PIGEON_BRAIN_URL` 没配就整段不挂，
+  // 工作台其余行为完全不变。挂在 /api 下，所以受与其它路由同一道 UI 鉴权。
+  registerPigeonBrainRoutes(app, { logger: console });
 
   // One scanner backs both discovery and the tunnel allowlist, so a port the
   // user can see is exactly a port the tunnel will dial.
