@@ -112,6 +112,7 @@ import { createDevServerScanner } from './lib/dev-servers/routes.js';
 import { createDevTunnelRuntime } from './lib/dev-tunnel/runtime.js';
 import { registerBrowserControlRoutes } from './lib/browser-control/routes.js';
 import { registerPigeonBrainRoutes } from './lib/pigeon-brain/routes.js';
+import { registerOpenVikingRoutes } from './lib/openviking/routes.js';
 import { createSystemPromptRuntime } from './lib/system-prompt/runtime.js';
 import { createOpenChamberSessionService } from './lib/openchamber-sessions/routes.js';
 import { createScheduledTaskService } from './lib/scheduled-tasks/service.js';
@@ -1911,6 +1912,10 @@ async function main(options = {}) {
   // 记忆库管理界面的同源反代。`PIGEON_BRAIN_URL` 没配就整段不挂，
   // 工作台其余行为完全不变。挂在 /api 下，所以受与其它路由同一道 UI 鉴权。
   registerPigeonBrainRoutes(app, { logger: console });
+
+  // OpenViking 记忆/知识库的同源反代。`OPENVIKING_URL` / `OPENVIKING_API_KEY`
+  // 没配全就整段不挂；OpenViking 的 key 由服务器注入，浏览器拿不到。
+  registerOpenVikingRoutes(app, { logger: console });
 
   // One scanner backs both discovery and the tunnel allowlist, so a port the
   // user can see is exactly a port the tunnel will dial.
