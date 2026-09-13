@@ -388,6 +388,23 @@
   );
 }
 
+/* Panes nest (the context panel wraps its tabs, the shell wraps a page surface),
+   and stacked translucent fills multiply into an opaque one. Only the outermost
+   surface of any stack keeps its fill; the wrappers inside it go clear. */
+.oc-chat-backdrop-on .oc-backdrop-surface .oc-backdrop-surface {
+  background-color: transparent;
+}
+
+/* Sticky bands are deliberately exempt: rows scroll underneath them, so they
+   need a near-solid fill of their own rather than the inherited one. */
+.oc-sidebar-sticky-band {
+  background-color: var(--sidebar);
+}
+
+.oc-chat-backdrop-on .oc-sidebar-sticky-band {
+  background-color: color-mix(in srgb, var(--sidebar) 94%, transparent);
+}
+
 /* Surfaces whose upstream fill is the sidebar token rather than the page one. */
 .oc-backdrop-surface-sidebar {
   --oc-surface-color: var(--sidebar);

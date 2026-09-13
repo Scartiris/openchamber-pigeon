@@ -1190,7 +1190,7 @@ export const ContextPanel: React.FC = () => {
       tabIndex={-1}
       inert={!isOpen || undefined}
       className={cn(
-        'flex min-h-0 flex-col overflow-hidden oc-backdrop-clear',
+        'flex min-h-0 flex-col overflow-hidden oc-backdrop-surface',
         // Right-anchored while expanded: `inset-0` would teleport the left
         // edge instantly (position does not transition), so only the width
         // animates and the panel grows leftwards from its docked position.

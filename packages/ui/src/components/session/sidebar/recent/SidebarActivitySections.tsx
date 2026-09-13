@@ -253,9 +253,8 @@ export function SidebarActivitySections(props: Props): React.ReactNode {
               '-ml-2.5 -mr-2',
               !isCollapsed && 'mb-1',
               // A sticky band must stay nearly solid: rows scroll underneath it.
-              stickyZoneHeaders && 'sticky top-0 z-20 oc-backdrop-surface oc-backdrop-surface-sidebar',
+              stickyZoneHeaders && 'sticky top-0 z-20 oc-sidebar-sticky-band',
             )}
-              style={stickyZoneHeaders ? ({ '--oc-surface-opacity': '94%' } as React.CSSProperties) : undefined}
               data-sidebar-sticky-header={stickyZoneHeaders ? 'true' : undefined}>
               <button
                 type="button"
