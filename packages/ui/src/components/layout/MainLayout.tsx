@@ -32,6 +32,7 @@ import { cn } from '@/lib/utils';
 import { lazyWithChunkRecovery } from '@/lib/chunkLoadRecovery';
 import { useSessionListSync } from '@/components/session/sidebar/list/useSessionListSync';
 
+import { ChatBackdrop, useChatBackdrop } from '@/components/chat/ChatBackdrop';
 import { ChatView } from '@/components/views/ChatView';
 
 const SettingsWindow = lazyWithChunkRecovery(() => import('@/components/views/SettingsWindow').then(m => ({ default: m.SettingsWindow })));
@@ -86,6 +87,15 @@ export const MainLayout: React.FC = () => {
     }, []);
     const { isMobile } = useDeviceInfo();
 
+    // Pigeon: the video backdrop is a desktop surface — on a phone the footage
+    // would eat the screen it is meant to sit behind. The setting is left
+    // untouched, so the same profile on a desktop still gets it.
+    const chatBackdrop = useChatBackdrop();
+    const showChatBackdrop = chatBackdrop.enabled && !isMobile;
+    // The class drives every surface's translucency, so it must follow what
+    // actually renders; otherwise a phone gets see-through panes over nothing.
+    const backdropRootClassName = showChatBackdrop ? chatBackdrop.rootClassName : '';
+
     useUpdatePolling();
 
     const sessionTreeMoveConfirmation = useSessionTreeMoveConfirmation();
@@ -101,8 +111,15 @@ export const MainLayout: React.FC = () => {
         <DiffWorkerProvider>
             <div
                 data-page-scroll-lock="true"
-                className="main-content-safe-area relative flex h-[100dvh] bg-background"
+                className={cn(
+                    // `isolate` keeps the backdrop layer (z-index -1) inside this
+                    // shell instead of sliding under an ancestor's background.
+                    'main-content-safe-area relative isolate flex h-[100dvh] bg-background',
+                    backdropRootClassName,
+                )}
+                style={chatBackdrop.style}
             >
+                {showChatBackdrop ? <ChatBackdrop motion={chatBackdrop.motion} /> : null}
                 <CommandPalette />
                 <HelpDialog />
                 <OpenCodeStatusDialog />
@@ -127,22 +144,22 @@ export const MainLayout: React.FC = () => {
                     >
                         <SessionSidebar isVisible={isSidebarOpen} />
                     </Sidebar>
-                    <div className="relative flex flex-1 min-w-0 flex-col overflow-hidden bg-background" data-page-scroll-lock="true">
+                    <div className="relative flex flex-1 min-w-0 flex-col overflow-hidden oc-backdrop-clear" data-page-scroll-lock="true">
                         <Header />
-                        <div className="relative flex flex-1 min-h-0 overflow-hidden bg-background" data-page-scroll-lock="true">
-                            <div className="relative flex flex-1 min-w-0 flex-col overflow-hidden border-t border-border bg-background" data-page-scroll-lock="true">
+                        <div className="relative flex flex-1 min-h-0 overflow-hidden oc-backdrop-clear" data-page-scroll-lock="true">
+                            <div className="relative flex flex-1 min-w-0 flex-col overflow-hidden border-t border-border oc-backdrop-clear" data-page-scroll-lock="true">
                                 <div className="flex flex-1 min-h-0 overflow-hidden" data-page-scroll-lock="true">
                                     {/* Holds the chat and the context panel together, so its
                                         width does not move when the context panel opens. The
                                         work-status panel measures this rather than the chat,
                                         which the context panel animates. */}
                                     <div className="relative flex flex-1 min-h-0 min-w-0 overflow-hidden" data-page-scroll-lock="true" data-chat-area="true">
-                                        <main className="flex-1 overflow-hidden bg-background relative" data-page-scroll-lock="true">
+                                        <main className="flex-1 overflow-hidden oc-backdrop-clear relative" data-page-scroll-lock="true">
                                             <div className={cn('absolute inset-0', isSurfacePageOpen && 'invisible')}>
                                                 <ErrorBoundary><ChatView active={!isSettingsDialogOpen && !isSurfacePageOpen} /></ErrorBoundary>
                                             </div>
                                             {isMultiRunLauncherOpen && (
-                                                <div className="absolute inset-0 z-10 bg-background">
+                                                <div className="absolute inset-0 z-10 oc-backdrop-surface">
                                                     <ErrorBoundary>
                                                         {/* isWindowed: the app Header already shows the surface
                                                             title, so skip the launcher's own title bar. */}

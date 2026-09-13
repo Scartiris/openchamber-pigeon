@@ -56,7 +56,7 @@ export const ProjectContextPanel: React.FC<{
 
   return (
     /* The panel scrolls its own tab content; a scroller here would nest. */
-    <div className="h-full min-h-0 overflow-hidden bg-background">
+    <div className="h-full min-h-0 overflow-hidden oc-backdrop-clear">
       <ProjectNotesTodoPanel
         projectRef={projectRef}
         projectLabel={projectLabel}

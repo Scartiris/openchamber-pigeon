@@ -252,8 +252,11 @@ export function SidebarActivitySections(props: Props): React.ReactNode {
               'relative group/chats',
               '-ml-2.5 -mr-2',
               !isCollapsed && 'mb-1',
-              stickyZoneHeaders && 'sticky top-0 z-20 bg-sidebar',
-            )} data-sidebar-sticky-header={stickyZoneHeaders ? 'true' : undefined}>
+              // A sticky band must stay nearly solid: rows scroll underneath it.
+              stickyZoneHeaders && 'sticky top-0 z-20 oc-backdrop-surface oc-backdrop-surface-sidebar',
+            )}
+              style={stickyZoneHeaders ? ({ '--oc-surface-opacity': '94%' } as React.CSSProperties) : undefined}
+              data-sidebar-sticky-header={stickyZoneHeaders ? 'true' : undefined}>
               <button
                 type="button"
                 onClick={() => toggleSection(section.key)}

@@ -1701,7 +1701,7 @@ export const Header: React.FC = () => {
   // The divider lives on the chat content wrapper instead of the header, so it
   // doesn't run between the header and the right sidebar (they read as one
   // continuous surface).
-  const headerClassName = 'header-safe-area relative z-10 bg-background';
+  const headerClassName = 'header-safe-area relative z-10 oc-backdrop-surface';
 
   return (
     <>

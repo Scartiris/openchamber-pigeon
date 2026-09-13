@@ -316,7 +316,7 @@ export const ContextPanelRail: React.FC = () => {
   return (
     <nav
       aria-label={t('contextRail.aria.rail')}
-      className="flex h-full w-11 flex-shrink-0 flex-col items-center gap-1 bg-background py-2"
+      className="flex h-full w-11 flex-shrink-0 flex-col items-center gap-1 oc-backdrop-surface py-2"
     >
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={surfaces.map((surface) => surface.id)} strategy={verticalListSortingStrategy}>

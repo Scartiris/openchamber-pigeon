@@ -365,25 +365,51 @@
   }
 }
 
-/* Pigeon: the video backdrop behind the chat column.
+/* Pigeon: the video backdrop behind the whole workspace.
+ 
+   Every rule here is opt-in. `.oc-backdrop-surface` is the plain fill it
+   replaces until an ancestor carries `.oc-chat-backdrop-on`, so an install that
+   never turns the backdrop on renders exactly like upstream — and a token
+   change in any theme keeps working, because the translucent variant mixes
+   *from* the surface token instead of restating a colour.
+ 
+   `--oc-surface-color` lets a surface keep its own token (the sidebar is
+   `--sidebar`, not `--background`); `--oc-surface-opacity` tunes how much of it
+   survives. Both fall back to the upstream-equivalent values. */
+.oc-backdrop-surface {
+  background-color: var(--oc-surface-color, var(--background));
+}
 
-   Every rule here is opt-in. `.oc-chat-surface` is the plain `bg-background`
-   fill it replaces until an ancestor carries `.oc-chat-backdrop-on`, so an
-   install that never turns the backdrop on renders exactly like upstream —
-   and a token change in any theme keeps working, because the translucent
-   variant mixes *from* `--background` instead of restating a colour. */
-.oc-chat-surface {
+.oc-chat-backdrop-on .oc-backdrop-surface {
+  background-color: color-mix(
+    in srgb,
+    var(--oc-surface-color, var(--background)) var(--oc-surface-opacity, 78%),
+    transparent
+  );
+}
+
+/* Surfaces whose upstream fill is the sidebar token rather than the page one. */
+.oc-backdrop-surface-sidebar {
+  --oc-surface-color: var(--sidebar);
+}
+
+/* Layout wrappers between the backdrop layer and the panes that actually hold
+   text. They must go fully clear while the backdrop is on: stacked translucent
+   fills multiply (0.22^4 is invisible), so exactly one `oc-backdrop-surface`
+   may sit between the footage and the reader in any given region. Off, this is
+   the same opaque fill upstream used. */
+.oc-backdrop-clear {
   background-color: var(--background);
 }
 
-.oc-chat-backdrop-on .oc-chat-surface {
-  background-color: color-mix(in srgb, var(--background) 78%, transparent);
+.oc-chat-backdrop-on .oc-backdrop-clear {
+  background-color: transparent;
 }
 
-/* `z-index: -1` puts the footage above the column's own (now translucent)
-   background and below every in-flow child, so no message wrapper has to know
-   the backdrop exists. That only holds while the nearest ancestor is a
-   stacking context — the column carries `isolate` for exactly this reason. */
+/* `z-index: -1` puts the footage above the shell's own background and below
+   every in-flow child, so no pane has to know the backdrop exists. That only
+   holds while the nearest ancestor is a stacking context — the shell carries
+   `isolate` for exactly this reason. */
 .oc-chat-backdrop {
   position: absolute;
   inset: 0;
@@ -392,7 +418,7 @@
   pointer-events: none;
 }
 
-/* Bleeds past the column by 14px on every side: the blur samples outside the
+/* Bleeds past the viewport by 14px on every side: the blur samples outside the
    element, so without the overhang the edges of the picture would fade out
    whenever the breathing animation is switched off. */
 .oc-chat-backdrop-media {

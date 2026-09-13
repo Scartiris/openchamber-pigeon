@@ -411,7 +411,7 @@ export const ContextPanelContent: React.FC = () => {
   ];
 
   return (
-    <ScrollableOverlay outerClassName="h-full" className="bg-background">
+    <ScrollableOverlay outerClassName="h-full" className="oc-backdrop-clear">
       <div className="mx-auto w-full max-w-[52rem] px-5 py-6">
 
         {/* ── Session header ── */}

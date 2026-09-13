@@ -356,7 +356,7 @@ const EditorTreeColumn: React.FC<{ visible: boolean; active: boolean }> = ({ vis
     <div
       ref={columnRef}
       className={cn(
-        'relative h-full flex-shrink-0 overflow-hidden border-l border-border bg-background will-change-[width] motion-reduce:transition-none',
+        'relative h-full flex-shrink-0 overflow-hidden border-l border-border oc-backdrop-surface will-change-[width] motion-reduce:transition-none',
         !visible && 'border-l-0',
       )}
       style={{
@@ -1190,7 +1190,7 @@ export const ContextPanel: React.FC = () => {
       tabIndex={-1}
       inert={!isOpen || undefined}
       className={cn(
-        'flex min-h-0 flex-col overflow-hidden bg-background',
+        'flex min-h-0 flex-col overflow-hidden oc-backdrop-clear',
         // Right-anchored while expanded: `inset-0` would teleport the left
         // edge instantly (position does not transition), so only the width
         // animates and the panel grows leftwards from its docked position.
