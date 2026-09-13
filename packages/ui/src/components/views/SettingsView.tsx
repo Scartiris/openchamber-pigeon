@@ -42,6 +42,11 @@ import { SnippetsPage } from '@/components/sections/snippets/SnippetsPage';
 import { GitPage } from '@/components/sections/git-identities/GitPage';
 import { IntegrationsPage } from '@/components/sections/integrations/IntegrationsPage';
 import { PigeonBrainPage } from '@/components/sections/pigeon-brain/PigeonBrainPage';
+import { MemoryPage } from '@/components/sections/openviking/MemoryPage';
+import { MemorySettingsPage } from '@/components/sections/openviking/MemorySettingsPage';
+import { KnowledgePage } from '@/components/sections/openviking/KnowledgePage';
+import { KnowledgeSettingsPage } from '@/components/sections/openviking/KnowledgeSettingsPage';
+import { OpenVikingTreeSidebar } from '@/components/sections/openviking/OpenVikingTreeSidebar';
 import type { OpenChamberSection } from '@/components/sections/openchamber/types';
 import { OpenChamberPage } from '@/components/sections/openchamber/OpenChamberPage';
 import { AboutSettings } from '@/components/sections/openchamber/AboutSettings';
@@ -109,6 +114,12 @@ const pageOrder: SettingsPageSlug[] = [
   'usage',
   // 记忆库：深链能用但侧栏点不到，是因为它不在这个数组里（rank 999 排到最后）
   'pigeon-brain',
+  // OpenViking 的四个页面。必须列在这里，否则 rank 999 沉到列表末尾、
+  // 被底部页脚挡住 —— 现象是"深链能用但侧栏点不到"。
+  'memory-settings',
+  'memory-browse',
+  'knowledge-settings',
+  'knowledge-browse',
   'about',
   // 'projects' group — Workspace
   'projects',
@@ -386,6 +397,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
         return t('settings.page.about.title');
       case 'pigeon-brain':
         return t('settings.page.pigeonBrain.title');
+      case 'memory-settings':
+        return t('settings.page.memorySettings.title');
+      case 'memory-browse':
+        return t('settings.page.memoryBrowse.title');
+      case 'knowledge-settings':
+        return t('settings.page.knowledgeSettings.title');
+      case 'knowledge-browse':
+        return t('settings.page.knowledgeBrowse.title');
       case 'home':
       default:
         return t('settings.view.home.title');
@@ -623,6 +642,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
         return <MagicPromptsSidebar onItemSelect={opts.onItemSelect} />;
       case 'snippets':
         return <SnippetsSidebar onItemSelect={opts.onItemSelect} />;
+      case 'memory-browse':
+        return <OpenVikingTreeSidebar scope="memory" onItemSelect={opts.onItemSelect} />;
+      case 'knowledge-browse':
+        return <OpenVikingTreeSidebar scope="knowledge" onItemSelect={opts.onItemSelect} />;
       default:
         return null;
     }
@@ -671,6 +694,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
         return <GitPage />;
       case 'pigeon-brain':
         return <PigeonBrainPage />;
+      case 'memory-settings':
+        return <MemorySettingsPage />;
+      case 'memory-browse':
+        return <MemoryPage />;
+      case 'knowledge-settings':
+        return <KnowledgeSettingsPage />;
+      case 'knowledge-browse':
+        return <KnowledgePage />;
       case 'integrations':
         return <IntegrationsPage />;
       case 'general':

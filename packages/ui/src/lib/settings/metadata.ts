@@ -27,7 +27,11 @@ export type SettingsPageSlug =
   | 'tunnel'
   | 'about'
   | 'integrations'
-  | 'pigeon-brain';
+  | 'pigeon-brain'
+  | 'memory-settings'
+  | 'memory-browse'
+  | 'knowledge-settings'
+  | 'knowledge-browse';
 
 type SettingsPageGroup =
   | 'general'
@@ -215,6 +219,45 @@ export const SETTINGS_PAGE_METADATA: readonly SettingsPageMeta[] = [
     keywords: ['memory', 'brain', 'wiki', 'knowledge', '记忆', '知识库'],
     isAvailable: (ctx) => !ctx.isVSCode && !ctx.isMobile,
   },
+  // OpenViking 的四个页面。记忆与知识库在 OpenViking 里是同一套 viking://
+  // 文件系统的两个根，所以各拆成「设置 + 浏览」两页而不是一页内含切换：
+  // 浏览页是 split 形态（左边树、右边内容），需要整页宽度。
+  {
+    slug: 'memory-settings',
+    title: '记忆设置',
+    group: 'general',
+    kind: 'single',
+    description: 'OpenViking 记忆库的连接与就绪状态。',
+    keywords: ['memory', 'openviking', 'recall', '记忆', '记忆库'],
+    isAvailable: (ctx) => !ctx.isVSCode && !ctx.isMobile,
+  },
+  {
+    slug: 'memory-browse',
+    title: '记忆浏览',
+    group: 'general',
+    kind: 'split',
+    description: '按文件树浏览 OpenViking 里的长期记忆。',
+    keywords: ['memory', 'browse', 'tree', 'viking', '记忆', '浏览'],
+    isAvailable: (ctx) => !ctx.isVSCode && !ctx.isMobile,
+  },
+  {
+    slug: 'knowledge-settings',
+    title: '知识库设置',
+    group: 'general',
+    kind: 'single',
+    description: 'OpenViking 知识库的连接与就绪状态。',
+    keywords: ['knowledge', 'resource', 'openviking', '知识库', '资源'],
+    isAvailable: (ctx) => !ctx.isVSCode && !ctx.isMobile,
+  },
+  {
+    slug: 'knowledge-browse',
+    title: '知识库浏览',
+    group: 'general',
+    kind: 'split',
+    description: '按文件树浏览 OpenViking 里的资源与文档。',
+    keywords: ['knowledge', 'resource', 'browse', 'tree', 'viking', '知识库', '浏览'],
+    isAvailable: (ctx) => !ctx.isVSCode && !ctx.isMobile,
+  },
 ] as const;
 
 const LEGACY_SIDEBAR_SECTION_TO_SETTINGS_SLUG: Record<SidebarSection, SettingsPageSlug> = {
@@ -302,6 +345,16 @@ export function getSettingsNavIcon(slug: SettingsPageSlug): IconName | null {
 
     case 'pigeon-brain':
       return 'book';
+
+    // OpenViking 的两个作用域各两项：设置用「齿轮感」的通用图标，
+    // 浏览用「树/文件夹」—— 浏览器形态一眼可辨。
+    case 'memory-settings':
+    case 'knowledge-settings':
+      return 'settings-3';
+    case 'memory-browse':
+      return 'brain';
+    case 'knowledge-browse':
+      return 'node-tree';
     case 'integrations':
       return 'plug';
 
