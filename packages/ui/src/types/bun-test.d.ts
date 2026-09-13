@@ -32,6 +32,8 @@ declare module "bun:test" {
       toBe(expected: unknown): void;
       toContain(expected: unknown): void;
       toBeNull(): void;
+      toBeUndefined(): void;
+      toBeDefined(): void;
       toHaveBeenCalled(): void;
     };
   }

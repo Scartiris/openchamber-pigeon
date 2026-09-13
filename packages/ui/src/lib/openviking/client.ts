@@ -114,6 +114,46 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 }
 
+/**
+ * 反代状态。**注意这个端点没有 OpenViking 的信封**。
+ *
+ * `/api/openviking/status` 是**我们自己的反代模块**实现的（不转发到 OpenViking），
+ * 它直接返回 `{ enabled, upstream, hasApiKey }` —— 没有 `{ status, result, error }` 外壳。
+ * 早期版本这里走了统一的 `readEnvelope()`，于是永远取到 `envelope.result === undefined`，
+ * 表现是**两个设置页永远停在「加载中…」**（真机截图抓到：`/status` 回了 200 两次，
+ * 但页面一直不进入已就绪分支，`/health` 与 `/ready` 压根没发）。
+ *
+ * 所以这里必须显式判形状，而不是套信封。
+ *
+ * 导出是为了能直接对它写回归测试（这个 bug 靠"测 store 逻辑"是抓不到的）。
+ */
+export const readProxyStatus = async (response: Response): Promise<OpenVikingStatus> => {
+  const text = await response.text();
+  let payload: unknown = null;
+  try {
+    payload = text ? JSON.parse(text) : null;
+  } catch {
+    throw new OpenVikingError('反代状态响应无法解析', response.status, null);
+  }
+  if (!response.ok) {
+    const record = (payload ?? {}) as { error?: unknown; message?: unknown };
+    const code = typeof record.error === 'string' ? record.error : null;
+    const message = typeof record.message === 'string' && record.message
+      ? record.message
+      : `HTTP ${response.status}`;
+    throw new OpenVikingError(message, response.status, code);
+  }
+  const record = (payload ?? {}) as Partial<OpenVikingStatus>;
+  if (typeof record.enabled !== 'boolean') {
+    throw new OpenVikingError('反代状态响应缺少 enabled 字段', response.status, null);
+  }
+  return {
+    enabled: record.enabled,
+    upstream: typeof record.upstream === 'string' ? record.upstream : null,
+    hasApiKey: record.hasApiKey === true,
+  };
+};
+
 const withQuery = (path: string, params: Record<string, string | number | undefined>): string => {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -203,9 +243,23 @@ export interface OpenVikingGrepMatch {
 export const openVikingApi = {
   /**
    * 反代状态。反代自身**永远**回 200（未配置时 body 里 enabled=false），
-   * 所以这里不需要容错到 `null`。
+   * 但它**不走 OpenViking 的信封**，所以单独解析 —— 见 `readProxyStatus`。
    */
-  proxyStatus: () => request<OpenVikingStatus>('/status'),
+  proxyStatus: async (): Promise<OpenVikingStatus> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const response = await runtimeFetch(`${OPENVIKING_PREFIX}/status`, { signal: controller.signal });
+      return await readProxyStatus(response);
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new OpenVikingError('OpenViking 状态请求超时', 0, 'TIMEOUT');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  },
 
   health: () => request<OpenVikingStatusResponse>('/health'),
   ready: () => request<OpenVikingReadyResponse>('/ready'),
