@@ -188,6 +188,30 @@ export const createSettingsHelpers = (dependencies) => {
     if (typeof candidate.darkThemeId === 'string' && candidate.darkThemeId.length > 0) {
       result.darkThemeId = candidate.darkThemeId;
     }
+    // Pigeon: the chat backdrop. Without these four the response omits them and
+    // a PUT drops them, so the client would never see the setting.
+    if (typeof candidate.chatBackdropEnabled === 'boolean') {
+      result.chatBackdropEnabled = candidate.chatBackdropEnabled;
+    }
+    if (
+      typeof candidate.chatBackdropIntensity === 'number' &&
+      Number.isInteger(candidate.chatBackdropIntensity) &&
+      candidate.chatBackdropIntensity >= 0 &&
+      candidate.chatBackdropIntensity <= 100
+    ) {
+      result.chatBackdropIntensity = candidate.chatBackdropIntensity;
+    }
+    if (
+      typeof candidate.chatBackdropScrim === 'number' &&
+      Number.isInteger(candidate.chatBackdropScrim) &&
+      candidate.chatBackdropScrim >= 0 &&
+      candidate.chatBackdropScrim <= 80
+    ) {
+      result.chatBackdropScrim = candidate.chatBackdropScrim;
+    }
+    if (typeof candidate.chatBackdropMotion === 'boolean') {
+      result.chatBackdropMotion = candidate.chatBackdropMotion;
+    }
     if (typeof candidate.splashBgLight === 'string' && candidate.splashBgLight.trim().length > 0) {
       result.splashBgLight = candidate.splashBgLight.trim();
     }

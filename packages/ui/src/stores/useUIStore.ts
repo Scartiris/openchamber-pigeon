@@ -15,6 +15,13 @@ import { useFilesViewTabsStore } from './useFilesViewTabsStore';
 import { isWindowsArm64 } from '@/lib/platform';
 import { isVSCodeRuntime } from '@/lib/desktop';
 import { getRuntimeKey, isTransientRuntimeKey } from '@/lib/runtime-switch';
+import {
+  CHAT_BACKDROP_INTENSITY_DEFAULT,
+  CHAT_BACKDROP_MOTION_DEFAULT,
+  CHAT_BACKDROP_SCRIM_DEFAULT,
+  clampChatBackdropIntensity,
+  clampChatBackdropScrim,
+} from '@/lib/chatBackdrop';
 
 export type PendingDiffScope = 'working' | 'staged' | 'turn' | 'branch' | 'commit' | 'pr';
 const contextPanelModeSchema = z.enum(['diff', 'walkthrough', 'file', 'context', 'plan', 'chat', 'browser', 'git', 'pr', 'linear', 'notes', 'terminal', 'doc']);
@@ -972,6 +979,11 @@ interface UIStore {
   enterToSend: boolean;
   enterToSendConfigured: boolean;
   wideChatLayoutEnabled: boolean;
+  /** Pigeon: video backdrop behind the chat column (see `lib/chatBackdrop`). */
+  chatBackdropEnabled: boolean;
+  chatBackdropIntensity: number;
+  chatBackdropScrim: number;
+  chatBackdropMotion: boolean;
   codeBlockLineWrap: boolean;
   showToolFileIcons: boolean;
   showTurnChangedFiles: boolean;
@@ -1162,6 +1174,10 @@ interface UIStore {
   setEnterToSend: (value: boolean) => void;
   setEnterToSendConfigured: (value: boolean) => void;
   setWideChatLayoutEnabled: (value: boolean) => void;
+  setChatBackdropEnabled: (value: boolean) => void;
+  setChatBackdropIntensity: (value: number) => void;
+  setChatBackdropScrim: (value: number) => void;
+  setChatBackdropMotion: (value: boolean) => void;
   setCodeBlockLineWrap: (value: boolean) => void;
   setShowToolFileIcons: (value: boolean) => void;
   setShowTurnChangedFiles: (value: boolean) => void;
@@ -1336,6 +1352,10 @@ export const useUIStore = create<UIStore>()(
         enterToSend: false,
         enterToSendConfigured: false,
         wideChatLayoutEnabled: false,
+        chatBackdropEnabled: false,
+        chatBackdropIntensity: CHAT_BACKDROP_INTENSITY_DEFAULT,
+        chatBackdropScrim: CHAT_BACKDROP_SCRIM_DEFAULT,
+        chatBackdropMotion: CHAT_BACKDROP_MOTION_DEFAULT,
         codeBlockLineWrap: true,
         showToolFileIcons: true,
         showTurnChangedFiles: false,
@@ -2651,6 +2671,18 @@ export const useUIStore = create<UIStore>()(
         setWideChatLayoutEnabled: (value) => {
           set({ wideChatLayoutEnabled: value });
         },
+        setChatBackdropEnabled: (value) => {
+          set({ chatBackdropEnabled: value });
+        },
+        setChatBackdropIntensity: (value) => {
+          set({ chatBackdropIntensity: clampChatBackdropIntensity(value) });
+        },
+        setChatBackdropScrim: (value) => {
+          set({ chatBackdropScrim: clampChatBackdropScrim(value) });
+        },
+        setChatBackdropMotion: (value) => {
+          set({ chatBackdropMotion: value });
+        },
         setCodeBlockLineWrap: (value) => {
           set({ codeBlockLineWrap: value });
         },
@@ -3089,6 +3121,10 @@ export const useUIStore = create<UIStore>()(
           enterToSend: state.enterToSend,
           enterToSendConfigured: state.enterToSendConfigured,
           wideChatLayoutEnabled: state.wideChatLayoutEnabled,
+          chatBackdropEnabled: state.chatBackdropEnabled,
+          chatBackdropIntensity: state.chatBackdropIntensity,
+          chatBackdropScrim: state.chatBackdropScrim,
+          chatBackdropMotion: state.chatBackdropMotion,
           codeBlockLineWrap: state.codeBlockLineWrap,
           showToolFileIcons: state.showToolFileIcons,
           showTurnChangedFiles: state.showTurnChangedFiles,

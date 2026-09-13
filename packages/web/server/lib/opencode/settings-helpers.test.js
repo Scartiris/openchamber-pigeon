@@ -787,6 +787,7 @@ describe('settings registry gate', () => {
     usageExpandedFamilies: { anthropic: ['f'] }, usageModelGroups: { anthropic: { customGroups: [{ id: 'g', label: 'G', models: ['claude'], order: 0 }] } },
     globalBehaviorPrompt: 'Be brief.', responseStyleEnabled: true, responseStylePreset: 'concise', responseStyleCustomInstructions: 'x', optimizeSystemPrompt: true,
     pwaAppName: 'OpenChamber', pwaOrientation: 'portrait', mobileKeyboardMode: 'native', desktopWindowControlsPosition: 'left', desktopWindowControlsStyle: 'classic',
+    chatBackdropEnabled: true, chatBackdropIntensity: 70, chatBackdropScrim: 45, chatBackdropMotion: true,
     inputBarOffset: 10,
   };
 

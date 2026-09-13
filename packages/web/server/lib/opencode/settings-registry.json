@@ -21,6 +21,18 @@
       "scope": "profile",
       "perSurface": true
     },
+    "chatBackdropEnabled": {
+      "scope": "profile"
+    },
+    "chatBackdropIntensity": {
+      "scope": "profile"
+    },
+    "chatBackdropScrim": {
+      "scope": "profile"
+    },
+    "chatBackdropMotion": {
+      "scope": "profile"
+    },
     "lastDirectory": {
       "scope": "instance",
       "adopt": "bootstrap-only"

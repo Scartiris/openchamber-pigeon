@@ -70,6 +70,17 @@ import { isTerminalShell } from '@/lib/terminalShell';
 import { subscribeRuntimeEndpointChanged } from '@/lib/runtime-switch';
 import { formatShortcutForDisplay } from '@/lib/shortcuts';
 import { useInputHistoryStore } from '@/stores/useInputHistoryStore';
+import {
+    CHAT_BACKDROP_INTENSITY_MAX,
+    CHAT_BACKDROP_INTENSITY_MIN,
+    CHAT_BACKDROP_SCRIM_MAX,
+    CHAT_BACKDROP_SCRIM_MIN,
+    clampChatBackdropIntensity,
+    clampChatBackdropScrim,
+} from '@/lib/chatBackdrop';
+
+/** Same slider chrome VoiceSettings uses, so the two read as one control. */
+const CHAT_BACKDROP_SLIDER_CLASS = "flex-1 min-w-0 h-1.5 bg-[var(--interactive-border)] rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--primary-base)] [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-[var(--primary-base)] [&::-moz-range-thumb]:border-0 disabled:opacity-50";
 
 interface Option<T extends string> {
     id: T;
@@ -355,6 +366,14 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
     const setAutoSaveEnabled = useUIStore(state => state.setAutoSaveEnabled);
     const wideChatLayoutEnabled = useUIStore(state => state.wideChatLayoutEnabled);
     const setWideChatLayoutEnabled = useUIStore(state => state.setWideChatLayoutEnabled);
+    const chatBackdropEnabled = useUIStore(state => state.chatBackdropEnabled);
+    const setChatBackdropEnabled = useUIStore(state => state.setChatBackdropEnabled);
+    const chatBackdropIntensity = useUIStore(state => state.chatBackdropIntensity);
+    const setChatBackdropIntensity = useUIStore(state => state.setChatBackdropIntensity);
+    const chatBackdropScrim = useUIStore(state => state.chatBackdropScrim);
+    const setChatBackdropScrim = useUIStore(state => state.setChatBackdropScrim);
+    const chatBackdropMotion = useUIStore(state => state.chatBackdropMotion);
+    const setChatBackdropMotion = useUIStore(state => state.setChatBackdropMotion);
     const codeBlockLineWrap = useUIStore(state => state.codeBlockLineWrap);
     const setCodeBlockLineWrap = useUIStore(state => state.setCodeBlockLineWrap);
     const chatRenderMode = useUIStore(state => state.chatRenderMode);
@@ -556,6 +575,28 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
         setWideChatLayoutEnabled(enabled);
         void updateDesktopSettings({ wideChatLayoutEnabled: enabled });
     }, [setWideChatLayoutEnabled]);
+
+    const handleChatBackdropEnabledChange = React.useCallback((enabled: boolean) => {
+        setChatBackdropEnabled(enabled);
+        void updateDesktopSettings({ chatBackdropEnabled: enabled });
+    }, [setChatBackdropEnabled]);
+
+    const handleChatBackdropIntensityChange = React.useCallback((value: number) => {
+        const next = clampChatBackdropIntensity(value);
+        setChatBackdropIntensity(next);
+        void updateDesktopSettings({ chatBackdropIntensity: next });
+    }, [setChatBackdropIntensity]);
+
+    const handleChatBackdropScrimChange = React.useCallback((value: number) => {
+        const next = clampChatBackdropScrim(value);
+        setChatBackdropScrim(next);
+        void updateDesktopSettings({ chatBackdropScrim: next });
+    }, [setChatBackdropScrim]);
+
+    const handleChatBackdropMotionChange = React.useCallback((enabled: boolean) => {
+        setChatBackdropMotion(enabled);
+        void updateDesktopSettings({ chatBackdropMotion: enabled });
+    }, [setChatBackdropMotion]);
 
     const handleShowSplitAssistantMessageActionsChange = React.useCallback((enabled: boolean) => {
         setShowSplitAssistantMessageActions(enabled);
@@ -1020,6 +1061,75 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                 {scrollbarSetting && <SettingsInset>{scrollbarSetting}</SettingsInset>}
                             </SettingsSection>
                         )}
+
+                        <SettingsSection
+                            title={t('settings.openchamber.visual.section.chatBackdrop')}
+                            info={t('settings.openchamber.visual.section.chatBackdropInfo')}
+                            contentClassName={SETTINGS_FIELDS_STACK_CLASS}
+                        >
+                            <SettingsInset settingsItem="appearance.chat-backdrop">
+                                <SettingsCheckboxRow
+                                    checked={chatBackdropEnabled}
+                                    onChange={handleChatBackdropEnabledChange}
+                                    label={t('settings.openchamber.visual.field.chatBackdropEnabled')}
+                                    info={t('settings.openchamber.visual.field.chatBackdropEnabledHint')}
+                                    ariaLabel={t('settings.openchamber.visual.field.chatBackdropEnabled')}
+                                />
+                            </SettingsInset>
+
+                            <SettingsFieldRow
+                                label={t('settings.openchamber.visual.field.chatBackdropIntensity')}
+                                info={t('settings.openchamber.visual.field.chatBackdropIntensityHint')}
+                                settingsItem="appearance.chat-backdrop-intensity"
+                            >
+                                <input
+                                    type="range"
+                                    min={CHAT_BACKDROP_INTENSITY_MIN}
+                                    max={CHAT_BACKDROP_INTENSITY_MAX}
+                                    step={5}
+                                    value={chatBackdropIntensity}
+                                    disabled={!chatBackdropEnabled}
+                                    onChange={(event) => handleChatBackdropIntensityChange(Number(event.target.value))}
+                                    className={CHAT_BACKDROP_SLIDER_CLASS}
+                                    aria-label={t('settings.openchamber.visual.field.chatBackdropIntensity')}
+                                />
+                                <span className="typography-ui-label text-foreground tabular-nums min-w-[3rem] text-right">
+                                    {chatBackdropIntensity}%
+                                </span>
+                            </SettingsFieldRow>
+
+                            <SettingsFieldRow
+                                label={t('settings.openchamber.visual.field.chatBackdropScrim')}
+                                info={t('settings.openchamber.visual.field.chatBackdropScrimHint')}
+                                settingsItem="appearance.chat-backdrop-scrim"
+                            >
+                                <input
+                                    type="range"
+                                    min={CHAT_BACKDROP_SCRIM_MIN}
+                                    max={CHAT_BACKDROP_SCRIM_MAX}
+                                    step={5}
+                                    value={chatBackdropScrim}
+                                    disabled={!chatBackdropEnabled}
+                                    onChange={(event) => handleChatBackdropScrimChange(Number(event.target.value))}
+                                    className={CHAT_BACKDROP_SLIDER_CLASS}
+                                    aria-label={t('settings.openchamber.visual.field.chatBackdropScrim')}
+                                />
+                                <span className="typography-ui-label text-foreground tabular-nums min-w-[3rem] text-right">
+                                    {chatBackdropScrim}%
+                                </span>
+                            </SettingsFieldRow>
+
+                            <SettingsInset settingsItem="appearance.chat-backdrop-motion">
+                                <SettingsCheckboxRow
+                                    checked={chatBackdropMotion}
+                                    onChange={handleChatBackdropMotionChange}
+                                    disabled={!chatBackdropEnabled}
+                                    label={t('settings.openchamber.visual.field.chatBackdropMotion')}
+                                    info={t('settings.openchamber.visual.field.chatBackdropMotionHint')}
+                                    ariaLabel={t('settings.openchamber.visual.field.chatBackdropMotion')}
+                                />
+                            </SettingsInset>
+                        </SettingsSection>
 
                         {showWindowControlsPositionSetting && (
                             <SettingsSection

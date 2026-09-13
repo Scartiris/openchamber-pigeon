@@ -364,6 +364,105 @@
     background-color: var(--oc-glass-color);
   }
 }
+
+/* Pigeon: the video backdrop behind the chat column.
+
+   Every rule here is opt-in. `.oc-chat-surface` is the plain `bg-background`
+   fill it replaces until an ancestor carries `.oc-chat-backdrop-on`, so an
+   install that never turns the backdrop on renders exactly like upstream —
+   and a token change in any theme keeps working, because the translucent
+   variant mixes *from* `--background` instead of restating a colour. */
+.oc-chat-surface {
+  background-color: var(--background);
+}
+
+.oc-chat-backdrop-on .oc-chat-surface {
+  background-color: color-mix(in srgb, var(--background) 78%, transparent);
+}
+
+/* `z-index: -1` puts the footage above the column's own (now translucent)
+   background and below every in-flow child, so no message wrapper has to know
+   the backdrop exists. That only holds while the nearest ancestor is a
+   stacking context — the column carries `isolate` for exactly this reason. */
+.oc-chat-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Bleeds past the column by 14px on every side: the blur samples outside the
+   element, so without the overhang the edges of the picture would fade out
+   whenever the breathing animation is switched off. */
+.oc-chat-backdrop-media {
+  position: absolute;
+  inset: -14px;
+  width: calc(100% + 28px);
+  height: calc(100% + 28px);
+  object-fit: cover;
+  /* Pushes the subject out of the middle: text sits over the calm half. */
+  object-position: 28% 44%;
+  opacity: var(--oc-chat-backdrop-intensity, 1);
+  /* A backdrop behind prose is read, not watched — the blur is what keeps a
+     face from sitting sharp behind the composer. */
+  filter: blur(2px) saturate(1.06);
+}
+
+.oc-chat-backdrop-motion {
+  transform-origin: center center;
+  will-change: transform;
+  animation: oc-chat-backdrop-breathe 72s ease-in-out infinite alternate;
+}
+
+/* A veil mixed toward the active theme's own background, so text keeps its
+   contrast on any frame and the light theme is not handed a night scene at
+   full strength (`--oc-chat-scrim-opacity-light`, computed by the component). */
+.oc-chat-backdrop-on .oc-chat-scrim {
+  background-color: color-mix(
+    in srgb,
+    var(--background) var(--oc-chat-scrim-opacity, 45%),
+    transparent
+  );
+}
+
+:root:not(.dark) .oc-chat-backdrop-on .oc-chat-scrim {
+  background-color: color-mix(
+    in srgb,
+    var(--background) var(--oc-chat-scrim-opacity-light, 65%),
+    transparent
+  );
+}
+
+.oc-chat-scrim {
+  position: absolute;
+  inset: 0;
+}
+
+.oc-chat-scrim-vignette {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    120% 85% at 50% 45%,
+    transparent 45%,
+    color-mix(in srgb, var(--background) 40%, transparent) 100%
+  );
+}
+}
+
+@keyframes oc-chat-backdrop-breathe {
+  from {
+    transform: scale(1.03) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.1) translate3d(0, -1.4%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oc-chat-backdrop-motion {
+    animation: none;
+  }
 }
 
 @theme inline {
