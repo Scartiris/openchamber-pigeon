@@ -84,18 +84,20 @@ const readEnvelope = async <T>(response: Response): Promise<T> => {
 /**
  * 请求超时。
  *
- * OpenViking 的读接口在服务器侧实测是 5~15ms（uvicorn 访问日志 `duration_ms=4~8`），
- * 所以 20 秒只可能是「链路卡住」而不是「后端慢」。
+ * OpenViking 的读接口在**服务器侧**实测是 5~15ms（uvicorn 访问日志 `duration_ms=4~8`），
+ * 但**浏览器侧**要经过工作台的同源反代 + 用户所在链路：实测经一条慢隧道时，
+ * 同一个 154B 的响应可以在 0.7s 到 36s 之间浮动。所以超时必须按"端到端最坏情况"给，
+ * 而不是按服务器处理时间给 —— 给 20s 会把**只是慢**的读判成失败
+ * （实机截图抓到过：identity.md 被 20s 超时打断，界面显示"读取这个条目失败"）。
  *
- * 为什么要显式加：不加的话 `fetch` 会一直挂着，界面就永远停在「加载中…」——
- * 实机截图抓到的就是这个（右栏一直"加载中…"，而服务器根本没收到请求）。
- * 有超时至少能把它变成一条明确的错误。
+ * 这里取 90s：足够覆盖慢链路，又能在真的挂死时给出明确的错误
+ * （没有超时会永久停在"加载中…"，那才是最初那个更糟的表现）。
  */
-const DEFAULT_TIMEOUT_MS = 20_000;
+const REQUEST_TIMEOUT_MS = 90_000;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
     const response = await runtimeFetch(`${OPENVIKING_PREFIX}${path}`, {
       ...init,
