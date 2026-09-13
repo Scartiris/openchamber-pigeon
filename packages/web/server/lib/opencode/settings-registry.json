@@ -30,6 +30,9 @@
     "chatBackdropScrim": {
       "scope": "profile"
     },
+    "chatBackdropSurfaceOpacity": {
+      "scope": "profile"
+    },
     "chatBackdropMotion": {
       "scope": "profile"
     },

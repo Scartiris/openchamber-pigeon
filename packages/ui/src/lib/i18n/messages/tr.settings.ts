@@ -8,6 +8,8 @@ export const settingsDict = {
   'settings.openchamber.visual.field.chatBackdropIntensityHint': 'Görüntünün tema perdesinden ne kadarının kaldığı. 0 gizler, 100 olduğu gibi bırakır.',
   'settings.openchamber.visual.field.chatBackdropScrim': 'Perde',
   'settings.openchamber.visual.field.chatBackdropScrimHint': 'Metin kontrastını geri kazanmak için tema arka planına doğru ek perde. Açık tema %20 ekler.',
+  'settings.openchamber.visual.field.chatBackdropSurfaceOpacity': 'Panel opaklığı',
+  'settings.openchamber.visual.field.chatBackdropSurfaceOpacityHint': 'Panellerin ne kadar dolgun olduğu. Düşük değer duvar kağıdını çok daha fazla geçirir, yüksek değer metni sakinleştirir. Atmosferin gücünü esas bu belirler.',
   'settings.openchamber.visual.field.chatBackdropMotion': 'Nefes alma hareketi',
   'settings.openchamber.visual.field.chatBackdropMotionHint': 'Sabit bir kare donmuş görünmesin diye görüntüyü yavaşça büyütür. Hareketi azalt ayarında atlanır.',
   'settings.providers.page.openCodeGo.title': 'OpenCode Go kullanım takibi',

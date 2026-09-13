@@ -8,6 +8,8 @@ export const settingsDict = {
   'settings.openchamber.visual.field.chatBackdropIntensityHint': 'Скільки зображення лишається крізь серпанок теми. 0 ховає, 100 показує без змін.',
   'settings.openchamber.visual.field.chatBackdropScrim': 'Серпанок',
   'settings.openchamber.visual.field.chatBackdropScrimHint': 'Додатковий серпанок у бік тла теми для контрасту тексту. Світла тема додає 20%.',
+  'settings.openchamber.visual.field.chatBackdropSurfaceOpacity': 'Непрозорість панелей',
+  'settings.openchamber.visual.field.chatBackdropSurfaceOpacityHint': 'Наскільки щільні панелі. Нижче — значно більше видно тло, вище — текст спокійніший. Саме це визначає насиченість атмосфери.',
   'settings.openchamber.visual.field.chatBackdropMotion': 'Дихальний рух',
   'settings.openchamber.visual.field.chatBackdropMotionHint': 'Повільно наближає зображення, щоб статичний кадр не здавався завмерлим. Пропускається за зменшеної анімації.',
   'settings.openchamber.visual.section.chatBackdrop': 'Тло інтерфейсу',

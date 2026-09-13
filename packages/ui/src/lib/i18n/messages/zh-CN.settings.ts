@@ -8,6 +8,8 @@ export const settingsDict = {
   'settings.openchamber.visual.field.chatBackdropIntensityHint': '画面有多少能透过主题遮罩留下。0 为完全隐去，100 为原样呈现。',
   'settings.openchamber.visual.field.chatBackdropScrim': '遮罩',
   'settings.openchamber.visual.field.chatBackdropScrimHint': '向主题背景色额外叠一层纱，用来换回文字对比度。亮色主题会自动再加 20%。',
+  'settings.openchamber.visual.field.chatBackdropSurfaceOpacity': '面板不透明度',
+  'settings.openchamber.visual.field.chatBackdropSurfaceOpacityHint': '面板底色有多实。调低会让壁纸透出来更多、氛围更足；调高则文字更稳。氛围感的强弱主要就由它决定。',
   'settings.openchamber.visual.field.chatBackdropMotion': '呼吸动效',
   'settings.openchamber.visual.field.chatBackdropMotionHint': '缓慢缩放画面，避免静止帧看着像卡住。系统开启「减少动态效果」时自动跳过。',
   'settings.providers.page.openCodeGo.title': 'OpenCode Go 用量跟踪',

@@ -8,6 +8,8 @@ export const settingsDict = {
   'settings.openchamber.visual.field.chatBackdropIntensityHint': 'How much of the footage survives the theme veil. 0 hides it, 100 keeps it at full strength.',
   'settings.openchamber.visual.field.chatBackdropScrim': 'Scrim',
   'settings.openchamber.visual.field.chatBackdropScrimHint': 'Extra veil mixed toward the theme background to buy back text contrast. The light theme adds 20% on top.',
+  'settings.openchamber.visual.field.chatBackdropSurfaceOpacity': 'Panel opacity',
+  'settings.openchamber.visual.field.chatBackdropSurfaceOpacityHint': 'How solid the panes are. Lower lets much more of the wallpaper through; higher keeps text calmer. This is the knob that decides how strong the atmosphere feels.',
   'settings.openchamber.visual.field.chatBackdropMotion': 'Breathing motion',
   'settings.openchamber.visual.field.chatBackdropMotionHint': 'Slowly zooms the footage so a still frame never looks frozen. Skipped when the system asks for reduced motion.',
   'settings.providers.page.openCodeGo.title': 'OpenCode Go usage tracking',

@@ -13,11 +13,12 @@ import {
   CHAT_BACKDROP_VIDEO_SRC,
   clampChatBackdropIntensity,
   clampChatBackdropScrim,
+  clampChatBackdropSurface,
 } from '@/lib/chatBackdrop';
 import { useUIStore } from '@/stores/useUIStore';
 
-/** The light theme buys back 20 extra points of veil; see `design-system.css`. */
-const LIGHT_SCRIM_BOOST = 20;
+/** The light theme buys back a few extra points of veil; see `design-system.css`. */
+const LIGHT_SCRIM_BOOST = 8;
 
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 
@@ -44,9 +45,9 @@ export type ChatBackdropState = {
   enabled: boolean;
   /** Breathing animation requested by the user (media queries still win). */
   motion: boolean;
-  /** Class for the element that wraps both the layer and the chat surfaces. */
+  /** Class for the element that wraps both the layer and the surfaces. */
   rootClassName: string;
-  /** The two variables the surfaces and the scrim read. */
+  /** The variables the surfaces and the scrim read. */
   style: React.CSSProperties;
 };
 
@@ -54,11 +55,13 @@ export const useChatBackdrop = (): ChatBackdropState => {
   const enabled = useUIStore((state) => state.chatBackdropEnabled);
   const intensity = useUIStore((state) => state.chatBackdropIntensity);
   const scrim = useUIStore((state) => state.chatBackdropScrim);
+  const surfaceOpacity = useUIStore((state) => state.chatBackdropSurfaceOpacity);
   const motion = useUIStore((state) => state.chatBackdropMotion);
 
   return React.useMemo(() => {
     const safeIntensity = clampChatBackdropIntensity(intensity);
     const safeScrim = clampChatBackdropScrim(scrim);
+    const safeSurface = clampChatBackdropSurface(surfaceOpacity);
     return {
       enabled,
       motion,
@@ -67,9 +70,10 @@ export const useChatBackdrop = (): ChatBackdropState => {
         '--oc-chat-backdrop-intensity': String(safeIntensity / 100),
         '--oc-chat-scrim-opacity': `${safeScrim}%`,
         '--oc-chat-scrim-opacity-light': `${Math.min(100, safeScrim + LIGHT_SCRIM_BOOST)}%`,
+        '--oc-surface-opacity': `${safeSurface}%`,
       } as React.CSSProperties,
     };
-  }, [enabled, intensity, motion, scrim]);
+  }, [enabled, intensity, motion, scrim, surfaceOpacity]);
 };
 
 type ChatBackdropProps = {

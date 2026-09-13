@@ -383,7 +383,7 @@
 .oc-chat-backdrop-on .oc-backdrop-surface {
   background-color: color-mix(
     in srgb,
-    var(--oc-surface-color, var(--background)) var(--oc-surface-opacity, 78%),
+    var(--oc-surface-color, var(--background)) var(--oc-surface-opacity, 62%),
     transparent
   );
 }
@@ -447,9 +447,9 @@
   /* Pushes the subject out of the middle: text sits over the calm half. */
   object-position: 28% 44%;
   opacity: var(--oc-chat-backdrop-intensity, 1);
-  /* A backdrop behind prose is read, not watched — the blur is what keeps a
-     face from sitting sharp behind the composer. */
-  filter: blur(2px) saturate(1.06);
+  /* A hint of blur keeps a face from sitting razor-sharp behind the composer
+     without turning the whole wallpaper into mush. */
+  filter: blur(1px) saturate(1.06);
 }
 
 .oc-chat-backdrop-motion {

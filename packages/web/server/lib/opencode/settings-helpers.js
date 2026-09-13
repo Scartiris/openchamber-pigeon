@@ -205,9 +205,17 @@ export const createSettingsHelpers = (dependencies) => {
       typeof candidate.chatBackdropScrim === 'number' &&
       Number.isInteger(candidate.chatBackdropScrim) &&
       candidate.chatBackdropScrim >= 0 &&
-      candidate.chatBackdropScrim <= 80
+      candidate.chatBackdropScrim <= 92
     ) {
       result.chatBackdropScrim = candidate.chatBackdropScrim;
+    }
+    if (
+      typeof candidate.chatBackdropSurfaceOpacity === 'number' &&
+      Number.isInteger(candidate.chatBackdropSurfaceOpacity) &&
+      candidate.chatBackdropSurfaceOpacity >= 25 &&
+      candidate.chatBackdropSurfaceOpacity <= 100
+    ) {
+      result.chatBackdropSurfaceOpacity = candidate.chatBackdropSurfaceOpacity;
     }
     if (typeof candidate.chatBackdropMotion === 'boolean') {
       result.chatBackdropMotion = candidate.chatBackdropMotion;

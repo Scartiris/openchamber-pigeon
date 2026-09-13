@@ -8,6 +8,8 @@ export const settingsDict = {
   'settings.openchamber.visual.field.chatBackdropIntensityHint': 'Part de l\'image qui traverse le voile du thème. 0 la masque, 100 la laisse intacte.',
   'settings.openchamber.visual.field.chatBackdropScrim': 'Voile',
   'settings.openchamber.visual.field.chatBackdropScrimHint': 'Voile supplémentaire vers le fond du thème pour regagner du contraste. Le thème clair ajoute 20 %.',
+  'settings.openchamber.visual.field.chatBackdropSurfaceOpacity': 'Opacité des panneaux',
+  'settings.openchamber.visual.field.chatBackdropSurfaceOpacityHint': 'À quel point les panneaux sont opaques. Plus bas laisse passer bien plus le fond ; plus haut garde le texte plus calme. C\'est ce réglage qui décide le plus de l\'ambiance.',
   'settings.openchamber.visual.field.chatBackdropMotion': 'Mouvement respirant',
   'settings.openchamber.visual.field.chatBackdropMotionHint': 'Zoome lentement l\'image pour qu\'une image fixe ne paraisse pas figée. Ignoré si les animations sont réduites.',
   'settings.providers.page.openCodeGo.title': 'Suivi de l’utilisation d’OpenCode Go',

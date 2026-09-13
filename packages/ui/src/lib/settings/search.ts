@@ -91,6 +91,13 @@ const SETTINGS_SEARCH_ITEMS: readonly SettingsSearchItem[] = [
     keywords: ['wallpaper', 'backdrop', 'scrim', 'dim', 'contrast', 'veil', '遮罩', '背景'],
   },
   {
+    id: 'appearance.chat-backdrop-surface',
+    page: 'appearance',
+    titleKey: 'settings.openchamber.visual.field.chatBackdropSurfaceOpacity',
+    descriptionKey: 'settings.openchamber.visual.field.chatBackdropSurfaceOpacityHint',
+    keywords: ['wallpaper', 'backdrop', 'panel', 'surface', 'opacity', 'translucent', '氛围', '面板', '通透', '背景'],
+  },
+  {
     id: 'appearance.chat-backdrop-motion',
     page: 'appearance',
     titleKey: 'settings.openchamber.visual.field.chatBackdropMotion',

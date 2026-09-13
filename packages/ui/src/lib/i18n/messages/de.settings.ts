@@ -8,6 +8,8 @@ export const settingsDict = {
   'settings.openchamber.visual.field.chatBackdropIntensityHint': 'Wie viel vom Bild durch den Themenschleier bleibt. 0 blendet es aus, 100 zeigt es unverändert.',
   'settings.openchamber.visual.field.chatBackdropScrim': 'Schleier',
   'settings.openchamber.visual.field.chatBackdropScrimHint': 'Zusätzlicher Schleier in Richtung Themenhintergrund für besseren Textkontrast. Das helle Thema legt 20 % drauf.',
+  'settings.openchamber.visual.field.chatBackdropSurfaceOpacity': 'Deckkraft der Panels',
+  'settings.openchamber.visual.field.chatBackdropSurfaceOpacityHint': 'Wie deckend die Panels sind. Niedriger lässt mehr vom Hintergrund durch, höher hält Text ruhiger. Dieser Wert bestimmt die Stimmung am stärksten.',
   'settings.openchamber.visual.field.chatBackdropMotion': 'Atmende Bewegung',
   'settings.openchamber.visual.field.chatBackdropMotionHint': 'Zoomt das Bild langsam, damit ein Standbild nicht eingefroren wirkt. Entfällt bei reduzierter Bewegung.',
   'settings.providers.page.openCodeGo.title': 'OpenCode Go Nutzungsverfolgung',
