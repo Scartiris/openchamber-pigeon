@@ -1,0 +1,178 @@
+{
+  "metadata": {
+    "id": "yamada-ryo-light",
+    "name": "山田凉",
+    "description": "山田凉主题 · 昼。同一套配色的日间版：淡青白纸面、靛蓝墨字，发梢的青作为主色、灯火的金留给强调。",
+    "author": "Pigeon",
+    "version": "1.0.0",
+    "variant": "light",
+    "tags": [
+      "light",
+      "blue",
+      "paper",
+      "anime",
+      "character",
+      "yamada-ryo"
+    ]
+  },
+  "colors": {
+    "primary": {
+      "base": "#0f6b96",
+      "hover": "#0c5c83",
+      "active": "#0a4e70",
+      "foreground": "#ffffff",
+      "muted": "#0f6b9680",
+      "emphasis": "#14809f"
+    },
+    "surface": {
+      "background": "#f3f6fd",
+      "foreground": "#141b3e",
+      "muted": "#e5eaf8",
+      "mutedForeground": "#525c92",
+      "elevated": "#ffffff",
+      "elevatedForeground": "#141b3e",
+      "overlay": "#141b3e66",
+      "subtle": "#ecf0fb"
+    },
+    "interactive": {
+      "border": "#ced6ee",
+      "borderHover": "#a3aede",
+      "borderFocus": "#1a5fa8",
+      "selection": "#1a5fa82b",
+      "selectionForeground": "#141b3e",
+      "focus": "#1a5fa8",
+      "focusRing": "#1a5fa855",
+      "cursor": "#141b3e",
+      "hover": "#141b3e0d",
+      "active": "#141b3e1a"
+    },
+    "status": {
+      "error": "#a5342e",
+      "errorForeground": "#ffffff",
+      "errorBackground": "#a5342e1a",
+      "errorBorder": "#a5342e50",
+      "warning": "#8a6410",
+      "warningForeground": "#ffffff",
+      "warningBackground": "#8a64101a",
+      "warningBorder": "#8a641050",
+      "success": "#1f6b4f",
+      "successForeground": "#ffffff",
+      "successBackground": "#1f6b4f1a",
+      "successBorder": "#1f6b4f50",
+      "info": "#1f4f96",
+      "infoForeground": "#ffffff",
+      "infoBackground": "#1f4f961a",
+      "infoBorder": "#1f4f9650"
+    },
+    "pr": {
+      "open": "#2f6b3a",
+      "draft": "#525c92",
+      "blocked": "#8a6410",
+      "merged": "#4a3a9e",
+      "closed": "#a5342e"
+    },
+    "syntax": {
+      "base": {
+        "background": "#f3f6fd",
+        "foreground": "#141b3e",
+        "comment": "#5d6699",
+        "keyword": "#4a3a9e",
+        "string": "#8a6410",
+        "number": "#126b7a",
+        "function": "#1f4f96",
+        "variable": "#6f5410",
+        "type": "#12667a",
+        "operator": "#9a2f5a"
+      },
+      "tokens": {
+        "commentDoc": "#6b749f",
+        "stringEscape": "#5a3a12",
+        "keywordImport": "#9a2f5a",
+        "storageModifier": "#4a3a9e",
+        "functionCall": "#1f4f96",
+        "method": "#1f4f96",
+        "variableProperty": "#6f5410",
+        "variableOther": "#6f5410",
+        "variableGlobal": "#8a6410",
+        "variableLocal": "#e5eaf8",
+        "parameter": "#5a3a12",
+        "constant": "#126b7a",
+        "class": "#33409e",
+        "className": "#33409e",
+        "interface": "#12667a",
+        "struct": "#33409e",
+        "enum": "#33409e",
+        "typeParameter": "#12667a",
+        "namespace": "#12667a",
+        "module": "#9a2f5a",
+        "tag": "#4a3a9e",
+        "jsxTag": "#4a3a9e",
+        "tagAttribute": "#6f5410",
+        "tagAttributeValue": "#8a6410",
+        "boolean": "#4a3a9e",
+        "decorator": "#1f4f96",
+        "label": "#9a2f5a",
+        "punctuation": "#525c92",
+        "macro": "#4a3a9e",
+        "preprocessor": "#9a2f5a",
+        "regex": "#8a6410",
+        "url": "#8a6410",
+        "key": "#6f5410",
+        "exception": "#9a2f5a"
+      },
+      "highlights": {
+        "diffAdded": "#1f6b45",
+        "diffAddedBackground": "#1f6b4520",
+        "diffRemoved": "#a5342e",
+        "diffRemovedBackground": "#a5342e20",
+        "diffModified": "#1f4f96",
+        "diffModifiedBackground": "#1f4f9620",
+        "lineNumber": "#b3bcd8",
+        "lineNumberActive": "#141b3e"
+      }
+    },
+    "markdown": {
+      "heading1": "#141b3e",
+      "heading2": "#141b3e",
+      "heading3": "#141b3e",
+      "heading4": "#141b3e",
+      "link": "#1f4f96",
+      "linkHover": "#17397a",
+      "inlineCode": "#126b7a",
+      "inlineCodeBackground": "#e5eaf8",
+      "blockquote": "#525c92",
+      "blockquoteBorder": "#ced6ee",
+      "listMarker": "#0f6b9699"
+    },
+    "chat": {
+      "userMessage": "#141b3e",
+      "userMessageBackground": "#e2e8fa",
+      "assistantMessage": "#141b3e",
+      "assistantMessageBackground": "#f3f6fd",
+      "timestamp": "#525c92",
+      "divider": "#ced6ee"
+    },
+    "tools": {
+      "background": "#ecf0fb80",
+      "border": "#ced6ee99",
+      "headerHover": "#141b3e0a",
+      "icon": "#464f82",
+      "title": "#141b3e",
+      "description": "#464f82",
+      "edit": {
+        "added": "#1f6b45",
+        "addedBackground": "#1f6b4520",
+        "removed": "#a5342e",
+        "removedBackground": "#a5342e20",
+        "lineNumber": "#b3bcd8"
+      }
+    }
+  },
+  "config": {
+    "transitions": {
+      "fast": "150ms ease",
+      "normal": "250ms ease",
+      "slow": "350ms ease"
+    }
+  }
+}
