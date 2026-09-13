@@ -19,8 +19,18 @@ export interface OpenVikingScopeMeta {
   browseSlug: SettingsPageSlug;
   sidebarTitleKey: I18nKey;
   sidebarDescriptionKey: I18nKey;
+  /** 设置页的标题/描述 —— 只有 `OpenVikingSettingsPage` 用 */
   settingsTitleKey: I18nKey;
   settingsDescriptionKey: I18nKey;
+  /**
+   * 浏览页的标题/描述 —— 只有 `OpenVikingBrowsePage` 用。
+   *
+   * ★ 这两个字段是必需的，别让浏览页复用 `settingsTitleKey`：
+   * 复用过的后果是浏览页顶栏显示「记忆设置」+ 设置页的描述（实机截图抓到的），
+   * 因为 `settingsTitleKey` 指向的是 `settings.page.memorySettings.*`。
+   */
+  browseTitleKey: I18nKey;
+  browseDescriptionKey: I18nKey;
   emptyKey: I18nKey;
   scopeUri: string;
 }
@@ -33,6 +43,8 @@ export const OPENVIKING_SCOPE_META: Record<OpenVikingScope, OpenVikingScopeMeta>
     sidebarDescriptionKey: 'settings.openviking.memory.sidebar.description',
     settingsTitleKey: 'settings.page.memorySettings.title',
     settingsDescriptionKey: 'settings.page.memorySettings.description',
+    browseTitleKey: 'settings.page.memoryBrowse.title',
+    browseDescriptionKey: 'settings.page.memoryBrowse.description',
     emptyKey: 'settings.openviking.memory.empty',
     scopeUri: 'viking://user',
   },
@@ -43,6 +55,8 @@ export const OPENVIKING_SCOPE_META: Record<OpenVikingScope, OpenVikingScopeMeta>
     sidebarDescriptionKey: 'settings.openviking.knowledge.sidebar.description',
     settingsTitleKey: 'settings.page.knowledgeSettings.title',
     settingsDescriptionKey: 'settings.page.knowledgeSettings.description',
+    browseTitleKey: 'settings.page.knowledgeBrowse.title',
+    browseDescriptionKey: 'settings.page.knowledgeBrowse.description',
     emptyKey: 'settings.openviking.knowledge.empty',
     scopeUri: 'viking://resources',
   },

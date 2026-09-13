@@ -81,9 +81,35 @@ const readEnvelope = async <T>(response: Response): Promise<T> => {
   return envelope.result as T;
 };
 
+/**
+ * 请求超时。
+ *
+ * OpenViking 的读接口在服务器侧实测是 5~15ms（uvicorn 访问日志 `duration_ms=4~8`），
+ * 所以 20 秒只可能是「链路卡住」而不是「后端慢」。
+ *
+ * 为什么要显式加：不加的话 `fetch` 会一直挂着，界面就永远停在「加载中…」——
+ * 实机截图抓到的就是这个（右栏一直"加载中…"，而服务器根本没收到请求）。
+ * 有超时至少能把它变成一条明确的错误。
+ */
+const DEFAULT_TIMEOUT_MS = 20_000;
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await runtimeFetch(`${OPENVIKING_PREFIX}${path}`, init);
-  return readEnvelope<T>(response);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+  try {
+    const response = await runtimeFetch(`${OPENVIKING_PREFIX}${path}`, {
+      ...init,
+      signal: controller.signal,
+    });
+    return await readEnvelope<T>(response);
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new OpenVikingError('OpenViking 请求超时', 0, 'TIMEOUT');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 const withQuery = (path: string, params: Record<string, string | number | undefined>): string => {
@@ -173,8 +199,6 @@ export interface OpenVikingGrepMatch {
 // ---------------------------------------------------------------------------
 
 export const openVikingApi = {
-  status: () => request<OpenVikingStatus>(`/status`.replace(/^\//, '/'), undefined).catch(() => null),
-
   /**
    * 反代状态。反代自身**永远**回 200（未配置时 body 里 enabled=false），
    * 所以这里不需要容错到 `null`。

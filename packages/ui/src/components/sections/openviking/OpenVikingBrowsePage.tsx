@@ -114,8 +114,8 @@ export const OpenVikingBrowsePage: React.FC<OpenVikingBrowsePageProps> = ({ scop
 
   const shell = (children: React.ReactNode): React.ReactElement => (
     <SettingsPageLayout
-      title={t(meta.settingsTitleKey)}
-      description={t(meta.settingsDescriptionKey)}
+      title={t(meta.browseTitleKey)}
+      description={t(meta.browseDescriptionKey)}
       showSaveStatus={false}
       headerEnd={headerEnd}
     >
