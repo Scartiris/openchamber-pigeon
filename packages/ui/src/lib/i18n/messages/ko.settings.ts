@@ -133,6 +133,8 @@ export const settingsDict = {
   'settings.openviking.settings.unknown': '알 수 없음',
   'settings.openviking.settings.unreachable': '연결할 수 없음',
   'settings.openviking.settings.probeFailed': 'OpenViking 상태를 읽을 수 없습니다. 컨테이너가 실행 중인가요?',
+  'settings.openviking.settings.readyUnavailable': '준비 상태 확인이 시간 초과되었습니다.',
+  'settings.openviking.settings.healthFailed': 'OpenViking 버전을 읽을 수 없습니다. 컨테이너가 실행 중인가요?',
   'settings.openviking.settings.recheck': '다시 확인',
   'settings.openviking.settings.readOnlyNote': '이 페이지는 현재 읽기 전용입니다. 메모리 커밋 정책은 OpenViking의 각 세션에 있으며 여기에 없습니다.',
   'settings.openviking.memory.sidebar.title': '장기 메모리',

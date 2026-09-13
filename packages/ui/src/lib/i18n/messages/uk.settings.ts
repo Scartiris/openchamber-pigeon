@@ -135,6 +135,8 @@ export const settingsDict = {
   "settings.openviking.settings.unknown": "Невідомо",
   "settings.openviking.settings.unreachable": "Недосяжно",
   "settings.openviking.settings.probeFailed": "Не вдалося прочитати стан OpenViking. Контейнер запущено?",
+  "settings.openviking.settings.readyUnavailable": "Перевірка готовності перевищила час очікування.",
+  "settings.openviking.settings.healthFailed": "Не вдалося прочитати версію OpenViking. Контейнер запущено?",
   "settings.openviking.settings.recheck": "Перевірити знову",
   "settings.openviking.settings.readOnlyNote": "Ця сторінка поки що лише для читання. Політика фіксації пам’яті зберігається в кожному сеансі OpenViking, а не тут.",
   "settings.openviking.memory.sidebar.title": "Довготривала пам’ять",

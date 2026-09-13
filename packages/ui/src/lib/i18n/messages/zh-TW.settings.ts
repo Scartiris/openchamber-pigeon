@@ -130,6 +130,8 @@ export const settingsDict = {
   'settings.openviking.settings.unknown': '未知',
   'settings.openviking.settings.unreachable': '連不上',
   'settings.openviking.settings.probeFailed': '讀不到 OpenViking 的狀態。容器在跑嗎？',
+  'settings.openviking.settings.readyUnavailable': '就緒檢查逾時了。',
+  'settings.openviking.settings.healthFailed': '讀不到 OpenViking 的版本資訊。容器在跑嗎？',
   'settings.openviking.settings.recheck': '重新檢查',
   'settings.openviking.settings.readOnlyNote': '這一頁目前是唯讀的。記憶的提交策略在 OpenViking 的每個工作階段上，不在這裡。',
   'settings.openviking.memory.sidebar.title': '長期記憶',

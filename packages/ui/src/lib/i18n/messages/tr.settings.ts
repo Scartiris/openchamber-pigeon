@@ -132,6 +132,8 @@ export const settingsDict = {
   'settings.openviking.settings.unknown': 'Bilinmiyor',
   'settings.openviking.settings.unreachable': 'Erişilemiyor',
   'settings.openviking.settings.probeFailed': 'OpenViking durumu okunamadı. Kapsayıcı çalışıyor mu?',
+  'settings.openviking.settings.readyUnavailable': 'Hazır durum denetimi zaman aşımına uğradı.',
+  'settings.openviking.settings.healthFailed': 'OpenViking sürümü okunamadı. Kapsayıcı çalışıyor mu?',
   'settings.openviking.settings.recheck': 'Yeniden denetle',
   'settings.openviking.settings.readOnlyNote': 'Bu sayfa şimdilik salt okunur. Bellek işleme ilkesi OpenViking içindeki her oturumda bulunur, burada değil.',
   'settings.openviking.memory.sidebar.title': 'Uzun vadeli bellek',

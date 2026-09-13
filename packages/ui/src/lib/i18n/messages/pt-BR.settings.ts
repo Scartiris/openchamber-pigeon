@@ -135,6 +135,8 @@ export const settingsDict = {
   "settings.openviking.settings.unknown": "Desconhecido",
   "settings.openviking.settings.unreachable": "Inacessível",
   "settings.openviking.settings.probeFailed": "Não foi possível ler o estado do OpenViking. O contêiner está em execução?",
+  "settings.openviking.settings.readyUnavailable": "A verificação de prontidão expirou.",
+  "settings.openviking.settings.healthFailed": "Não foi possível ler a versão do OpenViking. O contêiner está em execução?",
   "settings.openviking.settings.recheck": "Verificar novamente",
   "settings.openviking.settings.readOnlyNote": "Esta página é somente leitura por enquanto. A política de confirmação de memória fica em cada sessão dentro do OpenViking, não aqui.",
   "settings.openviking.memory.sidebar.title": "Memória de longo prazo",

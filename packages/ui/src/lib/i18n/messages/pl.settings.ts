@@ -1339,6 +1339,8 @@ export const settingsDict = {
   'settings.openviking.settings.unknown': 'Nieznane',
   'settings.openviking.settings.unreachable': 'Nieosiągalne',
   'settings.openviking.settings.probeFailed': 'Nie udało się odczytać stanu OpenViking. Czy kontener działa?',
+  'settings.openviking.settings.readyUnavailable': 'Sprawdzanie gotowości przekroczyło limit czasu.',
+  'settings.openviking.settings.healthFailed': 'Nie udało się odczytać wersji OpenViking. Czy kontener działa?',
   'settings.openviking.settings.recheck': 'Sprawdź ponownie',
   'settings.openviking.settings.readOnlyNote': 'Ta strona jest na razie tylko do odczytu. Zasady zatwierdzania pamięci znajdują się w każdej sesji OpenViking, nie tutaj.',
   'settings.openviking.memory.sidebar.title': 'Pamięć długoterminowa',

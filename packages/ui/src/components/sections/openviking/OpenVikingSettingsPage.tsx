@@ -56,28 +56,51 @@ export const OpenVikingSettingsPage: React.FC<OpenVikingSettingsPageProps> = ({ 
     userId?: string;
   } | null>(null);
   const [ready, setReady] = React.useState<string | null>(null);
-  const [probeError, setProbeError] = React.useState(false);
+  /** 各自独立记录失败，不用一个 flag 混着 —— 否则 /health 成了也会显示"连不上" */
+  const [healthFailed, setHealthFailed] = React.useState(false);
+  const [readyFailed, setReadyFailed] = React.useState(false);
   const [probing, setProbing] = React.useState(false);
 
+  /**
+   * 两个探测**各自独立**。
+   *
+   * 早先版本把 `/health` 与 `/ready` 串在一个 try 里，任一失败就 `catch` 成
+   * "连不上" —— 实测出现过 `/health` 已经 200 拿到版本号、却因为 `/ready` 在这条
+   * 链路上超时而整块显示「版本 未知 / 就绪状态 连不上」，**对用户是假的**。
+   *
+   * `/ready` 本身每次都会**真探一次 embedding provider**（服务器侧实测稳定 ~0.42s，
+   * 比 /health 的 5ms 慢两个数量级），所以它是最容易在慢链路上超时的一环；
+   * 它失败只该影响"就绪状态"那一行，不该抹掉已经拿到的版本与身份。
+   */
   const probe = React.useCallback(async () => {
     setProbing(true);
-    setProbeError(false);
+    setHealthFailed(false);
+    setReadyFailed(false);
     setHealth(null);
     setReady(null);
-    try {
-      const healthResult = await openVikingApi.health();
+
+    const [healthOutcome, readyOutcome] = await Promise.allSettled([
+      openVikingApi.health(),
+      openVikingApi.ready(),
+    ]);
+
+    if (healthOutcome.status === 'fulfilled') {
       setHealth({
-        version: healthResult.version,
-        accountId: healthResult.account_id,
-        userId: healthResult.user_id,
+        version: healthOutcome.value.version,
+        accountId: healthOutcome.value.account_id,
+        userId: healthOutcome.value.user_id,
       });
-      const readyResult = await openVikingApi.ready();
-      setReady(readyResult.status);
-    } catch {
-      setProbeError(true);
-    } finally {
-      setProbing(false);
+    } else {
+      setHealthFailed(true);
     }
+
+    if (readyOutcome.status === 'fulfilled') {
+      setReady(readyOutcome.value.status);
+    } else {
+      setReadyFailed(true);
+    }
+
+    setProbing(false);
   }, []);
 
   React.useEffect(() => {
@@ -130,8 +153,12 @@ export const OpenVikingSettingsPage: React.FC<OpenVikingSettingsPageProps> = ({ 
     );
   }
 
+  // 就绪状态单独成判：`/ready` 会真探 embedding（慢两个数量级），
+  // 它失败只影响这一行，不动已经拿到的版本与身份。
   const readyLabel = ready
-    ?? (probeError ? t('settings.openviking.settings.unreachable') : unknown);
+    ?? (readyFailed
+      ? t('settings.openviking.settings.readyUnavailable')
+      : (probing ? t('settings.openviking.browse.loading') : unknown));
 
   return shell(
     <>
@@ -151,9 +178,9 @@ export const OpenVikingSettingsPage: React.FC<OpenVikingSettingsPageProps> = ({ 
             value={[health.accountId, health.userId].filter(Boolean).join(' / ')}
           />
         ) : null}
-        {probeError ? (
+        {healthFailed ? (
           <div className={SETTINGS_HELPER_CLASS}>
-            {t('settings.openviking.settings.probeFailed')}
+            {t('settings.openviking.settings.healthFailed')}
           </div>
         ) : null}
       </SettingsSection>

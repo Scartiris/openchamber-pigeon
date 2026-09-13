@@ -133,6 +133,8 @@ export const settingsDict = {
   'settings.openviking.settings.unknown': '不明',
   'settings.openviking.settings.unreachable': '到達不可',
   'settings.openviking.settings.probeFailed': 'OpenViking の状態を読み取れませんでした。コンテナは起動していますか？',
+  'settings.openviking.settings.readyUnavailable': '準備状態の確認がタイムアウトしました。',
+  'settings.openviking.settings.healthFailed': 'OpenViking のバージョンを読み取れませんでした。コンテナは起動していますか？',
   'settings.openviking.settings.recheck': '再確認',
   'settings.openviking.settings.readOnlyNote': 'このページは今のところ読み取り専用です。メモリのコミット方針は OpenViking の各セッション側にあり、ここではありません。',
   'settings.openviking.memory.sidebar.title': '長期メモリ',

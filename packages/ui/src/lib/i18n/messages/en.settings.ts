@@ -132,6 +132,8 @@ export const settingsDict = {
   'settings.openviking.settings.unknown': 'Unknown',
   'settings.openviking.settings.unreachable': 'Unreachable',
   'settings.openviking.settings.probeFailed': 'Could not read the OpenViking status. Is the container running?',
+  'settings.openviking.settings.readyUnavailable': 'Readiness check timed out.',
+  'settings.openviking.settings.healthFailed': 'Could not read the OpenViking version. Is the container running?',
   'settings.openviking.settings.recheck': 'Check again',
   'settings.openviking.settings.readOnlyNote': 'This page is read-only for now. Memory commit policy lives on each session inside OpenViking, not here.',
   'settings.openviking.memory.sidebar.title': 'Long-term memory',

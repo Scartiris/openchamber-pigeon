@@ -2149,6 +2149,8 @@ export const settingsDict = {
   'settings.openviking.settings.unknown': 'Inconnu',
   'settings.openviking.settings.unreachable': 'Injoignable',
   'settings.openviking.settings.probeFailed': 'Impossible de lire l’état d’OpenViking. Le conteneur tourne-t-il ?',
+  'settings.openviking.settings.readyUnavailable': 'La vérification de disponibilité a expiré.',
+  'settings.openviking.settings.healthFailed': 'Impossible de lire la version d’OpenViking. Le conteneur tourne-t-il ?',
   'settings.openviking.settings.recheck': 'Vérifier à nouveau',
   'settings.openviking.settings.readOnlyNote': 'Cette page est en lecture seule pour l’instant. La politique de validation de la mémoire se trouve dans chaque session d’OpenViking, pas ici.',
   'settings.openviking.memory.sidebar.title': 'Mémoire à long terme',

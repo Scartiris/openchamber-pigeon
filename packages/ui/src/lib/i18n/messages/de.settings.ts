@@ -114,6 +114,8 @@ export const settingsDict = {
   'settings.openviking.settings.unknown': 'Unbekannt',
   'settings.openviking.settings.unreachable': 'Nicht erreichbar',
   'settings.openviking.settings.probeFailed': 'Der OpenViking-Status konnte nicht gelesen werden. Läuft der Container?',
+  'settings.openviking.settings.readyUnavailable': 'Die Bereitschaftsprüfung hat ein Zeitlimit überschritten.',
+  'settings.openviking.settings.healthFailed': 'Die OpenViking-Version konnte nicht gelesen werden. Läuft der Container?',
   'settings.openviking.settings.recheck': 'Erneut prüfen',
   'settings.openviking.settings.readOnlyNote': 'Diese Seite ist vorerst schreibgeschützt. Die Commit-Richtlinie für Erinnerungen liegt in OpenViking bei jeder Sitzung, nicht hier.',
   'settings.openviking.memory.sidebar.title': 'Langzeitspeicher',
