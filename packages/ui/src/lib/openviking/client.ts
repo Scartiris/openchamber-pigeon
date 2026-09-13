@@ -114,6 +114,29 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 }
 
+/** 与 `request` 相同，但走 `readBareObject`（裸对象端点用） */
+async function requestBare<T extends object>(
+  path: string,
+  requireKeys: readonly string[],
+  label: string,
+): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const response = await runtimeFetch(`${OPENVIKING_PREFIX}${path}`, {
+      signal: controller.signal,
+    });
+    return await readBareObject<T>(response, requireKeys, label);
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new OpenVikingError(`${label}超时`, 0, 'TIMEOUT');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
  * 反代状态。**注意这个端点没有 OpenViking 的信封**。
  *
@@ -128,29 +151,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
  * 导出是为了能直接对它写回归测试（这个 bug 靠"测 store 逻辑"是抓不到的）。
  */
 export const readProxyStatus = async (response: Response): Promise<OpenVikingStatus> => {
-  const text = await response.text();
-  let payload: unknown = null;
-  try {
-    payload = text ? JSON.parse(text) : null;
-  } catch {
-    throw new OpenVikingError('反代状态响应无法解析', response.status, null);
-  }
-  if (!response.ok) {
-    const record = (payload ?? {}) as { error?: unknown; message?: unknown };
-    const code = typeof record.error === 'string' ? record.error : null;
-    const message = typeof record.message === 'string' && record.message
-      ? record.message
-      : `HTTP ${response.status}`;
-    throw new OpenVikingError(message, response.status, code);
-  }
-  const record = (payload ?? {}) as Partial<OpenVikingStatus>;
-  if (typeof record.enabled !== 'boolean') {
-    throw new OpenVikingError('反代状态响应缺少 enabled 字段', response.status, null);
+  const raw = await readBareObject<{
+    enabled: unknown;
+    upstream?: unknown;
+    hasApiKey?: unknown;
+  }>(response, ['enabled'], '反代状态');
+  if (typeof raw.enabled !== 'boolean') {
+    throw new OpenVikingError('反代状态响应的 enabled 不是布尔值', response.status, null);
   }
   return {
-    enabled: record.enabled,
-    upstream: typeof record.upstream === 'string' ? record.upstream : null,
-    hasApiKey: record.hasApiKey === true,
+    enabled: raw.enabled,
+    upstream: typeof raw.upstream === 'string' ? raw.upstream : null,
+    hasApiKey: raw.hasApiKey === true,
   };
 };
 
@@ -162,6 +174,61 @@ const withQuery = (path: string, params: Record<string, string | number | undefi
   }
   const query = search.toString();
   return query ? `${path}?${query}` : path;
+};
+
+/**
+ * 解析**裸对象**响应（顶层就是数据，没有 `{status, result, error}` 外壳）。
+ *
+ * 实测（2026-09-13）只有三个端点是这样，其余全是信封：
+ *   - OpenViking `GET /health` → `{status, healthy, version, auth_mode, account_id, user_id, role}`
+ *   - OpenViking `GET /ready`  → `{status, checks}`
+ *   - 我们反代 `GET /status`   → `{enabled, upstream, hasApiKey}`
+ *
+ * **踩过的坑**：一开始假设"OpenViking 的端点都有信封"，这三个都走了 `readEnvelope()`
+ * 去取 `envelope.result` → 永远是 `undefined`。分两步暴露：
+ *   ① 两个设置页**永远「加载中…」**（`/status` 取不到 enabled）
+ *   ② 修掉①之后立刻炸 `TypeError: Cannot read properties of undefined (reading 'version')`（`/health`）
+ *
+ * 所以裸对象必须显式解析，并用 `requireKeys` 校验关键字段：缺字段就**报错**，
+ * 而不是返回一个 undefined —— 否则又会退化成"静默的假状态"。
+ */
+export const readBareObject = async <T extends object>(
+  response: Response,
+  requireKeys: readonly string[],
+  label: string,
+): Promise<T> => {
+  const text = await response.text();
+  let payload: unknown = null;
+  try {
+    payload = text ? JSON.parse(text) : null;
+  } catch {
+    throw new OpenVikingError(`${label}响应无法解析`, response.status, null);
+  }
+
+  if (!response.ok) {
+    const record = (payload ?? {}) as { error?: unknown; message?: unknown };
+    const code = typeof record.error === 'string' ? record.error : null;
+    const message = typeof record.message === 'string' && record.message
+      ? record.message
+      : `HTTP ${response.status}`;
+    throw new OpenVikingError(message, response.status, code);
+  }
+
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
+    throw new OpenVikingError(`${label}响应不是对象`, response.status, null);
+  }
+
+  const record = payload as Record<string, unknown>;
+  const missing = requireKeys.filter((key) => record[key] === undefined);
+  if (missing.length > 0) {
+    throw new OpenVikingError(
+      `${label}响应缺少字段：${missing.join(', ')}`,
+      response.status,
+      null,
+    );
+  }
+
+  return record as unknown as T;
 };
 
 const jsonInit = (method: string, body: unknown): RequestInit => ({
@@ -261,8 +328,9 @@ export const openVikingApi = {
     }
   },
 
-  health: () => request<OpenVikingStatusResponse>('/health'),
-  ready: () => request<OpenVikingReadyResponse>('/ready'),
+  // `/health` 与 `/ready` 是**裸对象**（顶层就是数据），不是信封 —— 见 readBareObject。
+  health: () => requestBare<OpenVikingStatusResponse>('/health', ['status', 'healthy', 'version'], '健康检查'),
+  ready: () => requestBare<OpenVikingReadyResponse>('/ready', ['status'], '就绪检查'),
 
   ls: (uri: string) => request<OpenVikingEntry[]>(withQuery('/api/v1/fs/ls', { uri })),
   tree: (uri: string) => request<OpenVikingEntry[]>(withQuery('/api/v1/fs/tree', { uri })),
