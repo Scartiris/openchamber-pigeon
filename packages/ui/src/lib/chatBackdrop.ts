@@ -26,16 +26,16 @@ export const CHAT_BACKDROP_INTENSITY_DEFAULT = 100;
 /** Capped at 92: the light-theme boost in CSS adds up to 8 percentage points. */
 export const CHAT_BACKDROP_SCRIM_MIN = 0;
 export const CHAT_BACKDROP_SCRIM_MAX = 92;
-export const CHAT_BACKDROP_SCRIM_DEFAULT = 30;
+/** A light veil by default: enough to keep text calm over bright frames. */
+export const CHAT_BACKDROP_SCRIM_DEFAULT = 15;
 
 /**
  * Panel fill. 100 = opaque panes (upstream look), lower = more wallpaper.
- * 62% keeps body text comfortable over a busy frame; the slider goes to 25 so
- * the atmosphere can be pushed hard when the theme and the footage allow it.
+ * 49% is the shipped look: the footage reads clearly and body text still holds.
  */
 export const CHAT_BACKDROP_SURFACE_MIN = 25;
 export const CHAT_BACKDROP_SURFACE_MAX = 100;
-export const CHAT_BACKDROP_SURFACE_DEFAULT = 62;
+export const CHAT_BACKDROP_SURFACE_DEFAULT = 49;
 
 export const CHAT_BACKDROP_MOTION_DEFAULT = true;
 

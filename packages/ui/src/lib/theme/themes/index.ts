@@ -21,8 +21,9 @@ const pigeonNightcityDarkTheme = withPrColors(pigeonNightcityDarkRaw as Theme);
 const yamadaRyoLightTheme = withPrColors(yamadaRyoLightRaw as Theme);
 const yamadaRyoDarkTheme = withPrColors(yamadaRyoDarkRaw as Theme);
 
-export const DEFAULT_LIGHT_THEME_ID = 'openchamber-light' as const;
-export const DEFAULT_DARK_THEME_ID = 'openchamber-dark' as const;
+// Pigeon: a fresh profile opens on the theme pair made for the backdrop.
+export const DEFAULT_LIGHT_THEME_ID = 'yamada-ryo-light' as const;
+export const DEFAULT_DARK_THEME_ID = 'yamada-ryo-dark' as const;
 
 export const themes: Theme[] = [
   openchamberLightTheme,

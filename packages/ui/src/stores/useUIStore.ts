@@ -1357,7 +1357,8 @@ export const useUIStore = create<UIStore>()(
         enterToSend: false,
         enterToSendConfigured: false,
         wideChatLayoutEnabled: false,
-        chatBackdropEnabled: false,
+        // Pigeon: a fresh profile opens with the backdrop on (desktop only).
+        chatBackdropEnabled: true,
         chatBackdropIntensity: CHAT_BACKDROP_INTENSITY_DEFAULT,
         chatBackdropScrim: CHAT_BACKDROP_SCRIM_DEFAULT,
         chatBackdropSurfaceOpacity: CHAT_BACKDROP_SURFACE_DEFAULT,
