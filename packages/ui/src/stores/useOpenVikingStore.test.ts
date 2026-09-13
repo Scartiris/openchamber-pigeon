@@ -24,6 +24,11 @@ mock.module('@/lib/openviking/client', () => ({
   OpenVikingError: class OpenVikingError extends Error {
     status = 500; code: string | null = null; notConfigured = false;
   },
+  // 必须把真实模块导出的名字都补上。`bun test` 同一次运行里多个测试文件共享模块注册表，
+  // 只 mock 用到的几个会让**别的测试文件**导入剩余的导出时报
+  // "Export named 'X' not found"（本轮 client.test.ts 就被这条坑到了）。
+  // 仓库的 run-isolated-tests 会把每个文件单独起进程，正常不会串；但补全成本为零，更稳。
+  readProxyStatus: async () => ({ enabled: true, upstream: null, hasApiKey: true }),
   openVikingApi: {
     proxyStatus: async () => ({ enabled: true, upstream: 'http://openviking:1933', hasApiKey: true }),
     ls: lsMock,
