@@ -723,9 +723,9 @@ export function isPdfFile(filePath: string): boolean {
 export type DocumentPreviewKind = 'pdf' | 'word' | 'cell' | 'slide';
 
 /**
- * Files the preview panel can render. Office and OpenDocument formats go
- * through the OnlyOffice document server; PDF stays on the browser's native
- * viewer, which needs no conversion and no server round trip.
+ * Files the preview panel can render. Office and OpenDocument formats are
+ * converted to PDF server-side before the panel sees them; PDF stays on the
+ * browser's native viewer, which needs no conversion and no server round trip.
  *
  * Exported so a test can hold it against the server's own table — the two are
  * written in different languages and nothing else keeps them in step.

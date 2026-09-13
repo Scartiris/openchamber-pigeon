@@ -5,8 +5,8 @@ Office and PDF previews in the right-hand context panel (`mode: 'doc'`).
 ## Where it lives
 
 - `DocumentPreviewView.tsx` — the surface. Fetches `/api/doc-preview/config`,
-  loads the document server API once, creates/destroys the OnlyOffice editor, and
-  owns the toolbar (download / reload / fullscreen).
+  asks for the PDF to be produced when the file needs converting, renders it in an
+  iframe, and owns the toolbar (download / reload / fullscreen).
 - `@/lib/toolHelpers` — `isDocumentPreviewable()` / `getDocumentPreviewKind()`
   decide which files belong here and how they are rendered.
 - `@/stores/useUIStore` — the `doc` context panel mode and the
@@ -19,10 +19,13 @@ Office and PDF previews in the right-hand context panel (`mode: 'doc'`).
 
 ## Behaviour
 
+Every preview is the browser's own PDF viewer in an iframe; the two cases differ
+only in where the PDF comes from.
+
 | Kind | Renderer |
 |---|---|
-| `pdf` | `<iframe>` on the authenticated `/api/fs/raw` endpoint (browser-native viewer, no server round trip, no conversion). |
-| `word` / `cell` / `slide` | OnlyOffice editor in an iframe owned by the document server, in view mode (`permissions.edit: false`). |
+| `pdf` | `<iframe>` on the authenticated `/api/fs/raw` — the file itself, no round trip and no conversion. |
+| `word` / `cell` / `slide` | `<iframe>` on `/api/doc-preview/pdf`, which streams a PDF converted server-side. `/api/doc-preview/convert` is awaited first, so the wait is a loading state rather than a blank frame. |
 | anything else | not previewable — callers fall back to the text editor or the download action. |
 
 Entry points that open this surface: file paths in assistant markdown, file paths
@@ -37,14 +40,11 @@ because the panel is the only host of this surface.
   their previous behaviour (runtime editor / files view + download) instead of
   creating a tab nobody can see. Mobile document preview is a follow-up, not a
   silent dead click.
-- **One live editor at a time.** The context panel mounts only the *active*
-  document tab; switching tabs, switching to another surface (Git and back), or
-  hiding the panel destroys the editor (`destroyEditor()`) and the next visit
-  recreates it from the document server's converted copy. Keeping every open
-  document hot would multiply the document server's memory use by the number of
-  open tabs, which is not affordable on a small host.
+- **One preview at a time.** The context panel mounts only the *active* document
+  tab, so switching tabs unmounts the previous iframe instead of keeping every
+  open document loaded.
 - **Fullscreen is two-level**: the panel's own expand action (header button) and
-  the browser Fullscreen API from this surface's toolbar (which fills the editor
+  the browser Fullscreen API from this surface's toolbar (which fills the preview
   area, not the whole window).
 - **Download** streams the original bytes from `/api/fs/raw?download=true`; it is
   never a converted copy, so what the user downloads always matches the file.
@@ -52,14 +52,20 @@ because the panel is the only host of this surface.
   the file viewer uses: whoever opens the tab mints it first and the surface
   picks it up from the grant cache (desktop only — the grant flow is a desktop
   capability).
-- **No editing.** `permissions.edit` is false and the editor runs in `view` mode.
-  Enabling editing later means relaxing both and adding a save callback endpoint.
-- **Degrades loudly.** `not-configured` / `document-server-unavailable` / failed
+- **No editing, by design.** The preview shows a conversion, so there is nothing
+  to write back. `?edit=1`, permissions and a save callback do not exist here.
+- **A converted preview is a rendering, not the file.** Fidelity is LibreOffice's,
+  which is why the surface always offers the original for download. Font
+  substitution is the visible difference on documents that name fonts nobody has.
+- **Degrades loudly.** `not-configured` / `converter-unavailable` / failed
   conversions all render an explanatory card with a download action instead of a
-  blank frame, so a document server outage never looks like a broken file.
+  blank frame, so a conversion-service outage never looks like a broken file.
+- **The conversion is requested before the iframe is pointed at it.** Otherwise a
+  failing conversion would render a JSON error body inside the frame.
 
 ## Server contract
 
-See `packages/web/server/lib/doc-preview/DOCUMENTATION.md`. Two response shapes
-matter here: `kind: 'pdf'`, and `kind: 'onlyoffice'` with `documentServerUrl` +
-`editorConfig` (already signed with the shared JWT secret).
+See `packages/web/server/lib/doc-preview/DOCUMENTATION.md`. `config` answers
+`kind: 'pdf'` in both cases; `converted: true` means the PDF has to be produced by
+`/api/doc-preview/convert` first, and `converted: false` means the file is already
+a PDF and `/api/fs/raw` serves it.

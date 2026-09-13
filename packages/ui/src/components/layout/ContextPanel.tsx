@@ -1335,7 +1335,6 @@ export const ContextPanel: React.FC = () => {
                 key={activeDocumentTab.id}
                 filePath={activeDocumentTab.targetPath}
                 directory={directoryKey}
-                visible={isOpen}
               />
             </React.Suspense>
           </div>

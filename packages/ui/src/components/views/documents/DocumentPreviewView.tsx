@@ -3,7 +3,6 @@ import React from 'react';
 import { Icon } from '@/components/icon/Icon';
 import { FileTypeIcon } from '@/components/icons/FileTypeIcon';
 import { Button } from '@/components/ui/button';
-import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { useI18n } from '@/lib/i18n';
 import { runtimeFetch } from '@/lib/runtime-fetch';
 import {
@@ -14,107 +13,58 @@ import {
 import { getRuntimeUrlResolver } from '@/lib/runtime-url';
 import { getRuntimeApiBaseUrl } from '@/lib/runtime-switch';
 import { getOutsideFileGrant } from '@/lib/outsideFileGrants';
-import { cn } from '@/lib/utils';
 
 /**
  * Document preview surface (Word / Excel / PowerPoint / PDF) hosted in the
  * right-hand context panel.
  *
- * Office formats are rendered by the OnlyOffice document server: the server
- * route `/api/doc-preview/config` resolves the file inside the active
- * workspace, mints a short-lived capability URL for the document server and
- * returns a signed editor configuration. The editor itself lives in an iframe
- * owned by the document server, so this component only loads `api.js` once and
- * creates/destroys the editor instance.
+ * Every document is rendered by the browser's own PDF viewer in an iframe:
+ * PDFs straight from `/api/fs/raw`, office formats from `/api/doc-preview/pdf`,
+ * which streams a PDF converted server-side by the LibreOffice sidecar.
  *
- * PDFs never touch the document server — the browser renders them directly from
- * the authenticated `/api/fs/raw` endpoint.
- *
- * Only the active tab is mounted by the context panel, so switching tabs tears
- * down the previous editor instead of keeping one live editor per open document.
+ * The conversion is requested first (`/api/doc-preview/convert`) and awaited, so
+ * a slow or failed conversion shows as a loading state and an error card rather
+ * than leaving an iframe to render whatever the route answered with. The iframe
+ * URL is only built once that call succeeded.
  */
 
-type OnlyOfficeConfig = {
-  document: { fileType: string; key: string; title: string; url: string };
-  documentType: string;
-  editorConfig: Record<string, unknown>;
-  token?: string;
-  width?: string;
-  height?: string;
+type PreviewConfigPayload = {
+  available?: boolean;
+  kind?: string;
+  converted?: boolean;
+  reason?: string;
 };
 
 type PreviewState =
   | { status: 'loading' }
-  | { status: 'pdf' }
-  | { status: 'onlyoffice'; documentServerUrl: string; editorConfig: OnlyOfficeConfig }
+  | { status: 'converting' }
+  | { status: 'pdf'; converted: boolean }
   | { status: 'error'; reason: PreviewErrorReason };
 
 type PreviewErrorReason =
   | 'not-configured'
   | 'disabled'
-  | 'document-server-unavailable'
+  | 'converter-unavailable'
   | 'too-large'
   | 'unsupported'
   | 'failed';
 
-type DocsApiGlobal = {
-  DocsAPI?: {
-    DocEditor: new (
-      placeholder: string | HTMLElement,
-      config: OnlyOfficeConfig,
-    ) => { destroyEditor?: () => void };
-  };
-};
-
-const DOCS_API_PATH = '/web-apps/apps/api/documents/api.js';
-
-let docsApiPromise: Promise<void> | null = null;
-let editorPlaceholderSeq = 0;
-
-const loadDocsApi = (documentServerUrl: string): Promise<void> => {
-  const globalScope = window as unknown as DocsApiGlobal;
-  if (globalScope.DocsAPI?.DocEditor) {
-    return Promise.resolve();
-  }
-  if (!docsApiPromise) {
-    docsApiPromise = new Promise<void>((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = `${documentServerUrl.replace(/\/+$/, '')}${DOCS_API_PATH}`;
-      script.async = true;
-      // A 200 that is not the API (a proxy or SPA fallback serving index.html
-      // for an unknown path) would otherwise resolve the promise without
-      // DocsAPI and every later retry would short-circuit on it.
-      script.onload = () => {
-        if ((window as unknown as DocsApiGlobal).DocsAPI?.DocEditor) {
-          resolve();
-          return;
-        }
-        docsApiPromise = null;
-        reject(new Error('The document server API loaded but did not define DocsAPI'));
-      };
-      script.onerror = () => {
-        docsApiPromise = null;
-        reject(new Error('Failed to load the document server API'));
-      };
-      document.head.appendChild(script);
-    });
-  }
-  return docsApiPromise;
-};
-
 const readErrorReason = (status: number, payload: { reason?: string } | null): PreviewErrorReason => {
   if (payload?.reason === 'not-configured') return 'not-configured';
   if (payload?.reason === 'disabled') return 'disabled';
-  if (payload?.reason === 'document-server-unavailable') return 'document-server-unavailable';
-  if (status === 413) return 'too-large';
+  if (payload?.reason === 'converter-unavailable') return 'converter-unavailable';
+  if (payload?.reason === 'too-large' || status === 413) return 'too-large';
   if (status === 415) return 'unsupported';
+  // A conversion that failed or timed out is not a configuration problem and
+  // not a missing file: it is this document, and the card says so.
   return 'failed';
 };
 
 /**
- * Asset URLs (`/api/fs/raw` in an iframe) cannot carry an Authorization header,
- * so the runtime URL token has to be minted first — same mechanism the file
- * viewer and markdown image previews use.
+ * Asset URLs (an iframe cannot carry an Authorization header) need the runtime
+ * URL token minted first — the same mechanism the file viewer and markdown image
+ * previews use. `/api/doc-preview/pdf` is on the server's URL-token allowlist
+ * precisely so this works.
  */
 const useRuntimeAssetReady = (enabled: boolean): boolean => {
   const [ready, setReady] = React.useState(false);
@@ -154,26 +104,17 @@ const useRuntimeAssetReady = (enabled: boolean): boolean => {
 export type DocumentPreviewViewProps = {
   filePath: string;
   directory?: string | null;
-  visible?: boolean;
 };
 
 export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
   filePath,
   directory,
-  visible = true,
 }) => {
   const { t } = useI18n();
-  const { currentTheme } = useThemeSystem();
-  const themeVariant = currentTheme?.metadata?.variant === 'dark' ? 'dark' : 'light';
 
   const [state, setState] = React.useState<PreviewState>({ status: 'loading' });
   const [reloadNonce, setReloadNonce] = React.useState(0);
-  const placeholderRef = React.useRef<HTMLDivElement | null>(null);
-  const editorRef = React.useRef<{ destroyEditor?: () => void } | null>(null);
-  const [placeholderId] = React.useState(() => {
-    editorPlaceholderSeq += 1;
-    return `oc-document-preview-${editorPlaceholderSeq}`;
-  });
+  const contentRef = React.useRef<HTMLDivElement | null>(null);
   // Documents outside the workspace are readable only with a short-lived grant
   // that whoever opened this tab has already minted (the markdown link handler
   // on desktop calls ensureOutsideFileGrantForDesktop first). The grant lives in
@@ -199,89 +140,46 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
 
     void (async () => {
       try {
-        const response = await runtimeFetch('/api/doc-preview/config', {
-          query: {
-            path: filePath,
-            directory: directory ?? undefined,
-            theme: themeVariant,
-            ...outsideWorkspaceQuery,
-          },
-          cache: 'no-store',
-        });
+        const query = {
+          path: filePath,
+          directory: directory ?? undefined,
+          ...outsideWorkspaceQuery,
+        };
 
-        const payload = await response.json().catch(() => null) as
-          | {
-            available?: boolean;
-            kind?: string;
-            reason?: string;
-            documentServerUrl?: string;
-            editorConfig?: OnlyOfficeConfig;
-          }
-          | null;
-
+        const response = await runtimeFetch('/api/doc-preview/config', { query, cache: 'no-store' });
+        const payload = await response.json().catch(() => null) as PreviewConfigPayload | null;
         if (cancelled) return;
 
-        if (!response.ok || !payload?.available) {
-          setState({ status: 'error', reason: readErrorReason(response.status, payload) });
-          return;
-        }
-
-        if (payload.kind === 'pdf') {
-          setState({ status: 'pdf' });
-          return;
-        }
-
-        if (payload.kind === 'onlyoffice' && payload.documentServerUrl && payload.editorConfig) {
+        if (!response.ok || !payload?.available || payload.kind !== 'pdf') {
           setState({
-            status: 'onlyoffice',
-            documentServerUrl: payload.documentServerUrl,
-            editorConfig: payload.editorConfig,
+            status: 'error',
+            reason: response.ok && payload?.available
+              ? 'failed'
+              : readErrorReason(response.status, payload),
           });
           return;
         }
 
-        setState({ status: 'error', reason: 'failed' });
-      } catch {
-        if (!cancelled) {
-          setState({ status: 'error', reason: 'failed' });
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [directory, filePath, outsideWorkspaceQuery, reloadNonce, themeVariant]);
-
-  React.useEffect(() => {
-    // Only the visible tab keeps an editor alive: hiding the panel (or the
-    // surface) destroys it and showing it again recreates it, which keeps one
-    // live editor's worth of memory on the document server instead of one per
-    // open document. Creating an editor into a hidden 0-width placeholder is
-    // also what makes it come back blank after the panel is reopened.
-    if (state.status !== 'onlyoffice' || !visible) {
-      return;
-    }
-
-    let cancelled = false;
-
-    void (async () => {
-      try {
-        await loadDocsApi(state.documentServerUrl);
-        if (cancelled) return;
-
-        const globalScope = window as unknown as DocsApiGlobal;
-        const DocEditor = globalScope.DocsAPI?.DocEditor;
-        if (!DocEditor) {
-          setState({ status: 'error', reason: 'failed' });
+        if (!payload.converted) {
+          setState({ status: 'pdf', converted: false });
           return;
         }
 
-        editorRef.current = new DocEditor(placeholderId, state.editorConfig);
-      } catch (error) {
-        // Swallowing this silently leaves the user with a generic failure and
-        // nothing in the console to diagnose the document server with.
-        console.warn('Failed to start the document editor:', error);
+        setState({ status: 'converting' });
+        const renderResponse = await runtimeFetch('/api/doc-preview/convert', {
+          query,
+          cache: 'no-store',
+        });
+        const renderPayload = await renderResponse.json().catch(() => null) as PreviewConfigPayload | null;
+        if (cancelled) return;
+
+        if (!renderResponse.ok || !renderPayload?.available) {
+          setState({ status: 'error', reason: readErrorReason(renderResponse.status, renderPayload) });
+          return;
+        }
+
+        setState({ status: 'pdf', converted: true });
+      } catch {
         if (!cancelled) {
           setState({ status: 'error', reason: 'failed' });
         }
@@ -290,28 +188,26 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
 
     return () => {
       cancelled = true;
-      try {
-        editorRef.current?.destroyEditor?.();
-      } catch {
-        // The editor may already be gone (document server restart, tab close).
-      }
-      editorRef.current = null;
     };
-  }, [placeholderId, state, visible]);
+  }, [directory, filePath, outsideWorkspaceQuery, reloadNonce]);
 
   const isPdf = state.status === 'pdf';
+  const isConverted = isPdf && state.converted;
   // The download action has to work for every state, including the error card
   // that exists precisely to offer the original when the preview cannot render.
   const assetReady = useRuntimeAssetReady(state.status !== 'loading');
 
   const pdfSrc = React.useMemo(() => {
     if (!isPdf || !assetReady) return '';
-    return getRuntimeUrlResolver().authenticatedAsset('/api/fs/raw', {
-      path: filePath,
-      directory: directory ?? undefined,
-      ...outsideWorkspaceQuery,
-    });
-  }, [assetReady, directory, filePath, isPdf, outsideWorkspaceQuery]);
+    return getRuntimeUrlResolver().authenticatedAsset(
+      isConverted ? '/api/doc-preview/pdf' : '/api/fs/raw',
+      {
+        path: filePath,
+        directory: directory ?? undefined,
+        ...outsideWorkspaceQuery,
+      },
+    );
+  }, [assetReady, directory, filePath, isConverted, isPdf, outsideWorkspaceQuery]);
 
   const downloadUrl = React.useMemo(() => {
     if (!assetReady) return '';
@@ -330,7 +226,7 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
     if (state.reason === 'not-configured' || state.reason === 'disabled') {
       return t('documentPreview.error.notConfigured');
     }
-    if (state.reason === 'document-server-unavailable') {
+    if (state.reason === 'converter-unavailable') {
       return t('documentPreview.error.unavailable');
     }
     if (state.reason === 'too-large') {
@@ -350,7 +246,7 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
   }, []);
 
   const handleToggleFullscreen = React.useCallback(() => {
-    const element = placeholderRef.current?.parentElement ?? placeholderRef.current;
+    const element = contentRef.current;
     if (!element) return;
     if (document.fullscreenElement) {
       void document.exitFullscreen().catch(() => undefined);
@@ -407,11 +303,15 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
         </div>
       </div>
 
-      <div className="relative min-h-0 flex-1">
-        {state.status === 'loading' ? (
+      <div ref={contentRef} className="relative min-h-0 flex-1">
+        {state.status === 'loading' || state.status === 'converting' ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
             <Icon name="loader" className="h-6 w-6 animate-spin text-muted-foreground" />
-            <div className="typography-micro text-muted-foreground">{t('documentPreview.state.loading')}</div>
+            <div className="typography-micro text-muted-foreground">
+              {state.status === 'converting'
+                ? t('documentPreview.state.converting')
+                : t('documentPreview.state.loading')}
+            </div>
           </div>
         ) : null}
 
@@ -447,15 +347,6 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
             </div>
           )
         ) : null}
-
-        <div
-          ref={placeholderRef}
-          id={placeholderId}
-          className={cn(
-            'absolute inset-0 h-full w-full',
-            state.status === 'onlyoffice' && visible ? 'block' : 'hidden',
-          )}
-        />
       </div>
     </div>
   );

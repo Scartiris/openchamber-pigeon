@@ -213,6 +213,26 @@ describe('ui auth client credential seam', () => {
     });
     expect(mountedServeCalled).toBe(true);
 
+    // Document previews render in an iframe, so the converted PDF is a
+    // browser-owned URL and belongs on the allowlist. Every other route of that
+    // feature is fetched with a header and stays off it.
+    const previewPdfReq = { method: 'GET', path: '/api/doc-preview/pdf', url: `/api/doc-preview/pdf?path=%2Ftmp%2Freport.docx&oc_url_token=${encodeURIComponent(urlToken)}`, headers: {} };
+    const previewPdfRes = createResponse();
+    let previewPdfCalled = false;
+    await auth.requireAuth(previewPdfReq, previewPdfRes, () => {
+      previewPdfCalled = true;
+    });
+    expect(previewPdfCalled).toBe(true);
+
+    const previewConfigReq = { method: 'GET', path: '/api/doc-preview/config', url: `/api/doc-preview/config?path=%2Ftmp%2Freport.docx&oc_url_token=${encodeURIComponent(urlToken)}`, headers: {} };
+    const previewConfigRes = createResponse();
+    let previewConfigCalled = false;
+    await auth.requireAuth(previewConfigReq, previewConfigRes, () => {
+      previewConfigCalled = true;
+    });
+    expect(previewConfigCalled).toBe(false);
+    expect(previewConfigRes.statusCode).toBe(401);
+
     const dictationWsReq = {
       method: 'GET',
       path: '/api/dictation/ws',

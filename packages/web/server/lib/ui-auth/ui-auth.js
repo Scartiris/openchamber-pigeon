@@ -301,6 +301,7 @@ const isUrlAuthReadableHttpPath = (pathname) => {
     || pathname === '/api/fs/serve'
     || pathname.startsWith('/api/fs/serve/')
     || pathname.startsWith('/api/preview/proxy/')
+    || pathname === '/api/doc-preview/pdf'
     || /^\/api\/projects\/[^/]+\/icon$/.test(pathname);
 };
 

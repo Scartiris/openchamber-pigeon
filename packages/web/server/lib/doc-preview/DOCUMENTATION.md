@@ -2,89 +2,97 @@
 
 Optional Word / Excel / PowerPoint / PDF preview for the context panel.
 
-The surface is **inert unless configured**: with no document server URL and no
-JWT secret every route answers `not-configured`, so upstream builds, the desktop
-app and a plain `bun dev` keep their previous behaviour. The client only needs to
-know how to render what these routes return.
+Office formats are rendered as **PDF**, converted server-side by a LibreOffice
+sidecar (`deploy/office-convert/`); the browser then renders that PDF with its own
+viewer, exactly as it already did for `.pdf` files. There is no document editor
+and no editing: the surface is read-only, and the only thing that leaves the
+workspace is a copy of one document sent to the conversion service on the compose
+network.
+
+The surface is **inert unless configured**: with no conversion-service URL every
+office route answers `not-configured`, so upstream builds, the desktop app and a
+plain `bun dev` keep their previous behaviour. PDFs keep previewing even then,
+because the browser renders those itself.
 
 ## Endpoints
 
 | Route | Auth | Purpose |
 |---|---|---|
-| `GET /api/doc-preview/health` | UI session (bearer/cookie) | Whether office previews can render right now, plus the browser-facing document server origin. |
-| `GET /api/doc-preview/config?path=&directory=&theme=` | UI session | Resolves one file inside the active workspace and returns a render descriptor. |
-| `GET /doc-preview/raw?token=` | HMAC capability token | Serves document bytes to the document server (read into memory, bounded by `MAX_PREVIEW_BYTES`). |
+| `GET /api/doc-preview/health` | UI session (bearer/cookie) | Whether office previews can render right now. |
+| `GET /api/doc-preview/config?path=&directory=` | UI session | Resolves one file inside the active workspace and says how to render it. |
+| `GET /api/doc-preview/convert?path=&directory=` | UI session | Converts one office file and answers once its PDF exists. |
+| `GET /api/doc-preview/pdf?path=&directory=` | UI session, or `oc_url_token` | Streams the PDF an iframe renders. |
 
-`/doc-preview/raw` is deliberately **outside `/api`**: the document server fetches
-it container-to-container with no cookie and no `Authorization` header, so the UI
-auth middleware cannot apply. See "Capability tokens" below.
+`pdf` is the only route a browser loads as a URL rather than through
+`runtimeFetch`, so it is the only one on the URL-token allowlist
+(`lib/ui-auth/ui-auth.js`).
 
 ### `config` responses
 
 ```jsonc
-// PDF: the browser renders it, no document server involved
-{ "available": true, "kind": "pdf", "size": 12345 }
+// A real PDF: the browser renders it from /api/fs/raw, nothing else involved
+{ "available": true, "kind": "pdf", "converted": false, "size": 12345 }
 
-// Office: a signed OnlyOffice editor configuration
-{
-  "available": true,
-  "kind": "onlyoffice",
-  "documentType": "word",          // word | cell | slide
-  "documentKey": "9f2c…",          // sha1(realpath|mtimeMs|size)
-  "documentServerUrl": "https://office.example.com",
-  "editorConfig": { "document": { … }, "editorConfig": { … }, "token": "…" }
-}
+// An office file: a PDF has to be produced first
+{ "available": true, "kind": "pdf", "converted": true, "size": 23456, "fileName": "报告.docx" }
 ```
+
+`kind` is always `pdf` — the client renders both cases in an iframe and only
+differs in which endpoint it points at.
 
 Failures: `400` path missing/outside the workspace, `404` file missing,
 `413` over `MAX_PREVIEW_BYTES` (100 MiB), `415` type has no preview,
-`501 not-configured`, `503 document-server-unavailable`.
+`501 not-configured`, `502 conversion-failed`, `503 converter-unavailable`,
+`504 conversion-timeout`.
+
+### Why `convert` is a GET
+
+It writes a cache entry, so it would rather be a POST. It is not, for two
+mechanical reasons: the workspace-confinement resolver reads
+`allowOutsideWorkspace` and `outsideFileGrant` from the **query string**, and
+`/api/doc-preview` is not on the JSON-body middleware list in `core-routes.js`,
+so a POST body would arrive unparsed.
+
+The call is idempotent for one file version — the conversion key covers path,
+size and mtime — and it exists so the client can show a real loading state and a
+real error card. Without it the iframe would be pointed at a route that might
+answer with JSON, and the user would see raw JSON in a frame.
+
+## Conversion keys
+
+`buildConversionKey` (`converter.js`) is `sha1(canonicalPath|mtimeMs|size)`. It is
+the cache identity of one file version on both sides of the wire:
+
+- a different path, a save, or a truncation produces a different key, so a
+  converted PDF can never be served for content it was not made from;
+- saving a document simply misses the cache and converts again on next open;
+- the service only ever uses it as a cache file name, so it needs to know
+  nothing about the workspace it is serving.
+
+The key is an identifier, not a credential: the route re-resolves the path and
+re-checks the workspace on every request, and the service is only reachable from
+the compose network.
 
 ## Configuration
 
 | Variable | Meaning |
 |---|---|
-| `OPENCHAMBER_DOC_PREVIEW_URL` | Document server base URL as reachable **from this server** (e.g. `http://documentserver`). Enables the feature together with the JWT secret. |
-| `OPENCHAMBER_DOC_PREVIEW_PUBLIC_URL` | Document server origin the **browser** loads (e.g. `https://office.example.com`). Defaults to the internal URL. |
-| `OPENCHAMBER_DOC_PREVIEW_DOCUMENT_BASE_URL` | Base URL the document server uses to fetch documents back from OpenChamber (e.g. `http://openchamber:3000`). Defaults to the request origin, which works but sends document bytes through the public origin. |
-| `OPENCHAMBER_DOC_PREVIEW_JWT_SECRET` | Shared HS256 secret; must equal `JWT_SECRET` on the document server. |
-| `OPENCHAMBER_DOC_PREVIEW_RAW_SECRET` | Overrides the generated capability-token secret. |
+| `OPENCHAMBER_DOC_PREVIEW_URL` | Conversion-service base URL as reachable **from this server** (e.g. `http://office-convert:8000`). Enables the feature. |
+| `OPENCHAMBER_DOC_PREVIEW_TIMEOUT_MS` | Per-conversion budget, default 120000, clamped to 5s–10min. |
 | `OPENCHAMBER_DOC_PREVIEW_DISABLED` | `true` force-disables the surface even when otherwise configured. |
 
-The capability secret is generated once into `<data dir>/doc-preview-secret`
-(mode `0600`) when `OPENCHAMBER_DOC_PREVIEW_RAW_SECRET` is not set.
-
-The document server must run with `JWT_ENABLED=true`, `JWT_HEADER=Authorization`,
-`JWT_IN_BODY=true` and — when `DOCUMENT_BASE_URL` points at a private address —
-`ALLOW_PRIVATE_IP_ADDRESS=true` (verified against 9.3.0: without it the document
-server refuses the download).
-
-## Capability tokens
-
-`GET /doc-preview/raw` is authenticated by an HMAC-SHA256 token signed with a
-local secret. The payload pins `{ p: canonical path, m: mtimeMs, s: size, e: expiry }`;
-the TTL is 10 minutes and only the exact canonical path is signed.
-
-At fetch time the route re-runs `realpath` and refuses when it no longer equals
-the signed path (which also closes the symlink gap in `GET /api/fs/raw`), and it
-refuses with `409` when the file's size or mtime no longer match the token. That
-second check matters because the editor's `document.key` is derived from
-`path|mtimeMs|size`: serving newer bytes under an old key would hand the document
-server a document that disagrees with its own cache entry. A client that hits the
-409 reloads the configuration and gets a fresh key.
-
-Minting happens only after `resolveReadPathFromContext` (the same workspace
-confinement `/api/fs/raw` uses) plus a canonical containment re-check against the
-resolved base, so a preview link can never address a file the caller could not
-already open through the workspace.
-
-The token is a **capability**: anyone holding the URL can read that one file for
-10 minutes. It is therefore never logged, and responses carry `Cache-Control:
-no-store` and `Referrer-Policy: no-referrer`.
+There is no shared secret and no capability token. Nothing but this server talks
+to the conversion service, and nothing but the browser talks to these routes, so
+there is no second party to authenticate — these are ordinary `/api`-authenticated
+routes, and the one browser-loaded route is on the narrow URL-token allowlist.
 
 ## Tests
 
-`routes.test.js` covers the token round trip (tamper/expiry/foreign secret), the
-runtime's configured/unconfigured states, secret persistence, every `config`
-status code, the signed editor configuration payload, and the raw route's
-rejections. Run: `bun run --cwd packages/web test server/lib/doc-preview`.
+`routes.test.js` covers the conversion key, the runtime's configured/disabled
+states and timeout clamping, every `config` status code, the cache-hit path (no
+re-upload), the cache-miss path (upload, correct key, correct bytes), re-keying
+after a save, conversion failures, timeouts, refusals, and both branches of
+`pdf`. `extension-parity.test.js` keeps the server's extension table in step with
+the client's. `lib/ui-auth/ui-auth.test.js` covers the URL-token allowlist entry.
+
+Run: `bun run --cwd packages/web test server/lib/doc-preview`.

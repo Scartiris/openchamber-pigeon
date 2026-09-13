@@ -355,18 +355,13 @@ export const createFeatureRoutesRuntime = (dependencies) => {
     });
 
     // Optional document preview surface. It shares the filesystem route's
-    // workspace confinement rules and stays inert unless a document server is
-    // configured through the environment.
+    // workspace confinement rules and stays inert unless a conversion service
+    // is configured through the environment.
     registerDocPreviewRoutes(app, {
       crypto,
       fsPromises,
       path,
-      docPreviewRuntime: createDocPreviewRuntime({
-        crypto,
-        fsPromises,
-        path,
-        openchamberDataDir,
-      }),
+      docPreviewRuntime: createDocPreviewRuntime(),
       resolveReadPathFromContext: createReadPathResolver({
         path,
         os,
