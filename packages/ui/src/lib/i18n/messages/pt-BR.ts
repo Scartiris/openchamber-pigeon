@@ -3380,6 +3380,12 @@ export const dict: Record<I18nKey, string> = {
   "documentPreview.actions.exitFullscreen": "Sair da tela cheia",
   "documentPreview.actions.reload": "Recarregar",
   "documentPreview.state.loading": "Carregando pré-visualização…",
+  // Document preview editing
+  "documentPreview.actions.edit": "Editar",
+  "documentPreview.actions.view": "Visualizar",
+  "documentPreview.state.unsaved": "Alterações não salvas",
+  "documentPreview.state.saved": "Salvo",
+  "documentPreview.error.editUnsupported": "Este tipo de arquivo só pode ser pré-visualizado.",
   "documentPreview.error.notConfigured": "A pré-visualização de documentos não está configurada neste servidor.",
   "documentPreview.error.unavailable": "O servidor de documentos está indisponível. Você ainda pode baixar o original.",
   "documentPreview.error.failed": "Não foi possível abrir este documento.",

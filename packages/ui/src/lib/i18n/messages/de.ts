@@ -3377,6 +3377,12 @@ export const dict = {
   'documentPreview.actions.exitFullscreen': 'Vollbild beenden',
   'documentPreview.actions.reload': 'Neu laden',
   'documentPreview.state.loading': 'Vorschau wird geladen…',
+  // Document preview editing
+  'documentPreview.actions.edit': 'Bearbeiten',
+  'documentPreview.actions.view': 'Anzeigen',
+  'documentPreview.state.unsaved': 'Nicht gespeicherte Änderungen',
+  'documentPreview.state.saved': 'Gespeichert',
+  'documentPreview.error.editUnsupported': 'Dieser Dateityp kann nur in der Vorschau angezeigt werden.',
   'documentPreview.error.notConfigured': 'Die Dokumentvorschau ist auf diesem Server nicht konfiguriert.',
   'documentPreview.error.unavailable': 'Der Dokumentenserver ist nicht verfügbar. Sie können das Original weiterhin herunterladen.',
   'documentPreview.error.failed': 'Dieses Dokument konnte nicht geöffnet werden.',

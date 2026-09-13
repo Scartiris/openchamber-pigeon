@@ -39,7 +39,9 @@ const hmac = (crypto, secret, value) => crypto
 
 /**
  * Sign a capability token for one document version.
- * `payload` is `{ p: canonicalPath, m: mtimeMs, s: size, e: expiresAtMs }`.
+ * `payload` is `{ p: canonicalPath, m: mtimeMs, s: size, e: expiresAtMs }`, plus
+ * `k: 'read' | 'write'` so a token minted for one direction cannot be replayed
+ * against the other route.
  */
 export const signRawToken = ({ crypto, secret, payload }) => {
   const body = toBase64Url(JSON.stringify({ v: TOKEN_VERSION, ...payload }));
@@ -48,9 +50,10 @@ export const signRawToken = ({ crypto, secret, payload }) => {
 
 /**
  * Verify a capability token. Returns `{ ok: true, payload }` or
- * `{ ok: false, reason: 'malformed' | 'signature' | 'expired' }`.
+ * `{ ok: false, reason: 'malformed' | 'signature' | 'expired' | 'scope' }`.
+ * `requireKind` rejects a token minted for the other direction.
  */
-export const verifyRawToken = ({ crypto, secret, token, now = Date.now() }) => {
+export const verifyRawToken = ({ crypto, secret, token, now = Date.now(), requireKind = null }) => {
   const raw = typeof token === 'string' ? token.trim() : '';
   const separator = raw.lastIndexOf('.');
   if (!raw || separator <= 0 || separator === raw.length - 1) {
@@ -79,6 +82,9 @@ export const verifyRawToken = ({ crypto, secret, token, now = Date.now() }) => {
   if (typeof payload.e !== 'number' || !Number.isFinite(payload.e) || payload.e <= now) {
     return { ok: false, reason: 'expired' };
   }
+  if (requireKind && payload.k !== requireKind) {
+    return { ok: false, reason: 'scope' };
+  }
 
   return { ok: true, payload };
 };
@@ -92,6 +98,39 @@ export const signJwt = ({ crypto, secret, payload }) => {
   const body = toBase64Url(JSON.stringify(payload));
   const data = `${header}.${body}`;
   return `${data}.${hmac(crypto, secret, data)}`;
+};
+
+/**
+ * Verify a JWT produced by the document server (its callback bodies are signed
+ * with the same shared secret). Returns the payload, or null when the token is
+ * malformed, signed with a different secret, or expired.
+ */
+export const verifyJwt = ({ crypto, secret, token, now = Date.now() }) => {
+  const raw = typeof token === 'string' ? token.trim() : '';
+  const parts = raw.split('.');
+  if (parts.length !== 3) {
+    return null;
+  }
+
+  const [header, body, signature] = parts;
+  if (!safeEqual(crypto, signature, hmac(crypto, secret, `${header}.${body}`))) {
+    return null;
+  }
+
+  let payload = null;
+  try {
+    payload = JSON.parse(fromBase64Url(body));
+  } catch {
+    return null;
+  }
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+  if (typeof payload.exp === 'number' && Number.isFinite(payload.exp) && payload.exp * 1000 <= now) {
+    return null;
+  }
+
+  return payload;
 };
 
 /** Short, stable, OnlyOffice-safe document key (<=128 chars, `[0-9a-f]`). */

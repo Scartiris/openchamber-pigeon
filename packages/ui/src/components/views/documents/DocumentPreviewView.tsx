@@ -41,13 +41,29 @@ type OnlyOfficeConfig = {
   token?: string;
   width?: string;
   height?: string;
+  /** Editor lifecycle callbacks; added by this surface, not by the server. */
+  events?: DocEditorEvents;
+};
+
+/** Editor lifecycle events the surface listens to (added just before creation). */
+type DocEditorEvents = {
+  onDocumentStateChange?: (event: { data?: boolean }) => void;
+  onError?: (event: { data?: unknown }) => void;
 };
 
 type PreviewState =
   | { status: 'loading' }
   | { status: 'pdf' }
-  | { status: 'onlyoffice'; documentServerUrl: string; editorConfig: OnlyOfficeConfig }
+  | {
+    status: 'onlyoffice';
+    documentServerUrl: string;
+    editorConfig: OnlyOfficeConfig;
+    mode: DocumentMode;
+    editable: boolean;
+  }
   | { status: 'error'; reason: PreviewErrorReason };
+
+type DocumentMode = 'view' | 'edit';
 
 type PreviewErrorReason =
   | 'not-configured'
@@ -168,6 +184,11 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
 
   const [state, setState] = React.useState<PreviewState>({ status: 'loading' });
   const [reloadNonce, setReloadNonce] = React.useState(0);
+  // Editing is opt-in: the surface opens read-only and only asks the server for
+  // an editable configuration when the user switches.
+  const [requestedMode, setRequestedMode] = React.useState<DocumentMode>('view');
+  const [dirty, setDirty] = React.useState(false);
+  const [savedAt, setSavedAt] = React.useState<number | null>(null);
   const placeholderRef = React.useRef<HTMLDivElement | null>(null);
   const editorRef = React.useRef<{ destroyEditor?: () => void } | null>(null);
   const [placeholderId] = React.useState(() => {
@@ -204,6 +225,7 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
             path: filePath,
             directory: directory ?? undefined,
             theme: themeVariant,
+            ...(requestedMode === 'edit' ? { edit: '1' } : {}),
             ...outsideWorkspaceQuery,
           },
           cache: 'no-store',
@@ -216,6 +238,8 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
             reason?: string;
             documentServerUrl?: string;
             editorConfig?: OnlyOfficeConfig;
+            mode?: string;
+            editable?: boolean;
           }
           | null;
 
@@ -236,6 +260,8 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
             status: 'onlyoffice',
             documentServerUrl: payload.documentServerUrl,
             editorConfig: payload.editorConfig,
+            mode: payload.mode === 'edit' ? 'edit' : 'view',
+            editable: payload.editable === true,
           });
           return;
         }
@@ -251,7 +277,7 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [directory, filePath, outsideWorkspaceQuery, reloadNonce, themeVariant]);
+  }, [directory, filePath, outsideWorkspaceQuery, reloadNonce, requestedMode, themeVariant]);
 
   React.useEffect(() => {
     // Only the visible tab keeps an editor alive: hiding the panel (or the
@@ -264,6 +290,8 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
     }
 
     let cancelled = false;
+    setDirty(false);
+    setSavedAt(null);
 
     void (async () => {
       try {
@@ -277,7 +305,26 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
           return;
         }
 
-        editorRef.current = new DocEditor(placeholderId, state.editorConfig);
+        // The document server calls these back in the page; they are the only
+        // signal the surface gets about the editing state. `data === true` means
+        // there are changes the server has not stored yet, `false` that the last
+        // save went through — which is exactly when the callback has written the
+        // file back.
+        const events: DocEditorEvents = {
+          onDocumentStateChange: (event) => {
+            if (cancelled) return;
+            const modified = event?.data === true;
+            setDirty(modified);
+            if (!modified) {
+              setSavedAt(Date.now());
+            }
+          },
+          onError: (event) => {
+            console.warn('Document editor reported an error:', event?.data);
+          },
+        };
+
+        editorRef.current = new DocEditor(placeholderId, { ...state.editorConfig, events });
       } catch (error) {
         // Swallowing this silently leaves the user with a generic failure and
         // nothing in the console to diagnose the document server with.
@@ -359,6 +406,10 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
     void element.requestFullscreen?.().catch(() => undefined);
   }, []);
 
+  const onlyOfficeState = state.status === 'onlyoffice' ? state : null;
+  const currentMode: DocumentMode = onlyOfficeState?.mode ?? 'view';
+  const canEdit = onlyOfficeState?.editable === true;
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-[var(--surface-background)]">
       <div className="flex h-9 shrink-0 items-center gap-2 border-b border-border px-2">
@@ -366,7 +417,35 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
         <div className="min-w-0 flex-1 truncate typography-micro text-foreground" title={filePath}>
           {fileName}
         </div>
+        {onlyOfficeState ? (
+          <div className="shrink-0 typography-micro text-muted-foreground">
+            {dirty
+              ? t('documentPreview.state.unsaved')
+              : savedAt
+                ? t('documentPreview.state.saved')
+                : null}
+          </div>
+        ) : null}
         <div className="flex shrink-0 items-center gap-0.5">
+          <Button
+            type="button"
+            variant={currentMode === 'edit' ? 'secondary' : 'ghost'}
+            size="sm"
+            className="h-7 px-2"
+            disabled={!canEdit}
+            onClick={() => setRequestedMode((mode) => (mode === 'edit' ? 'view' : 'edit'))}
+            title={canEdit
+              ? (currentMode === 'edit' ? t('documentPreview.actions.view') : t('documentPreview.actions.edit'))
+              : t('documentPreview.error.editUnsupported')}
+            aria-label={canEdit
+              ? (currentMode === 'edit' ? t('documentPreview.actions.view') : t('documentPreview.actions.edit'))
+              : t('documentPreview.error.editUnsupported')}
+          >
+            <Icon name={currentMode === 'edit' ? 'eye' : 'edit'} className="mr-1 h-3.5 w-3.5" />
+            <span className="typography-micro">
+              {currentMode === 'edit' ? t('documentPreview.actions.view') : t('documentPreview.actions.edit')}
+            </span>
+          </Button>
           <Button
             type="button"
             variant="ghost"

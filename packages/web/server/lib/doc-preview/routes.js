@@ -1,32 +1,54 @@
 /**
  * Document preview routes (Word / Excel / PowerPoint / PDF).
  *
- *   GET /api/doc-preview/health   UI-authenticated. Reports whether the preview
- *                                 surface can render office files right now.
- *   GET /api/doc-preview/config   UI-authenticated. Resolves one file inside the
- *                                 active workspace and returns everything the
- *                                 client needs: a native PDF descriptor or a
- *                                 signed OnlyOffice editor configuration.
- *   GET /doc-preview/raw          Capability-token authenticated. Serves the
- *                                 document bytes to the document server.
+ *   GET  /api/doc-preview/health   UI-authenticated. Reports whether the preview
+ *                                  surface can render office files right now.
+ *   GET  /api/doc-preview/config   UI-authenticated. Resolves one file inside the
+ *                                  active workspace and returns everything the
+ *                                  client needs: a native PDF descriptor or a
+ *                                  signed OnlyOffice editor configuration. With
+ *                                  `?edit=1` and an editor-safe format it also
+ *                                  hands back a save callback URL.
+ *   GET  /doc-preview/raw          Capability-token authenticated. Serves the
+ *                                  document bytes to the document server.
+ *   POST /doc-preview/callback     Capability token **and** the document
+ *                                  server's own JWT. Receives a saved document
+ *                                  and writes it back to the workspace file.
  *
- * `/doc-preview/raw` deliberately lives **outside** `/api`: the OnlyOffice
- * Document Server fetches it container-to-container without cookies or an
- * `Authorization` header, so the UI auth middleware cannot apply. The URL
- * carries a short-lived HMAC token that pins one canonical path and one file
- * version, is never logged, and only ever exposes a file the requesting user
- * could already open through the workspace.
+ * `/doc-preview/raw` and `/doc-preview/callback` deliberately live **outside**
+ * `/api`: the OnlyOffice Document Server calls them container-to-container
+ * without cookies or an `Authorization` header, so the UI auth middleware cannot
+ * apply. Each URL carries an HMAC token that pins one canonical path, and — for
+ * the callback — the document key the editing session was opened with.
  */
+
+import { createHash } from 'node:crypto';
 
 import {
   buildDocumentKey,
   signJwt,
   signRawToken,
+  verifyJwt,
   verifyRawToken,
 } from './token.js';
 
 const MAX_PREVIEW_BYTES = 100 * 1024 * 1024;
 const RAW_TOKEN_TTL_MS = 10 * 60 * 1000;
+// An editing session can stay open for hours, and the document server only calls
+// back when the user saves or closes the document.
+const WRITE_TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
+const SAVED_VERSION_LIMIT = 5;
+
+/**
+ * Formats the editor may write back to the file it opened.
+ *
+ * Only the OOXML trio: the document server saves these in the format it read.
+ * Legacy binary formats (.doc/.xls/.ppt) would be converted to OOXML on save —
+ * silently changing the user's file type — and csv/rtf/odf round-trips lose
+ * structure or formatting, so those stay read-only.
+ */
+export const DOCUMENT_EDITABLE_EXTENSIONS = Object.freeze(['docx', 'xlsx', 'pptx']);
+const EDITABLE_EXTENSIONS = new Set(DOCUMENT_EDITABLE_EXTENSIONS);
 
 /** Extension -> OnlyOffice document type. `pdf` stays on the native viewer. */
 export const DOCUMENT_PREVIEW_KINDS = Object.freeze({
@@ -96,6 +118,103 @@ const encodeFileName = (fileName) => {
   };
 };
 
+const SAVE_DOWNLOAD_TIMEOUT_MS = 120 * 1000;
+
+/**
+ * The document server reports the saved file with a URL built from *its own*
+ * host name, which from inside this container points at our own loopback. Keep
+ * the cache path and re-attach it to the address we actually reach the server
+ * on. Only `/cache/` paths are accepted, so a callback cannot aim this at an
+ * arbitrary URL.
+ */
+const resolveDocumentServerDownloadUrl = ({ rawUrl, internalUrl }) => {
+  if (!rawUrl || !internalUrl) {
+    return '';
+  }
+
+  let parsed = null;
+  try {
+    parsed = new URL(rawUrl, 'http://document-server.invalid');
+  } catch {
+    return '';
+  }
+  if (!parsed.pathname.startsWith('/cache/')) {
+    return '';
+  }
+
+  return `${internalUrl.replace(/\/+$/, '')}${parsed.pathname}${parsed.search}`;
+};
+
+/**
+ * Writes to one document are serialised: the document server can deliver an
+ * autosave and a close-save back to back, and two interleaved read-modify-write
+ * cycles on the same file would lose one of them.
+ */
+const writeQueues = new Map();
+const enqueueDocumentWrite = (key, task) => {
+  const previous = writeQueues.get(key) ?? Promise.resolve();
+  const next = previous.then(task, task);
+  const settled = next.catch(() => {}).finally(() => {
+    if (writeQueues.get(key) === settled) {
+      writeQueues.delete(key);
+    }
+  });
+  writeQueues.set(key, settled);
+  return next;
+};
+
+const pruneSavedVersions = async ({ fsPromises, path, dir }) => {
+  try {
+    const entries = (await fsPromises.readdir(dir)).sort();
+    for (const entry of entries.slice(0, Math.max(0, entries.length - SAVED_VERSION_LIMIT))) {
+      await fsPromises.rm(path.join(dir, entry), { force: true });
+    }
+  } catch (error) {
+    console.warn('Failed to prune saved document versions:', error?.message || error);
+  }
+};
+
+/**
+ * Replace the workspace file with what the editor produced.
+ *
+ * Two properties matter here and both are deliberate: the copy of the version
+ * being replaced goes to the server's data dir (never next to the user's file),
+ * and the new bytes land through a same-directory temp file plus `rename`, so a
+ * crash mid-save cannot leave a half-written document in the workspace.
+ */
+const writeSavedDocument = async ({ fsPromises, path, canonicalPath, bytes, versionsDir }) => {
+  let previousStats = null;
+  try {
+    previousStats = await fsPromises.stat(canonicalPath);
+    const previous = await fsPromises.readFile(canonicalPath);
+    const digest = createHash('sha1').update(canonicalPath).digest('hex');
+    const dir = path.join(versionsDir, digest);
+    await fsPromises.mkdir(dir, { recursive: true });
+    await fsPromises.writeFile(
+      path.join(dir, `${Date.now()}-${previousStats.size}.bak`),
+      previous,
+      { mode: 0o600 },
+    );
+    await pruneSavedVersions({ fsPromises, path, dir });
+  } catch (error) {
+    // A document that vanished between the editor opening and the save should
+    // still be written: the user's edits are newer than the missing file.
+    if (error?.code !== 'ENOENT') {
+      console.warn('Failed to keep the previous document version:', error?.message || error);
+    }
+  }
+
+  const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+  const tempPath = `${canonicalPath}.doc-preview-${suffix}.tmp`;
+  try {
+    await fsPromises.writeFile(tempPath, bytes, previousStats ? { mode: previousStats.mode } : undefined);
+    await fsPromises.rename(tempPath, canonicalPath);
+  } catch (error) {
+    await fsPromises.rm(tempPath, { force: true }).catch(() => {});
+    throw error;
+  }
+};
+
 export const registerDocPreviewRoutes = (app, dependencies) => {
   const {
     crypto,
@@ -103,6 +222,9 @@ export const registerDocPreviewRoutes = (app, dependencies) => {
     path,
     docPreviewRuntime,
     resolveReadPathFromContext,
+    // Injected so the save callback's download can be driven in tests; the real
+    // server always uses the global fetch.
+    fetchImpl = globalThis.fetch,
   } = dependencies;
 
   const notConfigured = (res) => res.status(501).json({
@@ -216,6 +338,7 @@ export const registerDocPreviewRoutes = (app, dependencies) => {
       crypto,
       secret: rawSecret,
       payload: {
+        k: 'read',
         p: canonicalPath,
         m: Math.trunc(stats.mtimeMs),
         s: Math.trunc(stats.size),
@@ -235,6 +358,28 @@ export const registerDocPreviewRoutes = (app, dependencies) => {
     const requestedTheme = asString(req.query?.theme).toLowerCase();
     const fileName = getFileName(canonicalPath);
 
+    // Editing is opt-in per request and only offered for formats the editor can
+    // write back in place; everything else keeps the read-only view and says so,
+    // rather than leaving the client to guess why the toggle is missing.
+    const editRequested = asString(req.query?.edit) === '1' || asString(req.query?.mode).toLowerCase() === 'edit';
+    const editable = EDITABLE_EXTENSIONS.has(extension);
+    const editMode = editRequested && editable;
+
+    let callbackUrl;
+    if (editMode) {
+      const writeToken = signRawToken({
+        crypto,
+        secret: rawSecret,
+        payload: {
+          k: 'write',
+          p: canonicalPath,
+          d: documentKey,
+          e: Date.now() + WRITE_TOKEN_TTL_MS,
+        },
+      });
+      callbackUrl = `${documentBaseUrl}/doc-preview/callback?token=${encodeURIComponent(writeToken)}`;
+    }
+
     const editorConfigPayload = {
       document: {
         fileType: extension,
@@ -242,30 +387,33 @@ export const registerDocPreviewRoutes = (app, dependencies) => {
         title: fileName,
         url: documentUrl,
         permissions: {
-          edit: false,
+          edit: editMode,
           download: true,
           print: true,
           copy: true,
           review: false,
           comment: false,
-          fillForms: false,
-          modifyFilter: false,
-          modifyContentControl: false,
+          fillForms: editMode,
+          modifyFilter: editMode,
+          modifyContentControl: editMode,
         },
       },
       documentType: kind,
       editorConfig: {
-        mode: 'view',
+        mode: editMode ? 'edit' : 'view',
+        ...(callbackUrl ? { callbackUrl } : {}),
         // The fork ships Simplified Chinese only (LOCALES = ['zh-CN']), so the
         // editor language is not a per-request choice; theme is, because the
         // app's light/dark switch is.
         lang: 'zh-CN',
         user: { id: 'openchamber', name: 'OpenChamber' },
         customization: {
-          autosave: false,
+          // In edit mode the document server saves on its own and calls us back
+          // with the result; in view mode there is nothing to save.
+          autosave: editMode,
           forcesave: false,
           compactHeader: true,
-          hideRightMenu: true,
+          hideRightMenu: !editMode,
           help: false,
           about: false,
           feedback: false,
@@ -285,6 +433,8 @@ export const registerDocPreviewRoutes = (app, dependencies) => {
       documentServerUrl: docPreviewRuntime.getPublicUrl(),
       fileName,
       size: stats.size,
+      mode: editMode ? 'edit' : 'view',
+      editable,
       editorConfig: {
         ...editorConfigPayload,
         token: signJwt({
@@ -310,6 +460,7 @@ export const registerDocPreviewRoutes = (app, dependencies) => {
         crypto,
         secret: rawSecret,
         token: asString(req.query?.token),
+        requireKind: 'read',
       });
       if (!verified.ok) {
         if (verified.reason === 'signature') {
@@ -361,9 +512,106 @@ export const registerDocPreviewRoutes = (app, dependencies) => {
       return res.status(500).json({ error: error?.message || 'Failed to read file' });
     }
   });
+
+  /**
+   * Save callback for an editing session.
+   *
+   * The document server posts the edited document here. Two independent things
+   * have to hold: the URL's capability token (write-scoped, bound to one
+   * canonical path and to the document key this session was opened with), and
+   * the JWT the document server signs over its own callback body with the shared
+   * secret. Neither alone is enough — the token proves the request was minted
+   * for this file, the JWT proves it came from the document server.
+   */
+  app.post('/doc-preview/callback', async (req, res) => {
+    if (!docPreviewRuntime?.isConfigured()) {
+      return notConfigured(res);
+    }
+
+    try {
+      const rawSecret = await docPreviewRuntime.readRawSecret();
+      const verified = verifyRawToken({
+        crypto,
+        secret: rawSecret,
+        token: asString(req.query?.token),
+        requireKind: 'write',
+      });
+      if (!verified.ok) {
+        if (verified.reason === 'signature') {
+          console.warn('Rejected a document save callback with an invalid token');
+        }
+        // The document server reads `error` from the body, so a failure has to
+        // be reported there as well as in the status line.
+        return res.status(403).json({ error: 1 });
+      }
+
+      const body = req.body && typeof req.body === 'object' ? req.body : {};
+      const status = Number(body.status);
+      if (!Number.isFinite(status)) {
+        return res.status(400).json({ error: 1 });
+      }
+
+      const providedJwt = asString(body.token)
+        || asString(String(req.get('authorization') || '').replace(/^Bearer\s+/i, ''));
+      if (!verifyJwt({ crypto, secret: docPreviewRuntime.getJwtSecret(), token: providedJwt })) {
+        console.warn('Rejected a document save callback without a valid document server token');
+        return res.status(403).json({ error: 1 });
+      }
+
+      // status 1 = editing, 3 = save error, 4 = closed without changes,
+      // 7 = force-save error. Only 2 and 6 carry a document to store.
+      if (status !== 2 && status !== 6) {
+        return res.json({ error: 0 });
+      }
+
+      if (asString(body.key) !== verified.payload.d) {
+        // A save for a different version of this file: storing it would
+        // overwrite newer content with an older editing session's output.
+        console.warn('Rejected a document save callback for a stale document key');
+        return res.status(409).json({ error: 1 });
+      }
+
+      const downloadUrl = resolveDocumentServerDownloadUrl({
+        rawUrl: asString(body.url),
+        internalUrl: docPreviewRuntime.getInternalUrl(),
+      });
+      if (!downloadUrl) {
+        console.warn('Rejected a document save callback with an unusable document URL');
+        return res.status(400).json({ error: 1 });
+      }
+
+      const response = await fetchImpl(downloadUrl, { signal: AbortSignal.timeout(SAVE_DOWNLOAD_TIMEOUT_MS) });
+      if (!response.ok) {
+        console.error(`Document save download failed: ${response.status}`);
+        return res.status(502).json({ error: 1 });
+      }
+      const saved = Buffer.from(await response.arrayBuffer());
+      if (saved.length === 0 || saved.length > MAX_PREVIEW_BYTES) {
+        console.error(`Document save rejected: ${saved.length} bytes`);
+        return res.status(413).json({ error: 1 });
+      }
+
+      const canonicalPath = verified.payload.p;
+      await enqueueDocumentWrite(canonicalPath, () => writeSavedDocument({
+        fsPromises,
+        path,
+        canonicalPath,
+        bytes: saved,
+        versionsDir: docPreviewRuntime.getVersionsDir(),
+      }));
+
+      console.log(`Document saved: ${canonicalPath} (${saved.length} bytes, status ${status})`);
+      return res.json({ error: 0 });
+    } catch (error) {
+      console.error('Failed to store a saved document:', error);
+      return res.status(500).json({ error: 1 });
+    }
+  });
 };
 
 export const DOC_PREVIEW_LIMITS = Object.freeze({
   maxPreviewBytes: MAX_PREVIEW_BYTES,
   rawTokenTtlMs: RAW_TOKEN_TTL_MS,
+  writeTokenTtlMs: WRITE_TOKEN_TTL_MS,
+  savedVersionLimit: SAVED_VERSION_LIMIT,
 });

@@ -144,6 +144,13 @@ export const createDocPreviewRuntime = ({
     getDocumentBaseUrl: () => documentBaseUrl,
     readRawSecret,
     probeDocumentServer,
+    /**
+     * Where the one-deep copies of saved documents are kept. They live outside
+     * the workspace on purpose: saving must never leave anything behind next to
+     * the user's file, but an edit that mangles a document should still be
+     * recoverable.
+     */
+    getVersionsDir: () => path.join(openchamberDataDir, 'doc-preview-versions'),
     /** Test seam: drop the cached health result. */
     resetHealthCache: () => {
       healthCache = { at: 0, value: null };

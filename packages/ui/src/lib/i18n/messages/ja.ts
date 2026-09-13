@@ -3379,6 +3379,12 @@ export const dict: Record<I18nKey, string> = {
   'documentPreview.actions.exitFullscreen': '全画面を終了',
   'documentPreview.actions.reload': '再読み込み',
   'documentPreview.state.loading': 'プレビューを読み込み中…',
+  // Document preview editing
+  'documentPreview.actions.edit': '編集',
+  'documentPreview.actions.view': '表示',
+  'documentPreview.state.unsaved': '未保存の変更',
+  'documentPreview.state.saved': '保存済み',
+  'documentPreview.error.editUnsupported': 'このファイル形式はプレビューのみ可能です。',
   'documentPreview.error.notConfigured': 'このサーバーではドキュメントのプレビューが設定されていません。',
   'documentPreview.error.unavailable': 'ドキュメントサーバーを利用できません。元のファイルは引き続きダウンロードできます。',
   'documentPreview.error.failed': 'このドキュメントを開けませんでした。',
