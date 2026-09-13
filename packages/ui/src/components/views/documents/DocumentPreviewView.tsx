@@ -190,11 +190,16 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
   const [dirty, setDirty] = React.useState(false);
   const [savedAt, setSavedAt] = React.useState<number | null>(null);
   const placeholderRef = React.useRef<HTMLDivElement | null>(null);
-  const editorRef = React.useRef<{ destroyEditor?: () => void } | null>(null);
-  const [placeholderId] = React.useState(() => {
+  // The document server's api.js expects a pristine container: handing a second
+  // DocEditor the node of a destroyed one makes it fail (it keeps its own state on
+  // the element). A fresh id per configuration — used as the React key as well, so
+  // React really creates a new node instead of reusing this one — gives every
+  // editor instance, including the reload after switching view/edit, its own.
+  const placeholderId = React.useMemo(() => {
     editorPlaceholderSeq += 1;
     return `oc-document-preview-${editorPlaceholderSeq}`;
-  });
+  }, [state]);
+  const editorRef = React.useRef<{ destroyEditor?: () => void } | null>(null);
   // Documents outside the workspace are readable only with a short-lived grant
   // that whoever opened this tab has already minted (the markdown link handler
   // on desktop calls ensureOutsideFileGrantForDesktop first). The grant lives in
@@ -528,6 +533,7 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
         ) : null}
 
         <div
+          key={placeholderId}
           ref={placeholderRef}
           id={placeholderId}
           className={cn(
