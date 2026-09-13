@@ -86,6 +86,18 @@ export function registerPigeonBrainRoutes(app, options = {}) {
   });
 
   if (!brainUrl) {
+    // 未配置时**显式堵住整个前缀**，而不是让它落到 SPA 兜底。
+    //
+    // 实测过：不堵的话 `/api/pigeon-brain/ui/` 会命中静态资源的兜底路由、
+    // 返回工作台自己的 index.html（HTTP 200）—— 于是 iframe 会**把工作台嵌进它自己**，
+    // 表现为一个诡异的递归空白框。前端虽然会先查 status 不渲染 iframe，
+    // 但这层不该指望调用方自觉。
+    app.use(prefix, (_req, res) => {
+      res.status(404).json({
+        error: 'pigeon_brain_not_configured',
+        message: '这台工作台没有配置 pigeon-brain（环境变量 PIGEON_BRAIN_URL 为空）。',
+      });
+    });
     return { enabled: false, upstream: null };
   }
 

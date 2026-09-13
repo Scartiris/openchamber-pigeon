@@ -95,9 +95,15 @@ describe('未配置时', () => {
     expect(ctx.registration).toEqual({ enabled: false, upstream: null });
   });
 
-  test('其它路径不被吞掉（没有挂代理）', async () => {
-    const res = await fetch(`${ctx.base}${PIGEON_BRAIN_PREFIX}/ui/app.js`);
-    expect(res.status).toBe(404);
+  test('★ 整个前缀都被显式堵住，不会落到 SPA 兜底', async () => {
+    // 实测过：不堵的话 `/api/pigeon-brain/ui/` 会命中静态兜底、返回 200 的 index.html，
+    // 于是 iframe 把工作台嵌进它自己。这里断言拿到的必须是明确的 404。
+    for (const path of ['/ui/app.js', '/ui/', '/v1/memories']) {
+      const res = await fetch(`${ctx.base}${PIGEON_BRAIN_PREFIX}${path}`);
+      expect(res.status).toBe(404);
+      const body = await res.json();
+      expect(body.error).toBe('pigeon_brain_not_configured');
+    }
   });
 });
 
