@@ -2125,6 +2125,7 @@ export const settingsDict = {
   'settings.view.nav.group.opencode': 'OpenCode',
   'settings.view.nav.group.content': 'Bibliothèque',
   'settings.page.about.title': 'À propos',
+  'settings.page.pigeonBrain.title': 'Memory',
   'settings.openchamber.tunnel.notAvailable.dependencyNotFound': '{dependency} est introuvable.',
   'settings.magicPrompts.sidebar.item.sessionExplore': 'Tour du codebase',
   'settings.magicPrompts.sidebar.item.sessionFeaturePlan': 'Planification de fonctionnalité',

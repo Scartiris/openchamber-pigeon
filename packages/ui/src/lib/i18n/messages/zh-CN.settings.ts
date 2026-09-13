@@ -109,6 +109,7 @@ export const settingsDict = {
   'settings.page.tunnel.title': '外部隧道',
   'settings.page.tunnel.description': '通过远程隧道公开此实例。',
   'settings.page.about.title': '关于',
+  'settings.page.pigeonBrain.title': '记忆库',
   'settings.page.snippets.title': '代码片段',
   'settings.snippets.sidebar.title': '代码片段',
   'settings.snippets.sidebar.total': '共 {count} 个',

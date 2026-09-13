@@ -108,6 +108,7 @@ export const settingsDict = {
   'settings.page.tunnel.title': 'Harici Tunnel',
   'settings.page.tunnel.description': 'Bu örneği uzak bir tunnel üzerinden erişime açın.',
   'settings.page.about.title': 'Hakkında',
+  'settings.page.pigeonBrain.title': 'Memory',
   'settings.page.snippets.title': 'Snippet\'ler',
   'settings.snippets.sidebar.title': 'Snippet\'ler',
   'settings.snippets.sidebar.total': 'Toplam: {count}',

@@ -106,6 +106,7 @@ export const settingsDict = {
   'settings.page.tunnel.title': '外部通道',
   'settings.page.tunnel.description': '透過遠端通道公開此實例。',
   'settings.page.about.title': '關於',
+  'settings.page.pigeonBrain.title': '记忆库',
   'settings.page.snippets.title': '程式片段',
   'settings.snippets.sidebar.title': '程式片段',
   'settings.snippets.sidebar.total': '共 {count} 個',

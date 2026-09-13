@@ -107,6 +107,8 @@ const pageOrder: SettingsPageSlug[] = [
   'voice',
   'integrations',
   'usage',
+  // 记忆库：深链能用但侧栏点不到，是因为它不在这个数组里（rank 999 排到最后）
+  'pigeon-brain',
   'about',
   // 'projects' group — Workspace
   'projects',
@@ -382,6 +384,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
         return t('settings.page.tunnel.title');
       case 'about':
         return t('settings.page.about.title');
+      case 'pigeon-brain':
+        return t('settings.page.pigeonBrain.title');
       case 'home':
       default:
         return t('settings.view.home.title');

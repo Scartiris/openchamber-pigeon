@@ -111,6 +111,7 @@ export const settingsDict = {
   "settings.page.tunnel.title": "Зовнішній тунель",
   "settings.page.tunnel.description": "Відкрийте цей екземпляр через віддалений тунель.",
   "settings.page.about.title": "Про застосунок",
+  "settings.page.pigeonBrain.title": "Memory",
   "settings.page.snippets.title": "Сніпети",
   "settings.snippets.sidebar.title": "Сніпети",
   "settings.snippets.sidebar.total": "Всього: {count}",

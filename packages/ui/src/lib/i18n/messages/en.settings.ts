@@ -108,6 +108,7 @@ export const settingsDict = {
   'settings.page.tunnel.title': 'External Tunnel',
   'settings.page.tunnel.description': 'Expose this instance over a remote tunnel.',
   'settings.page.about.title': 'About',
+  'settings.page.pigeonBrain.title': 'Memory',
   'settings.page.snippets.title': 'Snippets',
   'settings.snippets.sidebar.title': 'Snippets',
   'settings.snippets.sidebar.total': 'Total: {count}',

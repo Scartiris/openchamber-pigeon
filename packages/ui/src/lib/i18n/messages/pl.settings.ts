@@ -1315,6 +1315,7 @@ export const settingsDict = {
   'settings.page.tunnel.title': 'Tunel zewnętrzny',
   'settings.page.tunnel.description': 'Udostępnij tę instancję przez zdalny tunel.',
   'settings.page.about.title': 'O aplikacji',
+  'settings.page.pigeonBrain.title': 'Memory',
   'settings.page.snippets.title': 'Fragmenty',
   'settings.snippets.sidebar.title': 'Fragmenty',
   'settings.snippets.sidebar.total': 'Suma: {count}',

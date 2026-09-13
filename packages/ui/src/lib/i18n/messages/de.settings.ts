@@ -90,6 +90,7 @@ export const settingsDict = {
   'settings.page.voice.title': 'Sprache',
   'settings.page.tunnel.title': 'Remote-Tunnel',
   'settings.page.about.title': 'Über',
+  'settings.page.pigeonBrain.title': 'Memory',
   'settings.page.snippets.title': 'Snippets',
   'settings.snippets.sidebar.title': 'Snippets',
   'settings.snippets.sidebar.total': 'Gesamt: {count}',
