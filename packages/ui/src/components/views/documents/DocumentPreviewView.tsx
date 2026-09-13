@@ -190,15 +190,6 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
   const [dirty, setDirty] = React.useState(false);
   const [savedAt, setSavedAt] = React.useState<number | null>(null);
   const placeholderRef = React.useRef<HTMLDivElement | null>(null);
-  // The document server's api.js expects a pristine container: handing a second
-  // DocEditor the node of a destroyed one makes it fail (it keeps its own state on
-  // the element). A fresh id per configuration — used as the React key as well, so
-  // React really creates a new node instead of reusing this one — gives every
-  // editor instance, including the reload after switching view/edit, its own.
-  const placeholderId = React.useMemo(() => {
-    editorPlaceholderSeq += 1;
-    return `oc-document-preview-${editorPlaceholderSeq}`;
-  }, [state]);
   const editorRef = React.useRef<{ destroyEditor?: () => void } | null>(null);
   // Documents outside the workspace are readable only with a short-lived grant
   // that whoever opened this tab has already minted (the markdown link handler
@@ -298,6 +289,23 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
     setDirty(false);
     setSavedAt(null);
 
+    const host = placeholderRef.current;
+    if (!host) {
+      return;
+    }
+    // The editor owns every node inside this host, and it does its own DOM surgery
+    // there (it creates and removes the frame, the toolbar and the canvas). React
+    // must therefore never reconcile that subtree: the host is rendered empty and
+    // the mount point is created here, imperatively, for each editor instance.
+    // Sharing one React-managed node between React and the document server is what
+    // threw `NotFoundError: Failed to execute 'removeChild'` on switching modes —
+    // React tried to remove a node the editor had already taken away — which the
+    // app's error boundary turned into a dead panel.
+    const mount = document.createElement('div');
+    mount.id = `oc-document-preview-${(editorPlaceholderSeq += 1)}`;
+    mount.className = 'h-full w-full';
+    host.replaceChildren(mount);
+
     void (async () => {
       try {
         await loadDocsApi(state.documentServerUrl);
@@ -329,7 +337,7 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
           },
         };
 
-        editorRef.current = new DocEditor(placeholderId, { ...state.editorConfig, events });
+        editorRef.current = new DocEditor(mount, { ...state.editorConfig, events });
       } catch (error) {
         // Swallowing this silently leaves the user with a generic failure and
         // nothing in the console to diagnose the document server with.
@@ -348,8 +356,13 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
         // The editor may already be gone (document server restart, tab close).
       }
       editorRef.current = null;
+      try {
+        host.replaceChildren();
+      } catch {
+        // Nothing left to clean up.
+      }
     };
-  }, [placeholderId, state, visible]);
+  }, [state, visible]);
 
   const isPdf = state.status === 'pdf';
   // The download action has to work for every state, including the error card
@@ -533,9 +546,7 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
         ) : null}
 
         <div
-          key={placeholderId}
           ref={placeholderRef}
-          id={placeholderId}
           className={cn(
             'absolute inset-0 h-full w-full',
             state.status === 'onlyoffice' && visible ? 'block' : 'hidden',
