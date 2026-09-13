@@ -8,6 +8,8 @@ export const settingsDict = {
   'settings.openchamber.visual.field.chatBackdropIntensityHint': 'Ile obrazu zostaje pod zasłoną motywu. 0 ukrywa, 100 pokazuje bez zmian.',
   'settings.openchamber.visual.field.chatBackdropScrim': 'Zasłona',
   'settings.openchamber.visual.field.chatBackdropScrimHint': 'Dodatkowa zasłona w stronę tła motywu dla lepszego kontrastu tekstu. Jasny motyw dodaje 20%.',
+  'settings.openchamber.visual.field.chatBackdropSurfaceOpacity': 'Krycie paneli',
+  'settings.openchamber.visual.field.chatBackdropSurfaceOpacityHint': 'Jak kryjące są panele. Niżej przepuszcza znacznie więcej tła, wyżej uspokaja tekst. To ten suwak decyduje o nastroju.',
   'settings.openchamber.visual.field.chatBackdropMotion': 'Ruch oddychania',
   'settings.openchamber.visual.field.chatBackdropMotionHint': 'Powoli powiększa obraz, aby nieruchoma klatka nie wyglądała na zatrzymaną. Pomijane przy ograniczeniu animacji.',
   'settings.providers.page.openCodeGo.title': 'Śledzenie użycia OpenCode Go',

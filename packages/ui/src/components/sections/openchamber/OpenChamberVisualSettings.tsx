@@ -75,8 +75,11 @@ import {
     CHAT_BACKDROP_INTENSITY_MIN,
     CHAT_BACKDROP_SCRIM_MAX,
     CHAT_BACKDROP_SCRIM_MIN,
+    CHAT_BACKDROP_SURFACE_MAX,
+    CHAT_BACKDROP_SURFACE_MIN,
     clampChatBackdropIntensity,
     clampChatBackdropScrim,
+    clampChatBackdropSurface,
 } from '@/lib/chatBackdrop';
 
 /** Same slider chrome VoiceSettings uses, so the two read as one control. */
@@ -372,6 +375,8 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
     const setChatBackdropIntensity = useUIStore(state => state.setChatBackdropIntensity);
     const chatBackdropScrim = useUIStore(state => state.chatBackdropScrim);
     const setChatBackdropScrim = useUIStore(state => state.setChatBackdropScrim);
+    const chatBackdropSurfaceOpacity = useUIStore(state => state.chatBackdropSurfaceOpacity);
+    const setChatBackdropSurfaceOpacity = useUIStore(state => state.setChatBackdropSurfaceOpacity);
     const chatBackdropMotion = useUIStore(state => state.chatBackdropMotion);
     const setChatBackdropMotion = useUIStore(state => state.setChatBackdropMotion);
     const codeBlockLineWrap = useUIStore(state => state.codeBlockLineWrap);
@@ -592,6 +597,12 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
         setChatBackdropScrim(next);
         void updateDesktopSettings({ chatBackdropScrim: next });
     }, [setChatBackdropScrim]);
+
+    const handleChatBackdropSurfaceOpacityChange = React.useCallback((value: number) => {
+        const next = clampChatBackdropSurface(value);
+        setChatBackdropSurfaceOpacity(next);
+        void updateDesktopSettings({ chatBackdropSurfaceOpacity: next });
+    }, [setChatBackdropSurfaceOpacity]);
 
     const handleChatBackdropMotionChange = React.useCallback((enabled: boolean) => {
         setChatBackdropMotion(enabled);
@@ -1076,6 +1087,27 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                     ariaLabel={t('settings.openchamber.visual.field.chatBackdropEnabled')}
                                 />
                             </SettingsInset>
+
+                            <SettingsFieldRow
+                                label={t('settings.openchamber.visual.field.chatBackdropSurfaceOpacity')}
+                                info={t('settings.openchamber.visual.field.chatBackdropSurfaceOpacityHint')}
+                                settingsItem="appearance.chat-backdrop-surface"
+                            >
+                                <input
+                                    type="range"
+                                    min={CHAT_BACKDROP_SURFACE_MIN}
+                                    max={CHAT_BACKDROP_SURFACE_MAX}
+                                    step={2}
+                                    value={chatBackdropSurfaceOpacity}
+                                    disabled={!chatBackdropEnabled}
+                                    onChange={(event) => handleChatBackdropSurfaceOpacityChange(Number(event.target.value))}
+                                    className={CHAT_BACKDROP_SLIDER_CLASS}
+                                    aria-label={t('settings.openchamber.visual.field.chatBackdropSurfaceOpacity')}
+                                />
+                                <span className="typography-ui-label text-foreground tabular-nums min-w-[3rem] text-right">
+                                    {chatBackdropSurfaceOpacity}%
+                                </span>
+                            </SettingsFieldRow>
 
                             <SettingsFieldRow
                                 label={t('settings.openchamber.visual.field.chatBackdropIntensity')}

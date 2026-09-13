@@ -8,6 +8,8 @@ export const settingsDict = {
   'settings.openchamber.visual.field.chatBackdropIntensityHint': '테마 베일 너머로 영상이 얼마나 남을지 정합니다. 0은 숨김, 100은 그대로 표시입니다.',
   'settings.openchamber.visual.field.chatBackdropScrim': '베일',
   'settings.openchamber.visual.field.chatBackdropScrimHint': '테마 배경색 쪽으로 덧씌워 텍스트 대비를 확보합니다. 라이트 테마는 20%가 더해집니다.',
+  'settings.openchamber.visual.field.chatBackdropSurfaceOpacity': '패널 불투명도',
+  'settings.openchamber.visual.field.chatBackdropSurfaceOpacityHint': '패널 바탕이 얼마나 진한지 정합니다. 낮추면 배경이 더 비쳐 분위기가 살고, 높이면 글자가 안정됩니다. 분위기의 강도를 사실상 이 값이 결정합니다.',
   'settings.openchamber.visual.field.chatBackdropMotion': '호흡 효과',
   'settings.openchamber.visual.field.chatBackdropMotionHint': '영상을 천천히 확대해 정지 화면이 멈춘 것처럼 보이지 않게 합니다. 동작 줄이기 설정에서는 생략됩니다.',
   'settings.providers.page.openCodeGo.title': 'OpenCode Go 사용량 추적',

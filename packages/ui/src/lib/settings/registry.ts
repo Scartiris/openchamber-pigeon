@@ -25,6 +25,8 @@ import {
   CHAT_BACKDROP_INTENSITY_MIN,
   CHAT_BACKDROP_SCRIM_MAX,
   CHAT_BACKDROP_SCRIM_MIN,
+  CHAT_BACKDROP_SURFACE_MAX,
+  CHAT_BACKDROP_SURFACE_MIN,
 } from '@/lib/chatBackdrop';
 import type { DraftStarterRef } from '@/lib/draftStarters';
 import { sanitizeStarterRefs } from '@/lib/draftStarters';
@@ -235,6 +237,11 @@ export const SETTINGS_REGISTRY = {
     scope: 'profile',
     parse: parseIntegerInRange(CHAT_BACKDROP_SCRIM_MIN, CHAT_BACKDROP_SCRIM_MAX),
     ui: uiStore('chatBackdropScrim', (value) => useUIStore.getState().setChatBackdropScrim(value)),
+  }),
+  chatBackdropSurfaceOpacity: field({
+    scope: 'profile',
+    parse: parseIntegerInRange(CHAT_BACKDROP_SURFACE_MIN, CHAT_BACKDROP_SURFACE_MAX),
+    ui: uiStore('chatBackdropSurfaceOpacity', (value) => useUIStore.getState().setChatBackdropSurfaceOpacity(value)),
   }),
   chatBackdropMotion: field({
     scope: 'profile',

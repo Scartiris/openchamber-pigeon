@@ -8,6 +8,8 @@ export const settingsDict = {
   'settings.openchamber.visual.field.chatBackdropIntensityHint': 'Quanto da imagem sobrevive ao véu do tema. 0 oculta, 100 mantém sem alteração.',
   'settings.openchamber.visual.field.chatBackdropScrim': 'Véu',
   'settings.openchamber.visual.field.chatBackdropScrimHint': 'Véu extra na direção do fundo do tema para recuperar contraste do texto. O tema claro soma 20%.',
+  'settings.openchamber.visual.field.chatBackdropSurfaceOpacity': 'Opacidade dos painéis',
+  'settings.openchamber.visual.field.chatBackdropSurfaceOpacityHint': 'Quão sólidos são os painéis. Mais baixo deixa passar muito mais o fundo; mais alto mantém o texto mais calmo. É o que mais define o clima.',
   'settings.openchamber.visual.field.chatBackdropMotion': 'Movimento de respiração',
   'settings.openchamber.visual.field.chatBackdropMotionHint': 'Amplia a imagem lentamente para um quadro parado não parecer congelado. Ignorado com movimento reduzido.',
   'settings.openchamber.visual.section.chatBackdrop': 'Fundo da interface',

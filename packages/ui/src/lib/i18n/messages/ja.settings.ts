@@ -8,6 +8,8 @@ export const settingsDict = {
   'settings.openchamber.visual.field.chatBackdropIntensityHint': 'テーマのベール越しに映像をどれだけ残すか。0 で非表示、100 でそのまま表示します。',
   'settings.openchamber.visual.field.chatBackdropScrim': 'ベール',
   'settings.openchamber.visual.field.chatBackdropScrimHint': 'テーマ背景色に寄せたベールを重ね、文字のコントラストを確保します。ライトテーマではさらに 20% 加算されます。',
+  'settings.openchamber.visual.field.chatBackdropSurfaceOpacity': 'パネルの不透明度',
+  'settings.openchamber.visual.field.chatBackdropSurfaceOpacityHint': 'パネル生地の不透明度。下げると壁紙がより透けて雰囲気が出て、上げると文字が落ち着きます。雰囲気の強さはほぼこれで決まります。',
   'settings.openchamber.visual.field.chatBackdropMotion': '呼吸する動き',
   'settings.openchamber.visual.field.chatBackdropMotionHint': '映像をゆっくり拡大し、静止画が固まって見えないようにします。視差効果を減らす設定では無効になります。',
   'settings.providers.page.openCodeGo.title': 'OpenCode Go 使用量追跡',
