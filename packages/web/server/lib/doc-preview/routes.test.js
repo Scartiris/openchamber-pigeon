@@ -230,8 +230,14 @@ describe('GET /api/doc-preview/config', () => {
   it('answers 413 over the preview size limit', async () => {
     await writeDocument('huge.docx');
     const registry = await setup({
+      // A spread of a real Stats loses `isFile` (it lives on the prototype), so
+      // the fake has to carry it explicitly.
       fsOverrides: {
-        stat: async (target) => ({ ...(await stat(target)), size: 100 * 1024 * 1024 + 1 }),
+        stat: async (target) => ({
+          ...(await stat(target)),
+          size: 100 * 1024 * 1024 + 1,
+          isFile: () => true,
+        }),
       },
     });
     const res = await call(registry, '/api/doc-preview/config', { path: 'huge.docx' });
