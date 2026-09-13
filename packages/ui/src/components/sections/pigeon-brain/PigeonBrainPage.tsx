@@ -62,12 +62,16 @@ export const PigeonBrainPage: React.FC = () => {
         variant="outline"
         size="sm"
         onClick={() => setReloadToken((value) => value + 1)}
-        disabled={!status?.enabled}
       >
         重新加载
       </Button>
-      <Button variant="outline" size="sm" asChild disabled={!status?.enabled}>
-        <a href={EMBED_SRC} target="_blank" rel="noreferrer">
+      {/*
+        注意 `asChild` 时**不能靠 disabled 挡住点击** —— 那个 prop 会落到 <a> 上，
+        而 <a> 没有 disabled 语义。这里的做法是：未配置时整个 header 根本不渲染
+        （见下面的提前 return），所以不需要 disabled。
+      */}
+      <Button variant="outline" size="sm" asChild>
+        <a href={EMBED_SRC} target="_blank" rel="noopener noreferrer">
           在新标签打开
         </a>
       </Button>
