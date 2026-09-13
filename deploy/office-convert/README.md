@@ -93,14 +93,20 @@ actually use resolve to the *Simplified Chinese* faces:
 | `微软雅黑` / `Microsoft YaHei` | Noto Sans CJK SC |
 
 Without those rules fontconfig falls back to the first Noto CJK face it finds,
-which is the *Japanese* one: different glyph variants for a number of
-characters, and the serif/sans distinction the document was written with is
-lost. Check what a name resolves to with:
+which is the *Japanese* one, and the document's serif/sans distinction is lost.
+Check what a name resolves to with:
 
 ```sh
 docker run --rm --entrypoint fc-match pigeon-office-convert:1 宋体
 docker run --rm --entrypoint fc-match pigeon-office-convert:1 黑体
 ```
+
+Measured effect on a converted `.docx`: before the table it embedded only
+`NotoSansCJKjp-*`; after it, both a serif and a sans CJK face, so text the author
+marked serif (宋体/仿宋) stays serif. One cosmetic limit remains: the PostScript
+name inside the generated PDF still reports the collection's `jp` face, so the
+SC-versus-JP *glyph variant* of a character is not guaranteed to be the
+Simplified Chinese one.
 
 A document that names a font with no substitute at all still renders — the text
 stays legible rather than turning into boxes — but the substitution is
