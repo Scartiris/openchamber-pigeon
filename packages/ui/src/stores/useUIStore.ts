@@ -19,8 +19,10 @@ import {
   CHAT_BACKDROP_INTENSITY_DEFAULT,
   CHAT_BACKDROP_MOTION_DEFAULT,
   CHAT_BACKDROP_SCRIM_DEFAULT,
+  CHAT_BACKDROP_SURFACE_DEFAULT,
   clampChatBackdropIntensity,
   clampChatBackdropScrim,
+  clampChatBackdropSurface,
 } from '@/lib/chatBackdrop';
 
 export type PendingDiffScope = 'working' | 'staged' | 'turn' | 'branch' | 'commit' | 'pr';
@@ -979,10 +981,12 @@ interface UIStore {
   enterToSend: boolean;
   enterToSendConfigured: boolean;
   wideChatLayoutEnabled: boolean;
-  /** Pigeon: video backdrop behind the chat column (see `lib/chatBackdrop`). */
+  /** Pigeon: video backdrop behind the whole workspace (see `lib/chatBackdrop`). */
   chatBackdropEnabled: boolean;
   chatBackdropIntensity: number;
   chatBackdropScrim: number;
+  /** Panel fill: 100 = opaque panes, lower lets more wallpaper through. */
+  chatBackdropSurfaceOpacity: number;
   chatBackdropMotion: boolean;
   codeBlockLineWrap: boolean;
   showToolFileIcons: boolean;
@@ -1177,6 +1181,7 @@ interface UIStore {
   setChatBackdropEnabled: (value: boolean) => void;
   setChatBackdropIntensity: (value: number) => void;
   setChatBackdropScrim: (value: number) => void;
+  setChatBackdropSurfaceOpacity: (value: number) => void;
   setChatBackdropMotion: (value: boolean) => void;
   setCodeBlockLineWrap: (value: boolean) => void;
   setShowToolFileIcons: (value: boolean) => void;
@@ -1355,6 +1360,7 @@ export const useUIStore = create<UIStore>()(
         chatBackdropEnabled: false,
         chatBackdropIntensity: CHAT_BACKDROP_INTENSITY_DEFAULT,
         chatBackdropScrim: CHAT_BACKDROP_SCRIM_DEFAULT,
+        chatBackdropSurfaceOpacity: CHAT_BACKDROP_SURFACE_DEFAULT,
         chatBackdropMotion: CHAT_BACKDROP_MOTION_DEFAULT,
         codeBlockLineWrap: true,
         showToolFileIcons: true,
@@ -2680,6 +2686,9 @@ export const useUIStore = create<UIStore>()(
         setChatBackdropScrim: (value) => {
           set({ chatBackdropScrim: clampChatBackdropScrim(value) });
         },
+        setChatBackdropSurfaceOpacity: (value) => {
+          set({ chatBackdropSurfaceOpacity: clampChatBackdropSurface(value) });
+        },
         setChatBackdropMotion: (value) => {
           set({ chatBackdropMotion: value });
         },
@@ -3124,6 +3133,7 @@ export const useUIStore = create<UIStore>()(
           chatBackdropEnabled: state.chatBackdropEnabled,
           chatBackdropIntensity: state.chatBackdropIntensity,
           chatBackdropScrim: state.chatBackdropScrim,
+          chatBackdropSurfaceOpacity: state.chatBackdropSurfaceOpacity,
           chatBackdropMotion: state.chatBackdropMotion,
           codeBlockLineWrap: state.codeBlockLineWrap,
           showToolFileIcons: state.showToolFileIcons,
