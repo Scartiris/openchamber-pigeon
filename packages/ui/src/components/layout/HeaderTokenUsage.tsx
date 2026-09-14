@@ -10,7 +10,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/icon/Icon';
 import { useI18n, getCurrentIntlLocale } from '@/lib/i18n';
-import { formatMoney } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import { useTokenUsageStore } from '@/stores/useTokenUsageStore';
 import type { TokenUsageSnapshot, TokenUsageWindow } from '@/lib/tokenUsage/aggregate';
@@ -92,7 +91,6 @@ const ModelBreakdown: React.FC<ModelBreakdownProps> = ({ window }) => {
               <StatRow label={t('tokenUsage.stats.reasoning')} value={formatCompactTokens(model.reasoning)} />
               <StatRow label={t('tokenUsage.stats.cacheRead')} value={formatCompactTokens(model.cacheRead)} />
               <StatRow label={t('tokenUsage.stats.cacheWrite')} value={formatCompactTokens(model.cacheWrite)} />
-              <StatRow label={t('tokenUsage.stats.cost')} value={formatMoney(model.cost)} />
             </div>
             <div className="mt-2 flex items-center gap-2">
               <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border">
@@ -197,7 +195,6 @@ const TokenUsageDialog: React.FC<TokenUsageDialogProps> = ({
                 <StatRow label={t('tokenUsage.stats.reasoning')} value={formatFullTokens(window.reasoning)} />
                 <StatRow label={t('tokenUsage.stats.cacheRead')} value={formatFullTokens(window.cacheRead)} />
                 <StatRow label={t('tokenUsage.stats.cacheWrite')} value={formatFullTokens(window.cacheWrite)} />
-                <StatRow label={t('tokenUsage.stats.cost')} value={formatMoney(window.cost)} />
                 <StatRow
                   label={t('tokenUsage.stats.cacheHit')}
                   value={window.hasCacheInput

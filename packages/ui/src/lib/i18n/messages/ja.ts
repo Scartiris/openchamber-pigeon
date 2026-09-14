@@ -3409,7 +3409,6 @@ export const dict: Record<I18nKey, string> = {
   'tokenUsage.stats.cacheRead': 'キャッシュ読み取り',
   'tokenUsage.stats.cacheWrite': 'キャッシュ書き込み',
   'tokenUsage.stats.cacheHit': 'キャッシュヒット',
-  'tokenUsage.stats.cost': 'コスト',
   'tokenUsage.stats.messages': 'ターン',
 
 };

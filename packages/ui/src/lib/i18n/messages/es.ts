@@ -3410,7 +3410,6 @@ export const dict: Record<I18nKey, string> = {
   'tokenUsage.stats.cacheRead': 'Lectura de caché',
   'tokenUsage.stats.cacheWrite': 'Escritura de caché',
   'tokenUsage.stats.cacheHit': 'Aciertos de caché',
-  'tokenUsage.stats.cost': 'Coste',
   'tokenUsage.stats.messages': 'Turnos',
 
 };

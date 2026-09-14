@@ -3410,7 +3410,6 @@ export const dict: Record<I18nKey, string> = {
   'tokenUsage.stats.cacheRead': 'Читання кешу',
   'tokenUsage.stats.cacheWrite': 'Запис кешу',
   'tokenUsage.stats.cacheHit': 'Попадання кешу',
-  'tokenUsage.stats.cost': 'Вартість',
   'tokenUsage.stats.messages': 'Ходи',
 
 };

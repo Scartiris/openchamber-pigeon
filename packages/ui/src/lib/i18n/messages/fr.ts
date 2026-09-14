@@ -3408,6 +3408,5 @@ export const dict = {
   'tokenUsage.stats.cacheRead': 'Lecture du cache',
   'tokenUsage.stats.cacheWrite': 'Écriture du cache',
   'tokenUsage.stats.cacheHit': 'Hits de cache',
-  'tokenUsage.stats.cost': 'Coût',
   'tokenUsage.stats.messages': 'Tours',
 } as const;

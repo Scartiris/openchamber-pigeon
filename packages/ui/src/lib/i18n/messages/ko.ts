@@ -3409,7 +3409,6 @@ export const dict: Record<I18nKey, string> = {
   'tokenUsage.stats.cacheRead': '캐시 읽기',
   'tokenUsage.stats.cacheWrite': '캐시 쓰기',
   'tokenUsage.stats.cacheHit': '캐시 적중',
-  'tokenUsage.stats.cost': '비용',
   'tokenUsage.stats.messages': '턴',
 
 };

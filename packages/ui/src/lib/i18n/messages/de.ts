@@ -3407,7 +3407,6 @@ export const dict = {
   'tokenUsage.stats.cacheRead': 'Cache-Lesen',
   'tokenUsage.stats.cacheWrite': 'Cache-Schreiben',
   'tokenUsage.stats.cacheHit': 'Cache-Treffer',
-  'tokenUsage.stats.cost': 'Kosten',
   'tokenUsage.stats.messages': 'Durchläufe',
 
 };

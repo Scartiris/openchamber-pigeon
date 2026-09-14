@@ -22,7 +22,6 @@ type AssistantFixture = {
     cache?: { read?: number; write?: number };
     total?: number;
   };
-  cost?: number;
 };
 
 // SAFETY: fixtures supply only the AssistantMessage fields the extractor reads.
@@ -43,7 +42,6 @@ const sample = (overrides: Partial<AssistantUsageSample> = {}): AssistantUsageSa
   cacheRead: 800,
   cacheWrite: 50,
   reportedTotal: null,
-  cost: 0.12,
   ...overrides,
 });
 
@@ -71,7 +69,7 @@ describe('resolveUsageWindows', () => {
 });
 
 describe('extractAssistantUsageSample', () => {
-  test('reads assistant tokens, model, time, and cost', () => {
+  test('reads assistant tokens, model, and time', () => {
     const extracted = extractAssistantUsageSample(asMessage({
       role: 'assistant',
       time: { created: at(0) },
@@ -84,7 +82,6 @@ describe('extractAssistantUsageSample', () => {
         cache: { read: 30, write: 2 },
         total: 67,
       },
-      cost: 0.5,
     }));
 
     expect(extracted).not.toBeNull();
@@ -93,7 +90,6 @@ describe('extractAssistantUsageSample', () => {
     expect(extracted?.input).toBe(10);
     expect(extracted?.cacheRead).toBe(30);
     expect(extracted?.reportedTotal).toBe(67);
-    expect(extracted?.cost).toBe(0.5);
     expect(sampleTotalTokens(extracted!)).toBe(67);
   });
 
@@ -115,7 +111,6 @@ describe('extractAssistantUsageSample', () => {
         reasoning: 3,
         cache: { read: 4, write: 5 },
       },
-      cost: 0,
     }));
     expect(sampleTotalTokens(extracted!)).toBe(15);
   });
@@ -159,7 +154,6 @@ describe('aggregateTokenUsage', () => {
           reasoning: 0,
           cacheRead: 900,
           cacheWrite: 0,
-          cost: 1,
         }),
         sample({
           timeMs: startOfLocalDay(now) + 2000,
@@ -170,7 +164,6 @@ describe('aggregateTokenUsage', () => {
           reasoning: 0,
           cacheRead: 0,
           cacheWrite: 0,
-          cost: 0.5,
         }),
       ],
       { nowMs: now, scannedSessions: 2, failedSessions: 0 },
@@ -184,7 +177,6 @@ describe('aggregateTokenUsage', () => {
     expect(Math.abs(snapshot.today.cacheHitPercent - (900 / 1050) * 100)).toBeLessThan(1e-6);
     expect(snapshot.today.models.map((m) => m.modelID)).toEqual(['sonnet', 'gpt']);
     expect(snapshot.today.models[0]?.cacheRead).toBe(900);
-    expect(snapshot.today.models[0]?.cost).toBe(1);
   });
 
   test('empty snapshot has zero windows and no models', () => {

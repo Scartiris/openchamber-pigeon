@@ -3427,6 +3427,5 @@ export const dict: Record<I18nKey, string> = {
   'tokenUsage.stats.cacheRead': 'Odczyt cache',
   'tokenUsage.stats.cacheWrite': 'Zapis cache',
   'tokenUsage.stats.cacheHit': 'Trafienia cache',
-  'tokenUsage.stats.cost': 'Koszt',
   'tokenUsage.stats.messages': 'Tury',
 } as const;

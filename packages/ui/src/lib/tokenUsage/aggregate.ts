@@ -17,7 +17,6 @@ export type ModelTokenUsage = {
   cacheRead: number;
   cacheWrite: number;
   total: number;
-  cost: number;
   messages: number;
   /** Inclusive input total: input + cache.read + cache.write. 0 when unknown. */
   inputProcessed: number;
@@ -34,7 +33,6 @@ export type TokenUsageWindow = {
   reasoning: number;
   cacheRead: number;
   cacheWrite: number;
-  cost: number;
   messages: number;
   /** cacheRead / inputProcessed, 0-100. Meaningless when `hasCacheInput` is false. */
   cacheHitPercent: number;
@@ -64,7 +62,6 @@ export type AssistantUsageSample = {
   cacheWrite: number;
   /** Prefer the server-reported window total when present. */
   reportedTotal?: number | null;
-  cost: number;
 };
 
 type UsageWindows = {
@@ -89,7 +86,6 @@ const emptyWindow = (startMs: number, endMs: number): TokenUsageWindow => ({
   reasoning: 0,
   cacheRead: 0,
   cacheWrite: 0,
-  cost: 0,
   messages: 0,
   cacheHitPercent: 0,
   hasCacheInput: false,
@@ -163,7 +159,6 @@ export const extractAssistantUsageSample = (info: Message): AssistantUsageSample
     cacheRead,
     cacheWrite,
     reportedTotal,
-    cost: nonNegative(info.cost),
   };
 };
 
@@ -180,7 +175,6 @@ const emptyModel = (sample: AssistantUsageSample): ModelTokenUsage => ({
   cacheRead: 0,
   cacheWrite: 0,
   total: 0,
-  cost: 0,
   messages: 0,
   inputProcessed: 0,
 });
@@ -192,7 +186,6 @@ const addSampleToModel = (model: ModelTokenUsage, sample: AssistantUsageSample, 
   model.cacheRead += sample.cacheRead;
   model.cacheWrite += sample.cacheWrite;
   model.total += total;
-  model.cost += sample.cost;
   model.messages += 1;
   model.inputProcessed += sample.input + sample.cacheRead + sample.cacheWrite;
 };
@@ -210,7 +203,6 @@ const finalizeWindow = (
     window.reasoning += model.reasoning;
     window.cacheRead += model.cacheRead;
     window.cacheWrite += model.cacheWrite;
-    window.cost += model.cost;
     window.messages += model.messages;
   }
   const inputProcessed = window.input + window.cacheRead + window.cacheWrite;

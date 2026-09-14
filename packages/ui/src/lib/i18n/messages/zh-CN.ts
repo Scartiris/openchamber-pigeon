@@ -3410,7 +3410,6 @@ export const dict: Record<I18nKey, string> = {
   'tokenUsage.stats.cacheRead': '缓存读取',
   'tokenUsage.stats.cacheWrite': '缓存写入',
   'tokenUsage.stats.cacheHit': '缓存命中',
-  'tokenUsage.stats.cost': '费用',
   'tokenUsage.stats.messages': '轮次',
 
 };

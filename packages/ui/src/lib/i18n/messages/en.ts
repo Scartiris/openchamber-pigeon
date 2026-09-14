@@ -3410,7 +3410,6 @@ export const dict = {
   'tokenUsage.stats.cacheRead': 'Cache read',
   'tokenUsage.stats.cacheWrite': 'Cache write',
   'tokenUsage.stats.cacheHit': 'Cache hit',
-  'tokenUsage.stats.cost': 'Cost',
   'tokenUsage.stats.messages': 'Turns',
 } as const;
 

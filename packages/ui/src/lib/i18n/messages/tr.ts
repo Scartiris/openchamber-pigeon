@@ -3407,7 +3407,6 @@ export const dict = {
   'tokenUsage.stats.cacheRead': 'Cache okuma',
   'tokenUsage.stats.cacheWrite': 'Cache yazma',
   'tokenUsage.stats.cacheHit': 'Cache isabeti',
-  'tokenUsage.stats.cost': 'Maliyet',
   'tokenUsage.stats.messages': 'Tur',
 
 };
