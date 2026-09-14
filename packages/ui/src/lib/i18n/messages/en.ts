@@ -3387,6 +3387,31 @@ export const dict = {
   'documentPreview.error.unsupported': 'This file type cannot be previewed.',
   'chat.fileLink.previewTitle': 'Click to preview',
   'filesView.actions.openDocumentPreview': 'Open document preview',
+
+  // Token usage stats (header)
+  'tokenUsage.header.aria': 'Open token usage stats',
+  'tokenUsage.header.tooltip': 'Today: {tokens} tokens',
+  'tokenUsage.period.today': 'Today',
+  'tokenUsage.period.last7Days': 'Last 7 days',
+  'tokenUsage.period.last30Days': 'Last 30 days',
+  'tokenUsage.dialog.title': 'Token usage',
+  'tokenUsage.dialog.description': 'Token consumption by period, model, and cache hit.',
+  'tokenUsage.dialog.byModel': 'By model',
+  'tokenUsage.dialog.empty': 'No token usage in this period.',
+  'tokenUsage.dialog.unknownModel': 'Unknown model',
+  'tokenUsage.dialog.cacheHitValue': 'Cache hit {percent}%',
+  'tokenUsage.dialog.refresh': 'Refresh',
+  'tokenUsage.dialog.refreshAria': 'Refresh token usage',
+  'tokenUsage.dialog.loading': 'Collecting token usage…',
+  'tokenUsage.dialog.partial': '{failed} of {scanned} sessions could not be read.',
+  'tokenUsage.stats.input': 'Input',
+  'tokenUsage.stats.output': 'Output',
+  'tokenUsage.stats.reasoning': 'Reasoning',
+  'tokenUsage.stats.cacheRead': 'Cache read',
+  'tokenUsage.stats.cacheWrite': 'Cache write',
+  'tokenUsage.stats.cacheHit': 'Cache hit',
+  'tokenUsage.stats.cost': 'Cost',
+  'tokenUsage.stats.messages': 'Turns',
 } as const;
 
 export type I18nKey = keyof typeof dict;
