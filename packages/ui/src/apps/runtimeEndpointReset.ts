@@ -15,6 +15,7 @@ import { useSessionFoldersStore } from '@/stores/useSessionFoldersStore';
 import { useLinearAuthStore } from '@/stores/useLinearAuthStore';
 import { useGitHubAuthStore } from '@/stores/useGitHubAuthStore';
 import { useQuotaStore } from '@/stores/useQuotaStore';
+import { useTokenUsageStore } from '@/stores/useTokenUsageStore';
 import { useMcpStore } from '@/stores/useMcpStore';
 import { useSkillsStore } from '@/stores/useSkillsStore';
 import { useAgentMemoryStore } from '@/stores/useAgentMemoryStore';
@@ -87,6 +88,7 @@ export const resetAppForRuntimeEndpointChange = (detail: RuntimeEndpointChangedD
   // and agent memory. All were cached globally or by directory alone, so they
   // reported the previous instance until something happened to refetch.
   useQuotaStore.getState().resetForRuntimeSwitch();
+  useTokenUsageStore.getState().resetForRuntimeSwitch();
   useMcpStore.getState().resetForRuntimeSwitch();
   useSkillsStore.getState().resetForRuntimeSwitch();
   useAgentMemoryStore.getState().reset();
