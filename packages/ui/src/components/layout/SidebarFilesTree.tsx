@@ -45,6 +45,8 @@ import { opencodeClient } from '@/lib/opencode/client';
 import { FileTypeIcon } from '@/components/icons/FileTypeIcon';
 import { Icon } from "@/components/icon/Icon";
 import { getContextFileOpenFailureMessage, validateContextFileOpen } from '@/lib/contextFileOpenGuard';
+import { isDocumentPreviewable, isPdfFile } from '@/lib/toolHelpers';
+import { hasContextPanelSurface } from '@/lib/runtimeSurface';
 import { isFilesystemError } from '@/lib/api/files-errors';
 import { notifyFileContentInvalidated } from '@/lib/fileContentInvalidation';
 import { isBrowserClientRuntime } from '@/lib/desktop';
@@ -551,6 +553,7 @@ const SidebarFilesTreeContent: React.FC<{ visible: boolean }> = ({ visible }) =>
   const showGitignored = useFilesViewShowGitignored();
   const searchFiles = useFileSearchStore((state) => state.searchFiles);
   const openContextFile = useUIStore((state) => state.openContextFile);
+  const openContextDocument = useUIStore((state) => state.openContextDocument);
   const gitStatus = useGitStatus(visible ? currentDirectory : null);
 
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -1001,7 +1004,12 @@ const SidebarFilesTreeContent: React.FC<{ visible: boolean }> = ({ visible }) =>
     setSelectedPath(root, node.path);
     addOpenPath(root, node.path);
     openContextFile(root, node.path);
-  }, [addOpenPath, files, openContextFile, root, setSelectedPath]);
+    // Office documents get a dedicated preview tab immediately — the file tab
+    // alone would land on the binary empty state and require a second click.
+    if (isDocumentPreviewable(node.path) && !isPdfFile(node.path) && hasContextPanelSurface()) {
+      openContextDocument(root, node.path);
+    }
+  }, [addOpenPath, files, openContextDocument, openContextFile, root, setSelectedPath]);
 
   const toggleDirectory = React.useCallback(async (dirPath: string) => {
     const normalized = normalizePath(dirPath);
