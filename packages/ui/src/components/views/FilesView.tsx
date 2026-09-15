@@ -4,6 +4,13 @@ import { runtimeFetch } from '@/lib/runtime-fetch';
 import { toast } from '@/components/ui';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { collectArtifact } from '@/lib/artifacts/client';
+import { lazyWithChunkRecovery } from '@/lib/chunkLoadRecovery';
+
+// Office/PDF preview sits in the file-management pane itself; keep the iframe
+// + conversion client out of the eager Files chunk until a document is opened.
+const DocumentPreviewView = lazyWithChunkRecovery(() =>
+  import('@/components/views/documents/DocumentPreviewView').then((m) => ({ default: m.DocumentPreviewView })),
+);
 
 import {
   DropdownMenu,
@@ -82,7 +89,6 @@ import { useMessageTTS } from '@/hooks/useMessageTTS';
 import { ensurePierreThemeRegistered } from '@/lib/shiki/appThemeRegistry';
 import { getDefaultTheme } from '@/lib/theme/themes';
 import { isBrowserClientRuntime, openDesktopFileInApp, openDesktopPath } from '@/lib/desktop';
-import { hasContextPanelSurface } from '@/lib/runtimeSurface';
 import { useOpenInAppsStore } from '@/stores/useOpenInAppsStore';
 import { useKeybind, useKeybinds } from '@/hooks/useKeybind';
 import { isEditableEventTarget } from '@/hooks/keyboard-shortcut-dom';
@@ -2453,6 +2459,13 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full', visible = t
   const isSelectedImage = Boolean(selectedFile?.path && isImageFile(selectedFile.path));
   const isSelectedSvg = Boolean(selectedFile?.path && isSvgFile(selectedFile.path));
   const isSelectedPdf = Boolean(selectedFile?.path && isPdfFile(selectedFile.path));
+  // Office (and other non-PDF) documents preview inline in this pane; PDFs use
+  // the existing raw-asset iframe above and must not double-mount the surface.
+  const isSelectedDocument = Boolean(
+    selectedFile?.path
+    && !isSelectedPdf
+    && isDocumentPreviewable(selectedFile.path),
+  );
   const isSelectedBinary = Boolean(
     selectedFile?.path
     && (isBinaryFile(selectedFile.path) || contentDetectedBinary)
@@ -3958,21 +3971,21 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full', visible = t
             </div>
           ) : isSelectedPdf ? (
             renderPdfPreview(selectedFile)
+          ) : isSelectedDocument && selectedFile ? (
+            <React.Suspense
+              fallback={(
+                <div className="flex h-full items-center justify-center gap-2 p-6 typography-ui text-muted-foreground">
+                  <Icon name="loader-4" className="size-4 animate-spin" />
+                  {t('documentPreview.state.loading')}
+                </div>
+              )}
+            >
+              <DocumentPreviewView filePath={selectedFile.path} directory={root || null} />
+            </React.Suspense>
           ) : isUnsupportedBinary ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
               <div className="typography-ui-header text-foreground">{t('filesView.editor.cannotPreviewBinary')}</div>
               <div className="max-w-md typography-ui text-muted-foreground">{t('filesView.editor.binaryFileDescription')}</div>
-              {isDocumentPreviewable(selectedFile.path) && hasContextPanelSurface() ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => useUIStore.getState().openContextDocument(root, selectedFile.path)}
-                >
-                  <Icon name="file-text" className="mr-2 size-4" />
-                  {t('filesView.actions.openDocumentPreview')}
-                </Button>
-              ) : null}
               {files.downloadFile ? (
                 <Button
                   type="button"
@@ -4388,21 +4401,21 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full', visible = t
             </div>
           ) : isSelectedPdf ? (
             renderPdfPreview(selectedFile)
+          ) : isSelectedDocument && selectedFile ? (
+            <React.Suspense
+              fallback={(
+                <div className="flex h-full items-center justify-center gap-2 p-4 typography-ui text-muted-foreground">
+                  <Icon name="loader-4" className="size-4 animate-spin" />
+                  {t('documentPreview.state.loading')}
+                </div>
+              )}
+            >
+              <DocumentPreviewView filePath={selectedFile.path} directory={root || null} />
+            </React.Suspense>
           ) : isUnsupportedBinary ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
               <div className="typography-ui-header text-foreground">{t('filesView.editor.cannotPreviewBinary')}</div>
               <div className="max-w-md typography-ui text-muted-foreground">{t('filesView.editor.binaryFileDescription')}</div>
-              {isDocumentPreviewable(selectedFile.path) && hasContextPanelSurface() ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => useUIStore.getState().openContextDocument(root, selectedFile.path)}
-                >
-                  <Icon name="file-text" className="mr-2 size-4" />
-                  {t('filesView.actions.openDocumentPreview')}
-                </Button>
-              ) : null}
               {files.downloadFile ? (
                 <Button
                   type="button"

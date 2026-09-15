@@ -1,6 +1,16 @@
 # Document preview surface
 
-Office and PDF previews in the right-hand context panel (`mode: 'doc'`).
+Office and PDF previews. Hosts:
+
+1. **Files management pane** (`FilesView`) — selecting a previewable office document
+   mounts this surface in the main editor area (and fullscreen viewer). This is
+   the default path: no side panel required.
+2. **Right-hand context panel** (`mode: 'doc'`) — still available via
+   `openContextDocument` when a context panel exists (markdown links, tool cards,
+   optional secondary open).
+
+PDFs in `FilesView` keep the existing raw `/api/fs/raw` iframe and do **not**
+mount this surface.
 
 ## Where it lives
 
@@ -14,6 +24,8 @@ Office and PDF previews in the right-hand context panel (`mode: 'doc'`).
 - `@/lib/surfaces/registry` — the `doc` rail surface, declared
   `availability: 'has-content'` so the rail icon only appears once a document tab
   exists.
+- `@/components/views/FilesView` — lazy-mounts this surface when the selected
+  path is document-previewable and not a PDF.
 - `@/components/layout/ContextPanel` — tab label/icon, the multi-instance tab
   list, and the render branch.
 
@@ -28,10 +40,11 @@ only in where the PDF comes from.
 | `word` / `cell` / `slide` | `<iframe>` on `/api/doc-preview/pdf`, which streams a PDF converted server-side. `/api/doc-preview/convert` is awaited first, so the wait is a loading state rather than a blank frame. |
 | anything else | not previewable — callers fall back to the text editor or the download action. |
 
-Entry points that open this surface: file paths in assistant markdown, file paths
-in tool cards, and the "open document preview" action in the file view's binary
-state. All of them are gated on `hasContextPanelSurface()` (`@/lib/runtimeSurface`),
-because the panel is the only host of this surface.
+Entry points that open this surface: selecting an office document in the file
+management tree (inline in `FilesView`), file paths in assistant markdown, file
+paths in tool cards, and the optional "open document preview" action on the
+binary fallback card when a context panel is available. Markdown/tool/context
+entries are gated on `hasContextPanelSurface()`; the FilesView host is not.
 
 ## Deliberate limits
 
@@ -39,7 +52,8 @@ because the panel is the only host of this surface.
   mobile shell never mount `ContextPanel`, so there the document entry points keep
   their previous behaviour (runtime editor / files view + download) instead of
   creating a tab nobody can see. Mobile document preview is a follow-up, not a
-  silent dead click.
+  silent dead click. **Exception:** `FilesView` hosts the surface inline, so any
+  shell that already mounts `FilesView` gets office preview without a panel.
 - **One preview at a time.** The context panel mounts only the *active* document
   tab, so switching tabs unmounts the previous iframe instead of keeping every
   open document loaded.
