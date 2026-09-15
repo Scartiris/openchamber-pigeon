@@ -12,6 +12,7 @@ export const createGracefulShutdownRuntime = (dependencies) => {
     sessionGoalRuntime,
     contextObligatoryRuntime,
     messageQueueRuntime,
+    artifactRuntime,
     scheduledTasksRuntime,
     getHealthCheckInterval,
     clearHealthCheckInterval,
@@ -49,6 +50,7 @@ export const createGracefulShutdownRuntime = (dependencies) => {
     sessionGoalRuntime?.stop?.();
     contextObligatoryRuntime?.stop?.();
     messageQueueRuntime?.stop?.();
+    artifactRuntime?.stop?.();
     scheduledTasksRuntime?.stop?.();
 
     const healthCheckInterval = getHealthCheckInterval();

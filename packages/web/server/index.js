@@ -92,6 +92,7 @@ import { createApnsRuntime } from './lib/notifications/apns-runtime.js';
 import { createNotificationTemplateRuntime } from './lib/notifications/template-runtime.js';
 import { createPermissionAutoAcceptRuntime } from './lib/permission-auto-accept/runtime.js';
 import { createMessageQueueRuntime } from './lib/message-queue/runtime.js';
+import { createArtifactRuntime } from './lib/artifacts/runtime.js';
 import { createGracefulShutdownRuntime } from './lib/opencode/shutdown-runtime.js';
 import { createProjectConfigRuntime } from './lib/projects/project-config.js';
 import { migrateLegacyUserDirs } from './lib/data-dir-migration.js';
@@ -925,6 +926,15 @@ const messageQueueRuntime = createMessageQueueRuntime({
 });
 messageQueueRuntime.start();
 
+// Artifact Center: curated deliverables with hot content-hash versions.
+// Drive cold tier attaches when OAuth is configured; hot path works alone.
+const artifactRuntime = createArtifactRuntime({
+  openchamberDataDir: OPENCHAMBER_DATA_DIR,
+});
+artifactRuntime.start().catch((error) => {
+  console.warn('[artifacts] failed to start runtime:', error?.message ?? error);
+});
+
 const openCodeWatcherRuntime = createOpenCodeWatcherRuntime({
   waitForOpenCodePort: (...args) => waitForOpenCodePort(...args),
   buildOpenCodeUrl,
@@ -1476,6 +1486,7 @@ const gracefulShutdownRuntime = createGracefulShutdownRuntime({
   sessionGoalRuntime,
   contextObligatoryRuntime,
   messageQueueRuntime,
+  artifactRuntime,
   sessionRuntime,
   getHealthCheckInterval: () => healthCheckInterval,
   clearHealthCheckInterval: (value) => clearInterval(value),
@@ -1983,6 +1994,7 @@ async function main(options = {}) {
     writeSseEvent,
     permissionAutoAcceptRuntime,
     messageQueueRuntime,
+    artifactRuntime,
   });
 
   const startupPipelineResult = await startupPipelineRuntime.run({

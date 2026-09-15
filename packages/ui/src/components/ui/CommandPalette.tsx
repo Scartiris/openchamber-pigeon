@@ -96,6 +96,7 @@ export const CommandPalette: React.FC = () => {
   const shortcutOverrides = useUIStore((s) => s.shortcutOverrides);
   const openMultiRunLauncher = useUIStore((s) => s.openMultiRunLauncher);
   const setArchivePageOpen = useUIStore((s) => s.setArchivePageOpen);
+  const setArtifactCenterOpen = useUIStore((s) => s.setArtifactCenterOpen);
   const setProjectContextTab = useUIStore((s) => s.setProjectContextTab);
 
   const openNewSessionDraft = useSessionUIStore((s) => s.openNewSessionDraft);
@@ -325,6 +326,17 @@ export const CommandPalette: React.FC = () => {
         }),
       },
       {
+        id: 'open-artifact-center',
+        secondary: true,
+        title: t('commandPalette.item.openArtifactCenter'),
+        icon: <Icon name="folder-open" className="mr-2 h-4 w-4" />,
+        searchText: t('commandPalette.item.openArtifactCenter'),
+        onSelect: run(() => {
+          setSessionSwitcherOpen(false);
+          setArtifactCenterOpen(true);
+        }),
+      },
+      {
         id: 'open-notes',
         secondary: true,
         title: t('commandPalette.item.openNotes'),
@@ -396,6 +408,7 @@ export const CommandPalette: React.FC = () => {
     togglePinnedSession,
     openMultiRunLauncher,
     setArchivePageOpen,
+    setArtifactCenterOpen,
     setProjectContextTab,
   ]);
 

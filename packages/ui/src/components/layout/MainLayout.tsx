@@ -14,6 +14,7 @@ import { SessionDialogs } from '@/components/session/SessionDialogs';
 import { SessionWorktreeMoveConfirmDialog } from '@/components/session/sidebar/SessionWorktreeMoveConfirmDialog';
 import { ScheduledTasksDialog } from '@/components/session/ScheduledTasksDialog';
 import { ArchiveView } from '@/components/views/ArchiveView';
+import { ArtifactCenterView } from '@/components/views/artifacts/ArtifactCenterView';
 import { WorktreesView } from '@/components/views/WorktreesView';
 import { DiffWorkerProvider } from '@/contexts/DiffWorkerProvider';
 import { MultiRunLauncher } from '@/components/multirun';
@@ -66,11 +67,12 @@ export const MainLayout: React.FC = () => {
     const multiRunLauncherPrefillPrompt = useUIStore((state) => state.multiRunLauncherPrefillPrompt);
     const isScheduledTasksPageOpen = useUIStore((state) => state.isScheduledTasksDialogOpen);
     const isArchivePageOpen = useUIStore((state) => state.isArchivePageOpen);
+    const isArtifactCenterPageOpen = useUIStore((state) => state.isArtifactCenterPageOpen);
     const worktreesPageProjectId = useUIStore((state) => state.worktreesPageProjectId);
     // Any full-page surface replacing the chat area. While open, the chat is
     // fully hidden (not just covered) so none of its floating chrome bleeds
     // through, and selecting a session or draft anywhere closes the surface.
-    const isSurfacePageOpen = isScheduledTasksPageOpen || isArchivePageOpen || Boolean(worktreesPageProjectId) || isMultiRunLauncherOpen;
+    const isSurfacePageOpen = isScheduledTasksPageOpen || isArchivePageOpen || isArtifactCenterPageOpen || Boolean(worktreesPageProjectId) || isMultiRunLauncherOpen;
 
     React.useEffect(() => {
         const closeSurfacePages = () => useUIStore.getState().closeMainSurfaces();
@@ -178,6 +180,7 @@ export const MainLayout: React.FC = () => {
                                             )}
                                             <ErrorBoundary><ScheduledTasksDialog /></ErrorBoundary>
                                             <ErrorBoundary><ArchiveView /></ErrorBoundary>
+                                            <ErrorBoundary><ArtifactCenterView /></ErrorBoundary>
                                             <ErrorBoundary><WorktreesView /></ErrorBoundary>
                                         </main>
                                         <ContextPanel />

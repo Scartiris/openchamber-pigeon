@@ -6,6 +6,7 @@ import { isVSCodeRuntime } from '@/lib/desktop';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 import { GitHubIntegration } from './GitHubIntegration';
 import { LinearSettings } from './LinearSettings';
+import { GoogleDriveIntegration } from './GoogleDriveIntegration';
 
 export const IntegrationsPage: React.FC = () => {
   const { t } = useI18n();
@@ -29,6 +30,8 @@ export const IntegrationsPage: React.FC = () => {
       >
         {hasGitHub ? <GitHubIntegration /> : null}
         {hasLinear ? <LinearSettings /> : null}
+        {/* Artifact Center cold tier: OpenChamber server feature. */}
+        {!isVSCodeRuntime() ? <GoogleDriveIntegration /> : null}
       </SettingsSection>
     </SettingsPageLayout>
   );

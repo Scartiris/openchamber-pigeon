@@ -3,6 +3,7 @@ import { runtimeFetch } from '@/lib/runtime-fetch';
 
 import { toast } from '@/components/ui';
 import { copyTextToClipboard } from '@/lib/clipboard';
+import { collectArtifact } from '@/lib/artifacts/client';
 
 import {
   DropdownMenu,
@@ -460,6 +461,31 @@ const FileRow: React.FC<FileRowProps> = ({
       }}>
         <Icon name="file-copy-2" className="mr-2 size-4" /> {t('filesView.tree.menu.copyRelativePath')}
       </Item>
+      {!isDir && (
+        <Item
+          onClick={(e: React.MouseEvent) => {
+            e.stopPropagation();
+            void collectArtifact({
+              path: node.path,
+              directory: root || undefined,
+              origin: 'user',
+            })
+              .then((result) => {
+                toast.success(
+                  result.created
+                    ? t('artifacts.toast.collected')
+                    : t('artifacts.toast.alreadyCollected'),
+                );
+                useUIStore.getState().setArtifactCenterOpen(true);
+              })
+              .catch((error) => {
+                toast.error(error instanceof Error ? error.message : String(error));
+              });
+          }}
+        >
+          <Icon name="folder-open" className="mr-2 size-4" /> {t('artifacts.actions.collect')}
+        </Item>
+      )}
       {!isDir && downloadFile && (
         <Item onClick={(e: React.MouseEvent) => {
           e.stopPropagation();

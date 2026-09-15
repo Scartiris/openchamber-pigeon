@@ -17,6 +17,7 @@ import { registerAgentMemoryRoutes } from '../agent-memory/routes.js';
 import { registerSessionKnowledgeRoutes } from '../session-knowledge/routes.js';
 import { registerPermissionAutoAcceptRoutes } from '../permission-auto-accept/runtime.js';
 import { registerMessageQueueRoutes } from '../message-queue/runtime.js';
+import { registerArtifactRoutes } from '../artifacts/runtime.js';
 import { registerConfigEntityRoutes } from './config-entity-routes.js';
 import { registerSettingsUtilityRoutes } from './core-routes.js';
 import { registerProjectIconRoutes } from './project-icon-routes.js';
@@ -138,6 +139,7 @@ export const createFeatureRoutesRuntime = (dependencies) => {
       emitSessionCreatedEvent,
       permissionAutoAcceptRuntime,
       messageQueueRuntime,
+      artifactRuntime,
     } = routeDependencies;
 
     registerSettingsUtilityRoutes(app, {
@@ -148,6 +150,23 @@ export const createFeatureRoutesRuntime = (dependencies) => {
 
     registerPermissionAutoAcceptRoutes(app, permissionAutoAcceptRuntime);
     registerMessageQueueRoutes(app, messageQueueRuntime);
+
+    if (artifactRuntime) {
+      registerArtifactRoutes(app, {
+        runtime: artifactRuntime,
+        fsPromises,
+        path,
+        resolveReadPathFromContext: createReadPathResolver({
+          path,
+          os,
+          fsPromises,
+          normalizeDirectoryPath,
+          resolveProjectDirectory,
+          openchamberUserConfigRoot,
+          managedChatsRoot,
+        }),
+      });
+    }
 
     registerOpenCodeRoutes(app, {
       crypto,
