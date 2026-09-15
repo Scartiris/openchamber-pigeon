@@ -2,6 +2,7 @@ import React from 'react';
 import { useChatColumnSession } from '@/components/chat/chatColumnSession';
 import type { Message, Part, ReasoningPart, TextPart, ToolPart } from '@opencode-ai/sdk/v2';
 
+import { useI18n, type I18nKey } from '@/lib/i18n';
 import type { MessageStreamPhase } from '@/stores/types/sessionTypes';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useDirectorySync, useSessionMessages, useSessionPermissions, useSessionQuestions, useSessionStatus } from '@/sync/sync-context';
@@ -78,42 +79,46 @@ const DEFAULT_WORKING: WorkingSummary = {
 const EMPTY_PARTS: Part[] = [];
 const STATUS_SIGNATURE_SEPARATOR = '\u0000';
 const EDITING_TOOLS = new Set(['edit', 'write', 'multiedit', 'apply_patch']);
-const TOOL_STATUS_PHRASES: Record<string, string> = {
-    read: 'reading file',
-    write: 'writing file',
-    edit: 'editing file',
-    multiedit: 'editing files',
-    apply_patch: 'applying patch',
-    bash: 'running command',
-    grep: 'searching content',
-    glob: 'finding files',
-    list: 'listing directory',
-    task: 'delegating task',
-    webfetch: 'fetching URL',
-    websearch: 'searching web',
-    codesearch: 'web code search',
-    todowrite: 'updating todos',
-    todoread: 'reading todos',
-    skill: 'learning skill',
-    question: 'asking question',
-    plan_enter: 'switching to planning',
-    plan_exit: 'switching to building',
+// pigeon fork: the values below are i18n keys, not display text. The running
+// status line is part of the interface, so it is translated where it is
+// rendered instead of baking English into the string the status pipeline hands
+// around (that string is also the memoisation signature).
+const TOOL_STATUS_PHRASES: Record<string, I18nKey> = {
+    read: 'assistantStatus.readingFile',
+    write: 'assistantStatus.writingFile',
+    edit: 'assistantStatus.editingFile',
+    multiedit: 'assistantStatus.editingFiles',
+    apply_patch: 'assistantStatus.applyingPatch',
+    bash: 'assistantStatus.runningCommand',
+    grep: 'assistantStatus.searchingContent',
+    glob: 'assistantStatus.findingFiles',
+    list: 'assistantStatus.listingDirectory',
+    task: 'assistantStatus.delegatingTask',
+    webfetch: 'assistantStatus.fetchingUrl',
+    websearch: 'assistantStatus.searchingWeb',
+    codesearch: 'assistantStatus.webCodeSearch',
+    todowrite: 'assistantStatus.updatingTodos',
+    todoread: 'assistantStatus.readingTodos',
+    skill: 'assistantStatus.learningSkill',
+    question: 'assistantStatus.askingQuestion',
+    plan_enter: 'assistantStatus.switchingToPlanning',
+    plan_exit: 'assistantStatus.switchingToBuilding',
 };
-const WORKING_PHRASES = [
-    'working',
-    'processing',
-    'preparing',
-    'warming up',
-    'gears turning',
-    'computing',
-    'calculating',
-    'analyzing',
-    'wheels spinning',
-    'calibrating',
-    'synthesizing',
-    'connecting dots',
-    'inspecting logic',
-    'weighing options',
+const WORKING_PHRASE_KEYS: readonly I18nKey[] = [
+    'assistantStatus.working',
+    'assistantStatus.processing',
+    'assistantStatus.preparing',
+    'assistantStatus.warmingUp',
+    'assistantStatus.gearsTurning',
+    'assistantStatus.computing',
+    'assistantStatus.calculating',
+    'assistantStatus.analyzing',
+    'assistantStatus.wheelsSpinning',
+    'assistantStatus.calibrating',
+    'assistantStatus.synthesizing',
+    'assistantStatus.connectingDots',
+    'assistantStatus.inspectingLogic',
+    'assistantStatus.weighingOptions',
 ];
 
 type ParsedStatusResult = {
@@ -123,8 +128,18 @@ type ParsedStatusResult = {
     isGenericStatus: boolean;
 };
 
-const getToolStatusPhrase = (toolName: string): string => {
-    return TOOL_STATUS_PHRASES[toolName] ?? `using ${toolName}`;
+/** Translator shape shared by every helper below (`t` from `useI18n()`). */
+type TranslateFn = (key: I18nKey, params?: Record<string, string | number>) => string;
+
+const getToolStatusPhrase = (toolName: string, translate: TranslateFn): string => {
+    const key = TOOL_STATUS_PHRASES[toolName];
+    if (key) {
+        return translate(key);
+    }
+
+    // Unknown tools reach here (plugin and MCP calls). Keep the identifier the
+    // user typed rather than guessing at a translation for it.
+    return translate('assistantStatus.usingTool', { tool: toolName });
 };
 
 const hashString = (value: string): number => {
@@ -135,11 +150,12 @@ const hashString = (value: string): number => {
     return Math.abs(hash);
 };
 
-const getStableWorkingPhrase = (key: string): string => {
-    return WORKING_PHRASES[hashString(key) % WORKING_PHRASES.length] ?? 'working';
+const getStableWorkingPhrase = (key: string, translate: TranslateFn): string => {
+    const phraseKey = WORKING_PHRASE_KEYS[hashString(key) % WORKING_PHRASE_KEYS.length] ?? 'assistantStatus.working';
+    return translate(phraseKey);
 };
 
-const createParsedStatus = (parts: Part[], genericKey: string): ParsedStatusResult => {
+const createParsedStatus = (parts: Part[], genericKey: string, translate: TranslateFn): ParsedStatusResult => {
     let activePartType: ParsedStatusResult['activePartType'] = undefined;
     let activeToolName: string | undefined = undefined;
 
@@ -190,11 +206,11 @@ const createParsedStatus = (parts: Part[], genericKey: string): ParsedStatusResu
 
     const isGenericStatus = activePartType === undefined;
     const statusText = (() => {
-        if (activePartType === 'editing') return activeToolName === 'multiedit' ? getToolStatusPhrase(activeToolName) : 'editing file';
-        if (activePartType === 'tool' && activeToolName) return getToolStatusPhrase(activeToolName);
-        if (activePartType === 'reasoning') return 'thinking';
-        if (activePartType === 'text') return 'composing';
-        return getStableWorkingPhrase(genericKey);
+        if (activePartType === 'editing') return activeToolName === 'multiedit' ? getToolStatusPhrase(activeToolName, translate) : translate('assistantStatus.editingFile');
+        if (activePartType === 'tool' && activeToolName) return getToolStatusPhrase(activeToolName, translate);
+        if (activePartType === 'reasoning') return translate('assistantStatus.thinking');
+        if (activePartType === 'text') return translate('assistantStatus.composing');
+        return getStableWorkingPhrase(genericKey, translate);
     })();
 
     return { activePartType, activeToolName, statusText, isGenericStatus };
@@ -209,14 +225,14 @@ const encodeParsedStatus = (status: ParsedStatusResult): string => {
     ].join(STATUS_SIGNATURE_SEPARATOR);
 };
 
-const decodeParsedStatus = (signature: string): ParsedStatusResult => {
-    const [activePartType, activeToolName, statusText = 'working', isGenericStatus] = signature.split(STATUS_SIGNATURE_SEPARATOR);
+const decodeParsedStatus = (signature: string, translate: TranslateFn): ParsedStatusResult => {
+    const [activePartType, activeToolName, statusText, isGenericStatus] = signature.split(STATUS_SIGNATURE_SEPARATOR);
     return {
         activePartType: activePartType === 'text' || activePartType === 'tool' || activePartType === 'reasoning' || activePartType === 'editing'
             ? activePartType
             : undefined,
         activeToolName: activeToolName || undefined,
-        statusText,
+        statusText: statusText ?? translate('assistantStatus.working'),
         isGenericStatus: isGenericStatus === '1',
     };
 };
@@ -302,6 +318,10 @@ export const getActiveAssistantContext = (messages: Message[]): ActiveAssistantC
 };
 
 export function useAssistantStatus(): AssistantStatusSnapshot {
+    // The status phrases are translated while the signature is built, so the
+    // locale has to take part in the memo: switching language has to rebuild the
+    // signature and re-render the status line.
+    const { t, locale } = useI18n();
     // Inside the chat column, follow the session the timeline shows rather
     // than the live selection, so the status chip changes together with the
     // conversation instead of a commit ahead of it.
@@ -326,8 +346,8 @@ export function useAssistantStatus(): AssistantStatusSnapshot {
         React.useCallback((state) => {
             const genericKey = `${currentSessionId ?? ''}:${lastAssistantId ?? ''}`;
             const parts = lastAssistantId ? (state.part[lastAssistantId] ?? EMPTY_PARTS) : EMPTY_PARTS;
-            return encodeParsedStatus(createParsedStatus(parts, genericKey));
-        }, [currentSessionId, lastAssistantId]),
+            return encodeParsedStatus(createParsedStatus(parts, genericKey, t));
+        }, [currentSessionId, lastAssistantId, locale]),
         currentSessionDirectory ?? undefined,
     );
 
@@ -356,8 +376,8 @@ export function useAssistantStatus(): AssistantStatusSnapshot {
         : undefined;
 
     const parsedStatus = React.useMemo<ParsedStatusResult>(() => {
-        return decodeParsedStatus(lastAssistantStatusSignature);
-    }, [lastAssistantStatusSignature]);
+        return decodeParsedStatus(lastAssistantStatusSignature, t);
+    }, [lastAssistantStatusSignature, t]);
 
     const abortState = React.useMemo(() => {
         const hasActiveAbort = Boolean(sessionAbortRecord && !sessionAbortRecord.acknowledged);

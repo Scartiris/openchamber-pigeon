@@ -410,7 +410,7 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
               }}
             >
               <Icon name="check" className="h-3.5 w-3.5 sm:h-3 sm:w-3 flex-shrink-0" />
-              仅允许一次
+              {t('chat.permissionCard.allowOnce')}
               <kbd className="ml-1 hidden sm:inline typography-micro opacity-60">{formatShortcutForDisplay('alt+enter')}</kbd>
             </button>
 
@@ -436,13 +436,13 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
                 <Icon name="time" className="h-3.5 w-3.5 sm:h-3 sm:w-3 flex-shrink-0" />
                 {(() => {
                   const always = (permission.always as string[]) || (permission.metadata.always as string[]) || [];
-                  if (always.length === 0) return "始终允许";
+                  if (always.length === 0) return t('chat.permissionCard.allowAlways');
                   const displayPatterns = always.slice(0, 2);
                   const text = displayPatterns.join(", ");
                   const hasMore = always.length > 2;
                   return (
                     <span className="truncate max-w-[180px]">
-                      {hasMore ? `始终允许：${text}...` : `始终允许：${text}`}
+                      {t('chat.permissionCard.allowAlwaysWithPatterns', { patterns: hasMore ? `${text}...` : text })}
                     </span>
                   );
                 })()}
@@ -467,7 +467,7 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
                 }}
               >
                 <Icon name="time" className="h-3.5 w-3.5 sm:h-3 sm:w-3 flex-shrink-0" />
-                始终允许
+                {t('chat.permissionCard.allowAlways')}
                 <kbd className="ml-1 hidden sm:inline typography-micro opacity-60">{formatShortcutForDisplay('alt+shift+enter')}</kbd>
               </button>
             )}
@@ -491,7 +491,7 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
               }}
             >
               <Icon name="close" className="h-3.5 w-3.5 sm:h-3 sm:w-3 flex-shrink-0" />
-              Deny
+              {t('chat.permissionCard.deny')}
               <kbd className="ml-1 hidden sm:inline typography-micro opacity-60">{formatShortcutForDisplay('alt+backspace')}</kbd>
             </button>
 

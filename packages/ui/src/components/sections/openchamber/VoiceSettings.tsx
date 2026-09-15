@@ -964,9 +964,9 @@ export const VoiceSettings: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="space-y-1.5">
-                                        <span className={SETTINGS_FIELD_LABEL_CLASS}>API 密钥</span>
+                                        <span className={SETTINGS_FIELD_LABEL_CLASS}>{t('settings.voice.page.field.apiKey')}</span>
                                         <span className={SETTINGS_HELPER_CLASS}>
-                                            Optional
+                                            {t('common.optional')}
                                         </span>
                                         <div className={cn('relative', SETTINGS_CONTROL_CLUSTER_CLASS)}>
                                             <input
@@ -1240,9 +1240,9 @@ export const VoiceSettings: React.FC = () => {
                                     </div>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <span className={SETTINGS_FIELD_LABEL_CLASS}>API 密钥</span>
+                                    <span className={SETTINGS_FIELD_LABEL_CLASS}>{t('settings.voice.page.field.sttApiKey')}</span>
                                     <span className={SETTINGS_HELPER_CLASS}>
-                                        Optional
+                                        {t('common.optional')}
                                     </span>
                                     <div className={cn('relative', SETTINGS_CONTROL_CLUSTER_CLASS)}>
                                         <input

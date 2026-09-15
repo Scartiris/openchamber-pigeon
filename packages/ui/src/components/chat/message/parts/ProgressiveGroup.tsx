@@ -13,7 +13,8 @@ import { Text } from '@/components/ui/text';
 import { Icon } from "@/components/icon/Icon";
 import { FadeInOnReveal } from '../FadeInOnReveal';
 import { getToolIcon } from './toolPresentation';
-import { getToolMetadata } from '@/lib/toolHelpers';
+import { getToolDisplayName } from '@/lib/toolHelpers';
+import { useI18n } from '@/lib/i18n';
 import { isExpandableTool, isStandaloneTool, isStaticTool } from './toolRenderUtils';
 import { RuntimeAPIContext } from '@/contexts/runtimeAPIContext';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
@@ -558,7 +559,8 @@ const StaticToolRowInner: React.FC<{
     animateTailText: boolean;
 }> = ({ toolName, activities, animateTailText }) => {
     const showToolFileIcons = useUIStore((state) => state.showToolFileIcons);
-    const displayName = getToolMetadata(toolName).displayName;
+    const { t } = useI18n();
+    const displayName = getToolDisplayName(toolName, t);
     const icon = getToolIcon(toolName);
     const isReadGroup = toolName.toLowerCase() === 'read';
     const runtime = React.useContext(RuntimeAPIContext);
@@ -827,6 +829,7 @@ const ProgressiveGroup: React.FC<ProgressiveGroupProps> = ({
     animatedToolIds,
     renderJustificationActions,
 }) => {
+    const { t } = useI18n();
     const previewCount = showHeader && !isExpanded
         ? Math.max(0, Math.floor(collapsedPreviewCount))
         : 0;
@@ -967,7 +970,7 @@ const ProgressiveGroup: React.FC<ProgressiveGroupProps> = ({
                             letterSpacing: '0.005em',
                         }}
                     >
-                        Activity
+                        {t('chat.liveActivity.title')}
                     </span>
                 </button>
                 {shouldShowRowsContainer ? (

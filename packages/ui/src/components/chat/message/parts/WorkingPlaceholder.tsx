@@ -148,7 +148,7 @@ export function WorkingPlaceholder({
       return;
     }
 
-    const incomingText = isWaitingForPermission ? 'waiting for permission' : statusText;
+    const incomingText = isWaitingForPermission ? t('assistantStatus.waitingForPermission') : statusText;
     const incomingPermission = Boolean(isWaitingForPermission);
     const incomingGeneric = Boolean(isGenericStatus) && !incomingPermission;
 
@@ -187,6 +187,7 @@ export function WorkingPlaceholder({
     clearTimers,
     showStatus,
     scheduleQueueProcess,
+    t,
   ]);
 
   React.useEffect(() => () => clearTimers(), [clearTimers]);
@@ -197,11 +198,13 @@ export function WorkingPlaceholder({
 
   // Retry state: show countdown and attempt info
   if (retryInfo) {
-    const attemptLabel = retryInfo.attempt && retryInfo.attempt > 1 ? ` (attempt ${retryInfo.attempt})` : '';
-    const countdownLabel = retryCountdown !== null && retryCountdown > 0
-      ? ` in ${formatRetryCountdown(retryCountdown)}`
+    const attemptLabel = retryInfo.attempt && retryInfo.attempt > 1
+      ? t('assistantStatus.retryAttempt', { attempt: retryInfo.attempt })
       : '';
-    const retryText = `Retrying${countdownLabel}${attemptLabel}`;
+    const countdownLabel = retryCountdown !== null && retryCountdown > 0
+      ? t('assistantStatus.retryIn', { countdown: formatRetryCountdown(retryCountdown) })
+      : '';
+    const retryText = `${t('assistantStatus.retrying')}${countdownLabel}${attemptLabel}`;
 
     return (
       <div

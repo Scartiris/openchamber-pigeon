@@ -1,3 +1,5 @@
+import type { I18nKey, I18nParams } from './i18n/store';
+
 export interface ToolMetadata {
   displayName: string;
   icon?: string;
@@ -10,7 +12,6 @@ export interface ToolMetadata {
   }[];
   category: 'file' | 'search' | 'code' | 'system' | 'ai' | 'web';
 }
-
 const TOOL_METADATA: Record<string, ToolMetadata> = {
 
   read: {
@@ -252,6 +253,61 @@ export function getToolMetadata(toolName: string): ToolMetadata {
     outputLanguage: 'text',
     inputFields: []
   };
+}
+
+/**
+ * i18n keys for the tool names the chat transcript renders. Kept beside
+ * `TOOL_METADATA` so the canonical English name and its label stay together.
+ */
+const TOOL_DISPLAY_NAME_KEYS: Record<string, I18nKey> = {
+  read: 'toolDisplayName.read',
+  write: 'toolDisplayName.write',
+  edit: 'toolDisplayName.edit',
+  multiedit: 'toolDisplayName.multiedit',
+  apply_patch: 'toolDisplayName.applyPatch',
+  bash: 'toolDisplayName.bash',
+  grep: 'toolDisplayName.grep',
+  glob: 'toolDisplayName.glob',
+  list: 'toolDisplayName.list',
+  task: 'toolDisplayName.task',
+  webfetch: 'toolDisplayName.webfetch',
+  websearch: 'toolDisplayName.websearch',
+  codesearch: 'toolDisplayName.codesearch',
+  todowrite: 'toolDisplayName.todowrite',
+  todoread: 'toolDisplayName.todoread',
+  skill: 'toolDisplayName.skill',
+  question: 'toolDisplayName.question',
+  lsp: 'toolDisplayName.lsp',
+  openchamber: 'toolDisplayName.openchamber',
+  openchamber_web: 'toolDisplayName.openchamberWeb',
+  openchamber_memory: 'toolDisplayName.openchamberMemory',
+  plan_enter: 'toolDisplayName.planEnter',
+  plan_exit: 'toolDisplayName.planExit',
+  StructuredOutput: 'toolDisplayName.structuredOutput',
+  structuredoutput: 'toolDisplayName.structuredOutput',
+};
+
+/**
+ * The tool name as the interface should show it.
+ *
+ * `translate` is the `t` from `useI18n()`; passing it in keeps this module free
+ * of React while still re-rendering on language change. When it is omitted the
+ * canonical English name is used, which keeps non-React callers working.
+ *
+ * Unknown tools keep the name the caller supplied — a plugin or MCP tool the
+ * user installed reads better untranslated than guessed at.
+ */
+export function getToolDisplayName(
+  toolName: string,
+  translate?: (key: I18nKey, params?: I18nParams) => string,
+): string {
+  const fallback = getToolMetadata(toolName).displayName;
+  const key = TOOL_DISPLAY_NAME_KEYS[toolName];
+  if (!key || !translate) {
+    return fallback;
+  }
+
+  return translate(key);
 }
 
 export function detectToolOutputLanguage(

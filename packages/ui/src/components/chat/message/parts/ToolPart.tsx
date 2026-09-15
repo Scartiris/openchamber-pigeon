@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { SimpleMarkdownRenderer } from '../../MarkdownRenderer';
 import { QuestionMarkdown } from '../../QuestionMarkdown';
 import { MessageFilesDisplay } from '../../FileAttachment';
-import { getToolMetadata, isDocumentPreviewable } from '@/lib/toolHelpers';
+import { getToolDisplayName, isDocumentPreviewable } from '@/lib/toolHelpers';
 import { hasContextPanelSurface } from '@/lib/runtimeSurface';
 import type { ToolPart as ToolPartType, ToolState as ToolStateUnion, FilePart } from '@opencode-ai/sdk/v2';
 import { toolDisplayStyles } from '@/lib/typography';
@@ -54,6 +54,7 @@ import {
 } from './taskToolModel';
 import { areRenderRelevantPartsEqual } from '../renderCompare';
 import { useI18n } from '@/lib/i18n';
+import type { I18nKey, I18nParams } from '@/lib/i18n/store';
 import {
     extractFirstChangedLineFromDiff,
     getDiffPatchEntries,
@@ -480,7 +481,12 @@ const getLspToolDescription = (input: Record<string, unknown> | undefined, curre
     return displayPath ? `${operation} ${displayPath}${position}` : operation;
 };
 
-const getToolDescription = (part: ToolPartType, state: ToolStateUnion, currentDirectory: string): string => {
+const getToolDescription = (
+    part: ToolPartType,
+    state: ToolStateUnion,
+    currentDirectory: string,
+    translate: (key: I18nKey, params?: I18nParams) => string,
+): string => {
     const stateWithData = state as ToolStateWithMetadata;
     const metadata = stateWithData.metadata;
     const input = stateWithData.input;
@@ -493,7 +499,7 @@ const getToolDescription = (part: ToolPartType, state: ToolStateUnion, currentDi
     if (part.tool === 'apply_patch') {
         const files = Array.isArray(metadata?.files) ? metadata?.files : [];
         if (files.length > 1) {
-            return `${files.length} files`;
+            return translate('chat.toolPart.multipleFiles', { count: files.length });
         }
         return '';
     }
@@ -501,7 +507,7 @@ const getToolDescription = (part: ToolPartType, state: ToolStateUnion, currentDi
     // Question tool: show "Asked N question(s)"
     if (part.tool === 'question' && input?.questions && Array.isArray(input.questions)) {
         const count = input.questions.length;
-        return `Asked ${count} question${count !== 1 ? 's' : ''}`;
+        return translate(count === 1 ? 'chat.toolPart.askedQuestion' : 'chat.toolPart.askedQuestions', { count });
     }
 
     if (part.tool === 'bash' && input?.command && typeof input.command === 'string') {
@@ -900,7 +906,8 @@ const TaskSummaryEntryRow = React.memo(({
     const label = getTaskSummaryLabel(entry);
     const hasLabel = label.trim().length > 0;
     const status = entry.state?.status;
-    const displayName = getToolMetadata(toolName).displayName;
+    const { t } = useI18n();
+    const displayName = getToolDisplayName(toolName, t);
 
     return (
         <ToolRevealOnMount animate={animateTailText} wipe>
@@ -1979,8 +1986,8 @@ const ToolPartContent: React.FC<ToolPartProps> = ({
     const isMultiFileApplyPatch = normalizedPartTool === 'apply_patch' && Array.isArray(metadata?.files) && (metadata?.files as []).length > 1;
     const normalizedPart = normalizedPartTool !== part.tool ? ({ ...part, tool: normalizedPartTool } as ToolPartType) : part;
     const descriptionPath = getToolDescriptionPath(normalizedPart, state, currentDirectory);
-    const description = getToolDescription(normalizedPart, state, currentDirectory);
-    const displayName = getToolMetadata(normalizedPartTool || part.tool).displayName;
+    const description = getToolDescription(normalizedPart, state, currentDirectory, t);
+    const displayName = getToolDisplayName(normalizedPartTool || part.tool, t);
     
     // Tool title/description — shown inline as context
     const justificationText = React.useMemo(() => {
@@ -2419,7 +2426,7 @@ class ToolPartErrorBoundary extends React.Component<{
 const ToolPart: React.FC<ToolPartProps> = (props) => {
     const { t } = useI18n();
     const toolName = normalizeToolName(props.part.tool) || 'tool';
-    const displayName = getToolMetadata(toolName).displayName;
+    const displayName = getToolDisplayName(toolName, t);
 
     return (
         <ToolPartErrorBoundary

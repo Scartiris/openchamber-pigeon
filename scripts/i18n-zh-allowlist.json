@@ -432,6 +432,18 @@
     {
       "key": "walkthrough.scope.pullRequest",
       "en": "PR #{number}"
+    },
+    {
+      "key": "toolDisplayName.lsp",
+      "en": "LSP"
+    },
+    {
+      "key": "toolDisplayName.openchamber",
+      "en": "OpenChamber"
+    },
+    {
+      "key": "toolDisplayName.openchamberWeb",
+      "en": "OpenChamber Web"
     }
   ]
 }
