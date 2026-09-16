@@ -984,6 +984,21 @@ export const registerAuthAndAccessRoutes = (app, dependencies) => {
   });
 
   app.use('/api', async (req, res, next) => {
+    // Device MCP agents authenticate with a dedicated bearer token, not a UI
+    // session. The handler validates the token itself; this only lets the
+    // request past the UI gate.
+    //
+    // Inside `app.use('/api', …)` Express mounts `req.path` relative to /api,
+    // so the match must be `/devices/mcp`, not `/api/devices/mcp`.
+    if (req.path === '/devices/mcp' || req.path === '/devices/mcp/') {
+      const rawAuthorization = req.headers.authorization;
+      const authorization = rawAuthorization === undefined || rawAuthorization === null
+        ? ''
+        : String(rawAuthorization);
+      if (authorization.startsWith('Bearer oc_device_mcp_')) {
+        return next();
+      }
+    }
     try {
       await requireApiAuth(req, res, next);
     } catch (err) {
@@ -1074,6 +1089,7 @@ export const registerCommonRequestMiddleware = (app, dependencies) => {
       req.path.startsWith('/api/text') ||
       req.path.startsWith('/api/voice') ||
       req.path.startsWith('/api/tts') ||
+      req.path.startsWith('/api/devices') ||
       req.path.startsWith('/api/openchamber/tunnel')
     ) {
       express.json({ limit: '50mb' })(req, res, next);

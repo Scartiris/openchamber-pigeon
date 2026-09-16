@@ -4,6 +4,7 @@ import { createDocPreviewRuntime } from '../doc-preview/runtime.js';
 import { registerQuotaRoutes } from '../quota/routes.js';
 import { registerSmallModelRoutes } from '../small-model/routes.js';
 import { registerWalkthroughRoutes } from '../walkthrough/routes.js';
+import { createDeviceRuntime } from '../devices/index.js';
 import { registerSessionGoalRoutes } from '../session-goal/routes.js';
 import { registerGitHubRoutes } from '../github/routes.js';
 import { registerLinearRoutes } from '../linear/routes.js';
@@ -306,6 +307,18 @@ export const createFeatureRoutesRuntime = (dependencies) => {
     registerQuotaRoutes(app, { getQuotaProviders });
     registerSmallModelRoutes(app, { getSmallModelService });
     registerWalkthroughRoutes(app, { getWalkthroughService });
+
+    const deviceRuntime = createDeviceRuntime({
+      fsPromises,
+      path,
+      crypto,
+      net: await import('node:net'),
+      spawn,
+      os,
+      express: null,
+      openchamberDataDir,
+    });
+    deviceRuntime.registerRoutes(app);
     registerSessionGoalRoutes(app);
     registerGitHubRoutes(app);
     registerLinearRoutes(app);
