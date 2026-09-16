@@ -1,4 +1,5 @@
 import { asBoolean, asFiniteNumber, asNonEmptyString, asObject } from './parse.js';
+import { buildJoinScript } from './join-script.js';
 
 const readJsonBody = (req) => new Promise((resolve, reject) => {
   if (req.body !== undefined && req.body !== null) {
@@ -42,11 +43,19 @@ export function registerDeviceRoutes(app, runtime) {
   const {
     registry,
     tokens,
+    enrollTokens,
     audit,
     toolRuntime,
     mcpHandler,
     express,
   } = runtime;
+
+  const requestOrigin = (req) => {
+    const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http').split(',')[0].trim();
+    const host = (req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+    if (!host) return '';
+    return `${proto}://${host}`;
+  };
 
   const jsonParser = express?.json
     ? express.json({ limit: '2mb' })
@@ -110,6 +119,86 @@ export function registerDeviceRoutes(app, runtime) {
       res.json({ revoked: true });
     } catch (error) {
       sendError(res, error, 'Failed to revoke device MCP token');
+    }
+  });
+
+  // --- one-click enrollment (management, UI session) ---
+  app.get('/api/devices/enroll/tokens', async (_req, res) => {
+    try {
+      res.json({ tokens: await enrollTokens.listTokens() });
+    } catch (error) {
+      sendError(res, error, 'Failed to list enroll tokens');
+    }
+  });
+
+  app.post('/api/devices/enroll/tokens', jsonParser, async (req, res) => {
+    try {
+      const body = asObject(req.body) || {};
+      const created = await enrollTokens.createToken({
+        label: asNonEmptyString(body.label),
+        ttlMs: asFiniteNumber(body.ttlMs, undefined),
+      });
+      res.status(201).json({ token: created });
+    } catch (error) {
+      sendError(res, error, 'Failed to create enroll token');
+    }
+  });
+
+  app.delete('/api/devices/enroll/tokens/:id', async (req, res) => {
+    try {
+      const revoked = await enrollTokens.revokeToken(req.params.id);
+      if (!revoked) return res.status(404).json({ error: 'Token not found', code: 'token_not_found' });
+      res.json({ revoked: true });
+    } catch (error) {
+      sendError(res, error, 'Failed to revoke enroll token');
+    }
+  });
+
+  // Public join script: requires a valid (unspent) enroll token in the query.
+  // Consuming happens only on successful enroll, so the script can be fetched
+  // before execution.
+  app.get('/api/devices/join.ps1', async (req, res) => {
+    try {
+      const presented = asNonEmptyString(req.query.t) || asNonEmptyString(req.query.token);
+      const peeked = await enrollTokens.peekToken(presented);
+      if (!peeked.ok) {
+        return res.status(401).json({
+          error: peeked.reason === 'token_expired' ? 'Enrollment token expired' : 'Invalid enrollment token',
+          code: peeked.reason,
+        });
+      }
+      const script = buildJoinScript({
+        serverOrigin: requestOrigin(req) || 'http://127.0.0.1:3000',
+        enrollToken: presented,
+        approval: 'smart',
+        enableWindowsMcp: true,
+      });
+      res.setHeader('content-type', 'text/plain; charset=utf-8');
+      res.setHeader('cache-control', 'no-store');
+      res.send(script);
+    } catch (error) {
+      sendError(res, error, 'Failed to build join script');
+    }
+  });
+
+  // Public enroll: one device per enrollment token.
+  app.post('/api/devices/enroll', jsonParser, async (req, res) => {
+    try {
+      const header = asNonEmptyString(req.headers.authorization) || '';
+      const presented = header.startsWith('Bearer ')
+        ? header.slice('Bearer '.length).trim()
+        : asNonEmptyString(asObject(req.body)?.enrollToken);
+      const consumed = await enrollTokens.consumeToken(presented);
+      if (!consumed.ok) {
+        return res.status(401).json({
+          error: consumed.reason === 'token_expired' ? 'Enrollment token expired' : 'Invalid enrollment token',
+          code: consumed.reason,
+        });
+      }
+      const device = await registry.createDevice(req.body || {});
+      res.status(201).json({ device });
+    } catch (error) {
+      sendError(res, error, 'Failed to enroll device');
     }
   });
 

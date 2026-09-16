@@ -10,6 +10,8 @@ import { createDeviceTransportResolver } from './transport.js';
 import { createDeviceToolRuntime } from './tools.js';
 import { createDeviceMcpHandler } from './mcp.js';
 import { createDeviceAuditLog } from './audit.js';
+import { createDeviceEnrollTokenRuntime } from './enroll.js';
+import { buildJoinScript } from './join-script.js';
 
 let tempDir;
 
@@ -264,5 +266,55 @@ describe('device tools + mcp handler', () => {
     });
     expect(called.status).toBe(200);
     expect(called.json.result.structuredContent.devices).toHaveLength(1);
+  });
+});
+
+describe('enroll tokens + join script', () => {
+  const makeEnroll = () => createDeviceEnrollTokenRuntime({
+    fsPromises: fs.promises,
+    path,
+    crypto,
+    storePath: path.join(tempDir, 'enroll-tokens.json'),
+  });
+
+  test('creates, peeks, consumes once, and rejects reuse', async () => {
+    const enroll = makeEnroll();
+    const created = await enroll.createToken({ label: 'join' });
+    expect(created.token.startsWith('oc_enroll_')).toBe(true);
+
+    const peeked = await enroll.peekToken(created.token);
+    expect(peeked.ok).toBe(true);
+
+    const consumed = await enroll.consumeToken(created.token);
+    expect(consumed.ok).toBe(true);
+
+    const again = await enroll.consumeToken(created.token);
+    expect(again.ok).toBe(false);
+    expect(again.reason).toBe('invalid_token');
+
+    const listed = await enroll.listTokens();
+    expect(listed).toHaveLength(0);
+  });
+
+  test('rejects expired tokens', async () => {
+    const enroll = makeEnroll();
+    const created = await enroll.createToken({ label: 'old', ttlMs: 1 });
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const peeked = await enroll.peekToken(created.token);
+    expect(peeked.ok).toBe(false);
+    expect(peeked.reason).toBe('token_expired');
+  });
+
+  test('join script embeds server origin and token', () => {
+    const script = buildJoinScript({
+      serverOrigin: 'https://core.example',
+      enrollToken: 'oc_enroll_abc',
+      approval: 'smart',
+      enableWindowsMcp: true,
+    });
+    expect(script).toContain('https://core.example');
+    expect(script).toContain('oc_enroll_abc');
+    expect(script).toContain('/api/devices/enroll');
+    expect(script).toContain('windows-mcp');
   });
 });

@@ -165,6 +165,35 @@ const parseIssuedToken = (value: JsonValue): string | null => {
   return asOptionalText(token.token);
 };
 
+interface EnrollTokenView {
+  id: string;
+  label: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+const parseEnrollTokensPayload = (value: JsonValue): EnrollTokenView[] => {
+  const root = asObject(value);
+  const tokens = root && Array.isArray(root.tokens) ? root.tokens : [];
+  const out: EnrollTokenView[] = [];
+  for (const item of tokens) {
+    const record = asObject(item);
+    if (!record) continue;
+    out.push({
+      id: asText(record.id),
+      label: asText(record.label, 'enroll'),
+      createdAt: asText(record.createdAt),
+      expiresAt: asText(record.expiresAt),
+    });
+  }
+  return out;
+};
+
+const joinCommandFor = (token: string): string => {
+  const origin = globalThis.location?.origin || '';
+  return `irm '${origin}/api/devices/join.ps1?t=${token}' | iex`;
+};
+
 const readJson = async (response: Response): Promise<JsonValue> => {
   const payload: unknown = await response.json();
   const tag = Object.prototype.toString.call(payload);
@@ -185,6 +214,8 @@ export const DevicesPage: React.FC = () => {
   const [audit, setAudit] = React.useState<AuditEntry[]>([]);
   const [tokens, setTokens] = React.useState<TokenView[]>([]);
   const [issuedToken, setIssuedToken] = React.useState<string | null>(null);
+  const [enrollTokens, setEnrollTokens] = React.useState<EnrollTokenView[]>([]);
+  const [issuedEnroll, setIssuedEnroll] = React.useState<{ token: string; expiresAt: string } | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [draftName, setDraftName] = React.useState('');
@@ -197,15 +228,17 @@ export const DevicesPage: React.FC = () => {
 
   const refresh = React.useCallback(async () => {
     try {
-      const [devicesRes, auditRes, tokensRes] = await Promise.all([
+      const [devicesRes, auditRes, tokensRes, enrollRes] = await Promise.all([
         runtimeFetch('/api/devices'),
         runtimeFetch('/api/devices/audit?limit=20'),
         runtimeFetch('/api/devices/mcp/tokens'),
+        runtimeFetch('/api/devices/enroll/tokens'),
       ]);
       if (!devicesRes.ok) throw new Error(`设备列表 HTTP ${devicesRes.status}`);
       setDevices(parseDevicesPayload(await readJson(devicesRes)));
       if (auditRes.ok) setAudit(parseAuditPayload(await readJson(auditRes)));
       if (tokensRes.ok) setTokens(parseTokensPayload(await readJson(tokensRes)));
+      if (enrollRes.ok) setEnrollTokens(parseEnrollTokensPayload(await readJson(enrollRes)));
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -313,6 +346,37 @@ export const DevicesPage: React.FC = () => {
     }
   };
 
+  const createEnrollToken = async () => {
+    setBusy(true);
+    try {
+      const response = await runtimeFetch('/api/devices/enroll/tokens', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ label: 'one-click-join' }),
+      });
+      if (!response.ok) throw new Error(`创建一键注册码失败 HTTP ${response.status}`);
+      const payload = asObject(await readJson(response));
+      const token = payload ? asObject(payload.token) : null;
+      const plaintext = token ? asOptionalText(token.token) : null;
+      const expiresAt = token ? asText(token.expiresAt) : '';
+      if (!plaintext) throw new Error('注册码响应缺少 token');
+      setIssuedEnroll({ token: plaintext, expiresAt });
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copyText = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      setError('复制失败，请手动选中命令');
+    }
+  };
+
   return (
     <SettingsPageLayout title="设备" description="登记 Windows 设备，供 agent 通过 MCP 操作 shell / 文件 / 屏幕。">
       {error ? (
@@ -362,7 +426,45 @@ export const DevicesPage: React.FC = () => {
       </section>
 
       <section className="mb-8 space-y-3">
-        <h2 className="text-sm font-semibold">登记新设备</h2>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-semibold">一键注册</h2>
+            <p className="text-xs opacity-70">在目标 Windows 上以管理员 PowerShell 执行一条命令。注册码 15 分钟内有效，成功后自动作废。</p>
+          </div>
+          <Button size="sm" disabled={busy} onClick={() => void createEnrollToken()}>生成注册码</Button>
+        </div>
+        {issuedEnroll ? (
+          <div className="rounded-md border border-border/60 p-3 text-xs space-y-2">
+            <div className="opacity-70">复制到目标机器执行（过期：{issuedEnroll.expiresAt}）：</div>
+            <code className="block break-all select-all rounded bg-muted px-2 py-1.5">
+              {joinCommandFor(issuedEnroll.token)}
+            </code>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => void copyText(joinCommandFor(issuedEnroll.token))}>
+                复制命令
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => void copyText(issuedEnroll.token)}>
+                只复制注册码
+              </Button>
+            </div>
+            <div className="opacity-70">
+              脚本会：生成/复用 SSH 密钥、尽量授权到 administrators_authorized_keys、探测 Tailscale、可选打印 Windows-MCP 启动参数，然后向本工作台登记设备。
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm opacity-70">点「生成注册码」得到一键命令。</p>
+        )}
+        {enrollTokens.length > 0 ? (
+          <ul className="space-y-1 text-xs opacity-80">
+            {enrollTokens.map((token) => (
+              <li key={token.id}>未使用 · {token.label} · 过期 {token.expiresAt}</li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
+
+      <section className="mb-8 space-y-3">
+        <h2 className="text-sm font-semibold">手动登记（高级）</h2>
         <div className="grid gap-2 md:grid-cols-2">
           <input className="rounded border border-border/60 bg-background px-2 py-1.5 text-sm" placeholder="名称，例如 施工机" value={draftName} onChange={(e) => setDraftName(e.target.value)} />
           <input className="rounded border border-border/60 bg-background px-2 py-1.5 text-sm" placeholder="Tailscale IP（可选）" value={draftHost} onChange={(e) => setDraftHost(e.target.value)} />
