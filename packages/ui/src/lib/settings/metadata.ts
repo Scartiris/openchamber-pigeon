@@ -31,7 +31,8 @@ export type SettingsPageSlug =
   | 'memory-settings'
   | 'memory-browse'
   | 'knowledge-settings'
-  | 'knowledge-browse';
+  | 'knowledge-browse'
+  | 'devices';
 
 type SettingsPageGroup =
   | 'general'
@@ -258,6 +259,15 @@ export const SETTINGS_PAGE_METADATA: readonly SettingsPageMeta[] = [
     keywords: ['knowledge', 'resource', 'browse', 'tree', 'viking', '知识库', '浏览'],
     isAvailable: (ctx) => !ctx.isVSCode && !ctx.isMobile,
   },
+  {
+    slug: 'devices',
+    title: '设备',
+    group: 'general',
+    kind: 'single',
+    description: '登记 Windows 设备，供 agent 通过 MCP 操作。',
+    keywords: ['device', 'devices', 'mcp', 'ssh', 'screen', 'computer use', '设备', '多设备'],
+    isAvailable: (ctx) => !ctx.isVSCode,
+  },
 ] as const;
 
 const LEGACY_SIDEBAR_SECTION_TO_SETTINGS_SLUG: Record<SidebarSection, SettingsPageSlug> = {
@@ -345,6 +355,8 @@ export function getSettingsNavIcon(slug: SettingsPageSlug): IconName | null {
 
     case 'pigeon-brain':
       return 'book';
+    case 'devices':
+      return 'computer';
 
     // OpenViking 的两个作用域各两项：设置用「齿轮感」的通用图标，
     // 浏览用「树/文件夹」—— 浏览器形态一眼可辨。

@@ -956,7 +956,7 @@ interface UIStore {
   maxLastMessageLength: number; // chars — truncate {last_message} when summarization is off
 
   showTerminalQuickKeysOnDesktop: boolean;
-  /** Header session tabs (web/desktop), opt-in. Off keeps the plain session title. */
+  /** Header session tabs (web/desktop). On by default; off keeps the plain session title. */
   sessionTabsEnabled: boolean;
   persistChatDraft: boolean;
   showOpenCodeUpdateNotifications: boolean;
@@ -1345,7 +1345,7 @@ export const useUIStore = create<UIStore>()(
         maxLastMessageLength: 250,
 
         showTerminalQuickKeysOnDesktop: false,
-        sessionTabsEnabled: false,
+        sessionTabsEnabled: true,
         persistChatDraft: true,
         showOpenCodeUpdateNotifications: !isWindowsArm64(),
         agentControlToolEnabled: true,
