@@ -315,6 +315,10 @@ describe('enroll tokens + join script', () => {
     expect(script).toContain('https://core.example');
     expect(script).toContain('oc_enroll_abc');
     expect(script).toContain('/api/devices/enroll');
-    expect(script).toContain('windows-mcp');
+    expect(script).toContain('windows-mcp install');
+    expect(script).toContain('streamable-http');
+    expect(script).toContain('auth_key');
+    expect(script).toContain('Startup');
+    expect(script).toContain('ANONYMIZED_TELEMETRY');
   });
 });

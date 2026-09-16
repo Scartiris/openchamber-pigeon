@@ -56,20 +56,32 @@ try {
 } catch { }
 
 $sshPort = 22
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 # Ensure OpenSSH server is installed and running
 $sshd = Get-Service sshd -ErrorAction SilentlyContinue
 if (-not $sshd) {
-  Write-Warn2 "OpenSSH Server not installed. Install with:"
-  Write-Warn2 "  Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0"
-  Write-Warn2 "Then start: Start-Service sshd"
-} else {
+  if ($isAdmin) {
+    Write-Step "Installing OpenSSH Server capability (silent)"
+    try {
+      Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0 | Out-Null
+    } catch {
+      Write-Warn2 "OpenSSH capability install failed: $($_.Exception.Message)"
+    }
+  } else {
+    Write-Warn2 "OpenSSH Server not installed. Install with:"
+    Write-Warn2 "  Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0"
+  }
+  $sshd = Get-Service sshd -ErrorAction SilentlyContinue
+}
+if ($sshd) {
   if ($sshd.Status -ne 'Running') { Start-Service sshd }
   Set-Service sshd -StartupType Automatic
-  Write-Ok "sshd running"
+  Write-Ok "sshd running (Automatic)"
+} else {
+  Write-Warn2 "sshd still missing — shell/file tools will fail until installed"
 }
 
 # Authorize this user's key. Admin users use administrators_authorized_keys.
-$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if ($isAdmin) {
   $adminKeys = 'C:\\ProgramData\\ssh\\administrators_authorized_keys'
   $existing = ''
@@ -90,17 +102,132 @@ if ($isAdmin) {
   Write-Warn2 "  Add-Content C:\\ProgramData\\ssh\\administrators_authorized_keys -Value (Get-Content $keyPath.pub)"
 }
 
-# --- Optional Windows-MCP bearer ---
+# --- Windows-MCP: silent install + login autostart ---
 $mcpBearer = $null
 $mcpPort = $null
+$mcpReady = $false
 if ($EnableWindowsMcp) {
-  $mcpBearer = 'wmcp_' + [guid]::NewGuid().ToString('N')
   $mcpPort = 18080
-  Write-Warn2 "Windows-MCP install is optional. If installed, use:"
-  Write-Warn2 "  uvx windows-mcp serve --transport streamable-http --host 127.0.0.1 --port $mcpPort --auth-key $mcpBearer"
+  $mcpHost = '127.0.0.1'
+  $mcpBearer = 'wmcp_' + [guid]::NewGuid().ToString('N')
+  $wmcpDir = Join-Path $env:USERPROFILE '.windows-mcp'
+  $cfgPath = Join-Path $wmcpDir 'config.toml'
+
+  Write-Step "Installing Windows-MCP (silent, login autostart)"
+
+  # Telemetry off for personal fleet
+  [Environment]::SetEnvironmentVariable('ANONYMIZED_TELEMETRY', 'false', 'User')
+  $env:ANONYMIZED_TELEMETRY = 'false'
+
+  function Test-Uv {
+    try { $null = Get-Command uv -ErrorAction Stop; return $true } catch { return $false }
+  }
+
+  if (-not (Test-Uv)) {
+    Write-Step "Installing uv package manager"
+    $winget = Get-Command winget -ErrorAction SilentlyContinue
+    if ($winget) {
+      try {
+        winget install --id astral-sh.uv -e --silent --accept-source-agreements --accept-package-agreements | Out-Null
+      } catch {
+        Write-Warn2 "winget uv install failed, trying official installer"
+      }
+    }
+    if (-not (Test-Uv)) {
+      try {
+        irm https://astral.sh/uv/install.ps1 | iex
+      } catch {
+        Write-Warn2 "uv install failed: $($_.Exception.Message)"
+      }
+    }
+    # Refresh PATH for current session
+    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+    $machinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+    $env:Path = "$userPath;$machinePath"
+  }
+
+  if (Test-Uv) {
+    # Persist auth + bind settings; scheduled task runs serve and reads this file.
+    if (-not (Test-Path $wmcpDir)) { New-Item -ItemType Directory -Path $wmcpDir | Out-Null }
+    $toml = @"
+[server]
+transport = "streamable-http"
+host = "$mcpHost"
+port = $mcpPort
+auth_key = "$mcpBearer"
+"@
+    # UTF-8 without BOM — Windows PowerShell -Encoding utf8 writes a BOM that
+    # Python tomllib rejects ("Invalid statement at line 1").
+    [IO.File]::WriteAllText($cfgPath, $toml, (New-Object System.Text.UTF8Encoding $false))
+    try {
+      $acl = Get-Acl $cfgPath
+      $acl.SetAccessRuleProtection($true, $false)
+      $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+        [System.Security.Principal.WindowsIdentity]::GetCurrent().Name, 'Read', 'Allow')
+      $acl.SetAccessRule($rule)
+      Set-Acl -Path $cfgPath -AclObject $acl
+    } catch { }
+
+    # First resolve/download the package (may take a minute), then register task.
+    Write-Step "Preparing windows-mcp package (first run may take a minute)"
+    try {
+      uvx windows-mcp --help | Out-Null
+    } catch {
+      Write-Warn2 "uvx windows-mcp warmup failed: $($_.Exception.Message)"
+    }
+
+    Write-Step "Registering login autostart for Windows-MCP"
+    $installedTask = $false
+    try {
+      uvx windows-mcp install --force --transport streamable-http --host $mcpHost --port $mcpPort
+      $installedTask = $true
+      Write-Ok "Scheduled task windows-mcp-server installed (starts at login)"
+    } catch {
+      Write-Warn2 "Scheduled task install failed (often needs admin). Falling back to Startup folder."
+    }
+
+    if (-not $installedTask) {
+      # HKCU Startup — no admin required, runs at user logon.
+      $startup = [Environment]::GetFolderPath('Startup')
+      $wrapper = Join-Path $startup 'openchamber-windows-mcp.cmd'
+      $uvx = (Get-Command uvx -ErrorAction SilentlyContinue).Source
+      if (-not $uvx) { $uvx = 'uvx' }
+      $cmd = @"
+@echo off
+set ANONYMIZED_TELEMETRY=false
+"$uvx" windows-mcp serve --transport streamable-http --host $mcpHost --port $mcpPort >> "%USERPROFILE%\\.windows-mcp\\server.log" 2>&1
+"@
+      Set-Content -Path $wrapper -Value $cmd -Encoding ascii
+      Write-Ok "Startup autostart: $wrapper"
+      # Start now
+      Start-Process -FilePath $wrapper -WindowStyle Hidden
+    }
+
+    # Wait briefly for health
+    $deadline = (Get-Date).AddSeconds(60)
+    while ((Get-Date) -lt $deadline) {
+      try {
+        $r = Invoke-WebRequest -Uri "http://$($mcpHost):$($mcpPort)/mcp" -Method Post -Headers @{ Authorization = "Bearer $mcpBearer"; accept = 'application/json, text/event-stream' } -ContentType 'application/json' -Body '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"join","version":"0"}}}' -TimeoutSec 5 -UseBasicParsing
+        if ($r.StatusCode -ge 200 -and $r.StatusCode -lt 500) { $mcpReady = $true; break }
+      } catch { Start-Sleep -Seconds 2 }
+    }
+    if ($mcpReady) {
+      Write-Ok "Windows-MCP listening on $($mcpHost):$($mcpPort) (autostart on)"
+    } else {
+      Write-Warn2 "Windows-MCP not answering yet — check %USERPROFILE%\\.windows-mcp\\server.log"
+    }
+  } else {
+    Write-Warn2 "uv not available — skip Windows-MCP autostart (shell/files still work)"
+    $mcpBearer = $null
+    $mcpPort = $null
+  }
 }
 
 # --- Enroll ---
+if (-not $mcpReady) {
+  $mcpBearer = $null
+  $mcpPort = $null
+}
 $connection = @{}
 if ($tsIp) {
   $connection.tailscale = @{ host = $tsIp; sshPort = $sshPort; mcpPort = $mcpPort }
@@ -108,7 +235,7 @@ if ($tsIp) {
 }
 $connection.tunnel = @{ sshPort = $sshPort; mcpPort = $mcpPort }
 
-$capabilities = @{ shell = $true; files = $true; screen = [bool]$mcpBearer }
+$capabilities = @{ shell = $true; files = $true; screen = [bool]$mcpReady }
 $body = @{
   name = $name
   platform = 'windows'
@@ -132,11 +259,12 @@ try {
   Write-Ok "Registered: $($device.name)  id=$($device.id)"
   Write-Host ""
   Write-Host "Next steps:" -ForegroundColor Cyan
-  Write-Host "  1. Keep this terminal — enrollment token is now spent."
+  Write-Host "  1. Enrollment token is spent."
   Write-Host "  2. Agent MCP endpoint: POST $Server/api/devices/mcp"
   Write-Host "  3. Create an agent token in OpenChamber Settings → Devices."
-  if ($mcpBearer) {
-    Write-Host "  4. Windows-MCP bearer (save it): $mcpBearer"
+  if ($mcpReady) {
+    Write-Host "  4. Windows-MCP is running and will restart at login (task: windows-mcp-server)."
+    Write-Host "     Uninstall: uvx windows-mcp uninstall"
   }
   Write-Host ""
   Write-Ok "Done."
