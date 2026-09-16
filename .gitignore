@@ -25,6 +25,9 @@ changelog-*.png
 local-dev*
 .tmp/
 /tmp/
+# Local device-mcp e2e scratch (keys, enroll tokens, screenshots — never commit)
+.scratch-device-e2e/
+.scratch-device-e2e/**
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

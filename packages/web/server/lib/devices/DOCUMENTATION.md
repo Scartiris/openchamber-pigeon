@@ -88,7 +88,10 @@ irm 'https://<host>/api/devices/join.ps1?t=<token>' | iex
 - `GET /api/devices/join.ps1?t=` — public while the token is unspent; serves a
   PowerShell script that generates/reuses an SSH key, best-effort authorizes it
   (including `administrators_authorized_keys` when elevated), probes Tailscale,
-  optionally prints Windows-MCP args, then calls enroll.
+  **silently installs Windows-MCP with login autostart** (scheduled task when
+  elevated, Startup-folder fallback otherwise), writes a BOM-free
+  `~/.windows-mcp/config.toml` (auth_key + bind), health-checks it, then calls
+  enroll.
 - `POST /api/devices/enroll` — public with `Authorization: Bearer oc_enroll_…`;
   creates **one** device and spends the token.
 - `GET/POST/DELETE /api/devices/enroll/tokens` — UI-session management.
@@ -141,16 +144,16 @@ transport preference/fail-closed, tool orchestration, and the MCP handler.
   - Channel failures were wrapped as tool `ok:true` → now `isError` with `ssh_failed`/etc.
   - Windows OpenSSH rejects `%TEMP%` key ACLs → protect inheritance and grant
     Read only to the process identity via PowerShell `Set-Acl`
-- **本机 e2e 已通过**（隔离实例 :3021，设备 `dev_b139e893668b2053`）：
+- **本机 e2e 已通过**（隔离实例，设备 id 为一次性本地记录，未入库）：
   - shell: `whoami` / `hostname` / `echo` → exit 0
-  - files: list Desktop / read win.ini / write + readback
-  - screen: `devices.screen.capture` 返回真实 PNG（约 1.3MB），MCP image part 透传
-  - ui: click / type 经兼容 worker 打到本机
+  - files: list Desktop / read sample system file / write + readback
+  - screen: `devices.screen.capture` 返回真实 PNG，MCP image part 透传
+  - ui: click / type 经 worker 打到本机
   - MCP token 鉴权、审批三档、审计、密钥不回显均通过
 - **Windows-MCP（CursorTouch）实测通过**（uv + Python 3.14，`streamable-http`
-  `:18081/mcp`，`--auth-key`）：
+  + `--auth-key`）：
   - 工具对齐：`Screenshot` / `Snapshot` / `Click` / `Type`（含 `Mcp-Session-Id` 握手）
-  - 经 OpenChamber `/api/devices/mcp`：shell 回显、截屏 PNG（~1.2MB image part）、
+  - 经 OpenChamber `/api/devices/mcp`：shell 回显、截屏 PNG image part、
     点击、Type 坐标、Snapshot 树
 - e2e worker（兼容 mock）仅作早期链路验证；生产以 Windows-MCP 为准。
-- 源码：`.scratch-device-e2e/Windows-MCP`（克隆）。
+- 本机 e2e 脚本与密钥放在 gitignore 的 scratch 目录，**不入库**。
