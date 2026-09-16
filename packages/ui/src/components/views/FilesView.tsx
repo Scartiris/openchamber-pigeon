@@ -3924,8 +3924,10 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full', visible = t
         </div>
         ) : null}
 
-        {/* Row 2: Docked editor toolbar. */}
-        {selectedFile ? (
+        {/* Row 2: Docked editor toolbar. Hidden for office documents —
+            DocumentPreviewView already owns download/reload/fullscreen, and a
+            second action bar stacks three chrome rows above the PDF. */}
+        {selectedFile && !isSelectedDocument ? (
           <div className="flex min-w-0 items-center gap-3 border-t border-border/40 bg-[var(--surface-subtle)] px-3 py-1">
             {/* Mobile hosts already show the file name in their own header;
                 a truncated duplicate here just eats toolbar width. */}
