@@ -1,5 +1,6 @@
 import { createDeviceRegistry } from './registry.js';
 import { createDeviceMcpTokenRuntime } from './tokens.js';
+import { createDeviceEnrollTokenRuntime } from './enroll.js';
 import { createDeviceTransportResolver } from './transport.js';
 import { createDeviceSshClient } from './ssh.js';
 import { createWindowsMcpClient } from './windows-mcp.js';
@@ -32,6 +33,12 @@ export function createDeviceRuntime({
     crypto,
     storePath: path.join(devicesDir, 'mcp-tokens.json'),
   });
+  const enrollTokens = createDeviceEnrollTokenRuntime({
+    fsPromises,
+    path,
+    crypto,
+    storePath: path.join(devicesDir, 'enroll-tokens.json'),
+  });
   const transportResolver = createDeviceTransportResolver({ net });
   const sshClient = createDeviceSshClient({
     spawn,
@@ -61,6 +68,7 @@ export function createDeviceRuntime({
   return {
     registry,
     tokens,
+    enrollTokens,
     audit,
     toolRuntime,
     mcpHandler,
@@ -68,6 +76,7 @@ export function createDeviceRuntime({
     registerRoutes: (app) => registerDeviceRoutes(app, {
       registry,
       tokens,
+      enrollTokens,
       audit,
       toolRuntime,
       mcpHandler,

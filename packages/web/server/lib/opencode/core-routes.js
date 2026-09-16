@@ -985,11 +985,10 @@ export const registerAuthAndAccessRoutes = (app, dependencies) => {
 
   app.use('/api', async (req, res, next) => {
     // Device MCP agents authenticate with a dedicated bearer token, not a UI
-    // session. The handler validates the token itself; this only lets the
-    // request past the UI gate.
+    // session. One-click join uses a short-lived enrollment token instead.
     //
     // Inside `app.use('/api', …)` Express mounts `req.path` relative to /api,
-    // so the match must be `/devices/mcp`, not `/api/devices/mcp`.
+    // so the match must be `/devices/...`, not `/api/devices/...`.
     if (req.path === '/devices/mcp' || req.path === '/devices/mcp/') {
       const rawAuthorization = req.headers.authorization;
       const authorization = rawAuthorization === undefined || rawAuthorization === null
@@ -998,6 +997,13 @@ export const registerAuthAndAccessRoutes = (app, dependencies) => {
       if (authorization.startsWith('Bearer oc_device_mcp_')) {
         return next();
       }
+    }
+    if (req.path === '/devices/join.ps1'
+      || req.path === '/devices/enroll'
+      || req.path === '/devices/enroll/') {
+      // join.ps1 is public with ?t=enroll token; enroll is public with Bearer oc_enroll_.
+      // Do NOT match /devices/enroll/tokens — that stays UI-session authenticated.
+      return next();
     }
     try {
       await requireApiAuth(req, res, next);

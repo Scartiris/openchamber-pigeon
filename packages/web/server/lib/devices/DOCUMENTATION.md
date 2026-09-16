@@ -76,7 +76,26 @@ OpenCode catch-all proxy.
 - Tunnel server (rathole/frp) is external; this module only consumes loopback
   ports recorded on the device record.
 
-## Manual enrollment (M1)
+## One-click enrollment
+
+Settings → 设备 → **一键注册** issues a short-lived single-use token
+(`oc_enroll_…`, 15 minutes). The copyable line is:
+
+```powershell
+irm 'https://<host>/api/devices/join.ps1?t=<token>' | iex
+```
+
+- `GET /api/devices/join.ps1?t=` — public while the token is unspent; serves a
+  PowerShell script that generates/reuses an SSH key, best-effort authorizes it
+  (including `administrators_authorized_keys` when elevated), probes Tailscale,
+  optionally prints Windows-MCP args, then calls enroll.
+- `POST /api/devices/enroll` — public with `Authorization: Bearer oc_enroll_…`;
+  creates **one** device and spends the token.
+- `GET/POST/DELETE /api/devices/enroll/tokens` — UI-session management.
+
+Manual enrollment remains available for advanced cases.
+
+### Manual steps
 
 1. On the Windows machine, enable OpenSSH Server and start Windows-MCP with
    HTTP transport + a bearer key (listen on a tunnel/Tailscale-reachable port).
@@ -103,7 +122,10 @@ transport preference/fail-closed, tool orchestration, and the MCP handler.
 
 ## Validation performed (2026-09-16)
 
-- `bun run test -- server/lib/devices/devices.test.js` → **10 passed**
+- `bun run test -- server/lib/devices/devices.test.js` → **13 passed** (includes
+  enroll token single-use/expiry and join script embedding)
+- One-click e2e: create enroll token → fetch `join.ps1` without UI auth →
+  `POST /api/devices/enroll` creates device → reuse 401 → join after spend 401.
 - Module import smoke: `createDeviceRuntime`, `registerDeviceRoutes` load.
 - Live HTTP e2e on isolated instance (`127.0.0.1:3021`, own data dir):
   - Login + create MCP token + register 本机 (admin@127.0.0.1:22, tunnel sshPort 22)
