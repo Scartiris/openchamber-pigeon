@@ -338,7 +338,7 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
           },
         };
 
-        editorRef.current = new DocEditor(mount, { ...state.editorConfig, events });
+        editorRef.current = new DocEditor(mount.id, { ...state.editorConfig, events });
       } catch (error) {
         // Swallowing this silently leaves the user with a generic failure and
         // nothing in the console to diagnose the document server with.
