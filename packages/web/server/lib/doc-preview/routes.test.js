@@ -1,5 +1,5 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
-import { mkdtemp, mkdir, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, realpath, rename, rm, stat, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -18,6 +18,9 @@ const createRouteRegistry = () => {
     app: {
       get(routePath, handler) {
         routes.set(`GET ${routePath}`, handler);
+      },
+      post(routePath, handler) {
+        routes.set(`POST ${routePath}`, handler);
       },
     },
     getRoute(method, routePath) {
@@ -62,9 +65,11 @@ const createMockResponse = () => {
   };
 };
 
-const createRequest = ({ query = {}, host = 'oc.example.com', protocol = 'https' } = {}) => ({
+const createRequest = ({ query = {}, host = 'oc.example.com', protocol = 'https', body, headers = {} } = {}) => ({
   query,
   protocol,
+  body,
+  headers,
   get: (name) => (String(name).toLowerCase() === 'host' ? host : undefined),
 });
 
@@ -96,7 +101,7 @@ const setup = async ({ env = {}, resolver, fsOverrides = {} } = {}) => {
 
   registerDocPreviewRoutes(registry.app, {
     crypto,
-    fsPromises: { readFile, stat, realpath, ...fsOverrides },
+    fsPromises: { readFile, writeFile, mkdir, stat, realpath, rename, unlink, ...fsOverrides },
     path,
     docPreviewRuntime: runtime,
     resolveReadPathFromContext: resolver || (async ({ targetPath }) => ({
@@ -104,6 +109,7 @@ const setup = async ({ env = {}, resolver, fsOverrides = {} } = {}) => {
       base: workspace,
       resolved: path.resolve(workspace, targetPath),
     })),
+    fetchImpl: (...args) => fetchImpl(...args),
   });
 
   return registry;
@@ -328,6 +334,173 @@ describe('GET /api/doc-preview/config', () => {
     );
     const payload = decodeJwtPayload(res.body.editorConfig.token);
     expect(payload.document.url.startsWith('http://openchamber:3000/doc-preview/raw')).toBe(true);
+  });
+
+  it('mints an edit configuration for a workspace office document', async () => {
+    await writeFile(path.join(workspace, 'report.docx'), 'docx-bytes');
+    const registry = await setup();
+    const res = await invoke(
+      registry.getRoute('GET', '/api/doc-preview/config'),
+      createRequest({ query: { path: 'report.docx', edit: '1' } }),
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.editable).toBe(true);
+    expect(res.body.editorConfig.document.permissions.edit).toBe(true);
+    expect(res.body.editorConfig.editorConfig.mode).toBe('edit');
+    expect(res.body.editorConfig.editorConfig.customization.autosave).toBe(true);
+    expect(res.body.editorConfig.editorConfig.customization.forcesave).toBe(true);
+    expect(res.body.editorConfig.editorConfig.callbackUrl).toContain('/doc-preview/callback?token=');
+
+    const payload = decodeJwtPayload(res.body.editorConfig.token);
+    const callbackToken = decodeURIComponent(new URL(payload.editorConfig.callbackUrl).searchParams.get('token'));
+    const verified = verifyRawToken({ crypto, secret: SECRET, token: callbackToken });
+    expect(verified.ok).toBe(true);
+    expect(verified.payload.k).toBe('edit');
+    expect(verified.payload.p).toBe(path.join(workspace, 'report.docx'));
+  });
+
+  it('keeps PDFs and outside-workspace files out of edit mode', async () => {
+    await writeFile(path.join(workspace, 'report.pdf'), '%PDF-1.4');
+    await writeFile(path.join(workspace, 'report.docx'), 'docx');
+
+    const registry = await setup();
+    const pdfRes = await invoke(
+      registry.getRoute('GET', '/api/doc-preview/config'),
+      createRequest({ query: { path: 'report.pdf', edit: '1' } }),
+    );
+    expect(pdfRes.body).toMatchObject({ available: true, kind: 'pdf' });
+
+    const outsideRes = await invoke(
+      registry.getRoute('GET', '/api/doc-preview/config'),
+      createRequest({
+        query: {
+          path: 'report.docx',
+          edit: '1',
+          allowOutsideWorkspace: 'true',
+          outsideFileGrant: 'grant',
+        },
+      }),
+    );
+    // The default resolver ignores the outside-grant query, so this still
+    // resolves inside the workspace — but the route must refuse edit solely
+    // because allowOutsideWorkspace was requested.
+    expect(outsideRes.statusCode).toBe(200);
+    expect(outsideRes.body.editable).toBe(false);
+    expect(outsideRes.body.editorConfig.document.permissions.edit).toBe(false);
+    expect(outsideRes.body.editorConfig.editorConfig.mode).toBe('view');
+    expect(outsideRes.body.editorConfig.editorConfig.callbackUrl).toBeUndefined();
+  });
+});
+
+describe('POST /doc-preview/callback', () => {
+  const mintEditToken = async ({ filePath, secret = SECRET, exp = Date.now() + 60_000, kind = 'edit' }) => {
+    const stats = await stat(filePath).catch(() => null);
+    return signRawToken({
+      crypto,
+      secret,
+      payload: {
+        p: filePath,
+        m: Math.trunc(stats?.mtimeMs ?? 0),
+        s: Math.trunc(stats?.size ?? 0),
+        e: exp,
+        ...(kind ? { k: kind } : {}),
+      },
+    });
+  };
+
+  it('rejects missing, view-scoped, and expired tokens', async () => {
+    const registry = await setup();
+    const handler = registry.getRoute('POST', '/doc-preview/callback');
+    const filePath = path.join(workspace, 'report.docx');
+    await writeFile(filePath, 'docx');
+
+    expect((await invoke(handler, createRequest({ body: { status: 2 } }))).statusCode).toBe(403);
+    expect((await invoke(handler, createRequest({
+      query: { token: await mintEditToken({ filePath, kind: null }) },
+      body: { status: 2 },
+    }))).statusCode).toBe(403);
+    expect((await invoke(handler, createRequest({
+      query: { token: await mintEditToken({ filePath, exp: Date.now() - 1 }) },
+      body: { status: 2 },
+    }))).statusCode).toBe(403);
+  });
+
+  it('acks non-write statuses without touching the file', async () => {
+    const registry = await setup();
+    const handler = registry.getRoute('POST', '/doc-preview/callback');
+    const filePath = path.join(workspace, 'report.docx');
+    await writeFile(filePath, 'docx-bytes');
+
+    const res = await invoke(handler, createRequest({
+      query: { token: await mintEditToken({ filePath }) },
+      body: { status: 1, key: 'abc' },
+    }));
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.error).toBe(0);
+    expect(await readFile(filePath, 'utf8')).toBe('docx-bytes');
+  });
+
+  it('acks non-write statuses even when the path is gone', async () => {
+    const registry = await setup();
+    const handler = registry.getRoute('POST', '/doc-preview/callback');
+    const filePath = path.join(workspace, 'gone.docx');
+    await writeFile(filePath, 'docx-bytes');
+    const token = await mintEditToken({ filePath });
+    await unlink(filePath);
+
+    const res = await invoke(handler, createRequest({
+      query: { token },
+      body: { status: 4, key: 'abc' },
+    }));
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.error).toBe(0);
+  });
+
+  it('downloads the saved document and writes it back atomically', async () => {
+    const registry = await setup();
+    const handler = registry.getRoute('POST', '/doc-preview/callback');
+    const filePath = path.join(workspace, 'report.docx');
+    await writeFile(filePath, 'docx-bytes');
+
+    const downloadUrl = 'http://documentserver/cache/files/output.docx';
+    fetchImpl = vi.fn(async (url) => {
+      if (String(url) === downloadUrl) {
+        return {
+          ok: true,
+          arrayBuffer: async () => Buffer.from('saved-docx-bytes'),
+        };
+      }
+      return { ok: true, text: async () => 'true' };
+    });
+
+    const res = await invoke(handler, createRequest({
+      query: { token: await mintEditToken({ filePath }) },
+      body: { status: 2, url: downloadUrl, key: 'abc' },
+    }));
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.error).toBe(0);
+    expect(await readFile(filePath, 'utf8')).toBe('saved-docx-bytes');
+  });
+
+  it('refuses download URLs outside the configured document server', async () => {
+    const registry = await setup();
+    const handler = registry.getRoute('POST', '/doc-preview/callback');
+    const filePath = path.join(workspace, 'report.docx');
+    await writeFile(filePath, 'docx-bytes');
+
+    const res = await invoke(handler, createRequest({
+      query: { token: await mintEditToken({ filePath }) },
+      body: { status: 2, url: 'https://evil.example.com/output.docx' },
+    }));
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.error).toBe(1);
+    expect(res.body.reason).toBe('invalid-download-url');
+    expect(await readFile(filePath, 'utf8')).toBe('docx-bytes');
   });
 });
 

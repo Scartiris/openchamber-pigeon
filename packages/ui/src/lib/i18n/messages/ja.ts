@@ -3378,6 +3378,8 @@ export const dict: Record<I18nKey, string> = {
   'documentPreview.actions.fullscreen': '全画面',
   'documentPreview.actions.exitFullscreen': '全画面を終了',
   'documentPreview.actions.reload': '再読み込み',
+  'documentPreview.actions.edit': '編集',
+  'documentPreview.actions.stopEditing': '編集を終了',
   'documentPreview.state.loading': 'プレビューを読み込み中…',
   'documentPreview.error.notConfigured': 'このサーバーではドキュメントのプレビューが設定されていません。',
   'documentPreview.error.unavailable': 'ドキュメントサーバーを利用できません。元のファイルは引き続きダウンロードできます。',

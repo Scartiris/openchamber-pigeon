@@ -3379,6 +3379,8 @@ export const dict: Record<I18nKey, string> = {
   "documentPreview.actions.fullscreen": "Повний екран",
   "documentPreview.actions.exitFullscreen": "Вийти з повноекранного режиму",
   "documentPreview.actions.reload": "Перезавантажити",
+  "documentPreview.actions.edit": "Редагувати",
+  "documentPreview.actions.stopEditing": "Завершити редагування",
   "documentPreview.state.loading": "Завантаження перегляду…",
   "documentPreview.error.notConfigured": "Перегляд документів не налаштовано на цьому сервері.",
   "documentPreview.error.unavailable": "Сервер документів недоступний. Оригінал усе одно можна завантажити.",

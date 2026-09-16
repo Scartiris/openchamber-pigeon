@@ -3379,6 +3379,8 @@ export const dict: Record<I18nKey, string> = {
   'documentPreview.actions.fullscreen': '全屏',
   'documentPreview.actions.exitFullscreen': '退出全屏',
   'documentPreview.actions.reload': '重新加载',
+  'documentPreview.actions.edit': '编辑',
+  'documentPreview.actions.stopEditing': '停止编辑',
   'documentPreview.state.loading': '正在加载预览…',
   'documentPreview.error.notConfigured': '该服务器未配置文档预览服务。',
   'documentPreview.error.unavailable': '文档服务不可用，可下载原件。',

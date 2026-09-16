@@ -3376,6 +3376,8 @@ export const dict = {
   'documentPreview.actions.fullscreen': 'Vollbild',
   'documentPreview.actions.exitFullscreen': 'Vollbild beenden',
   'documentPreview.actions.reload': 'Neu laden',
+  'documentPreview.actions.edit': 'Bearbeiten',
+  'documentPreview.actions.stopEditing': 'Bearbeitung beenden',
   'documentPreview.state.loading': 'Vorschau wird geladen…',
   'documentPreview.error.notConfigured': 'Die Dokumentvorschau ist auf diesem Server nicht konfiguriert.',
   'documentPreview.error.unavailable': 'Der Dokumentenserver ist nicht verfügbar. Sie können das Original weiterhin herunterladen.',

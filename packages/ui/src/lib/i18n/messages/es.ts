@@ -3379,6 +3379,8 @@ export const dict: Record<I18nKey, string> = {
   "documentPreview.actions.fullscreen": "Pantalla completa",
   "documentPreview.actions.exitFullscreen": "Salir de pantalla completa",
   "documentPreview.actions.reload": "Recargar",
+  "documentPreview.actions.edit": "Editar",
+  "documentPreview.actions.stopEditing": "Dejar de editar",
   "documentPreview.state.loading": "Cargando vista previa…",
   "documentPreview.error.notConfigured": "La vista previa de documentos no está configurada en este servidor.",
   "documentPreview.error.unavailable": "El servidor de documentos no está disponible. Aún puedes descargar el original.",

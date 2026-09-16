@@ -3376,6 +3376,8 @@ export const dict = {
   'documentPreview.actions.fullscreen': 'Tam ekran',
   'documentPreview.actions.exitFullscreen': 'Tam ekrandan çık',
   'documentPreview.actions.reload': 'Yeniden yükle',
+  'documentPreview.actions.edit': 'Düzenle',
+  'documentPreview.actions.stopEditing': 'Düzenlemeyi bitir',
   'documentPreview.state.loading': 'Önizleme yükleniyor…',
   'documentPreview.error.notConfigured': 'Bu sunucuda belge önizlemesi yapılandırılmamış.',
   'documentPreview.error.unavailable': 'Belge sunucusu kullanılamıyor. Orijinali yine de indirebilirsiniz.',

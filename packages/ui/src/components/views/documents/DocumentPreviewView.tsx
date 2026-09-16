@@ -168,6 +168,10 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
 
   const [state, setState] = React.useState<PreviewState>({ status: 'loading' });
   const [reloadNonce, setReloadNonce] = React.useState(0);
+  // Edit is an explicit mode: the server still mints view configs by default,
+  // and only a workspace-scoped office file with a healthy document server can
+  // flip this to true. Outside-grant files never leave view mode.
+  const [editMode, setEditMode] = React.useState(false);
   const placeholderRef = React.useRef<HTMLDivElement | null>(null);
   const editorRef = React.useRef<{ destroyEditor?: () => void } | null>(null);
   const [placeholderId] = React.useState(() => {
@@ -187,6 +191,11 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
     () => (outsideFileGrant ? { allowOutsideWorkspace: 'true', outsideFileGrant } : {}),
     [outsideFileGrant],
   );
+  const isOutsideWorkspace = Boolean(outsideFileGrant);
+
+  // Only workspace office documents can flip into edit. The server enforces
+  // the same rule; this just keeps the toolbar honest without a round trip.
+  const canEdit = state.status === 'onlyoffice' && !isOutsideWorkspace;
 
   React.useEffect(() => {
     if (!filePath) {
@@ -204,6 +213,7 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
             path: filePath,
             directory: directory ?? undefined,
             theme: themeVariant,
+            edit: editMode ? '1' : undefined,
             ...outsideWorkspaceQuery,
           },
           cache: 'no-store',
@@ -216,6 +226,7 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
             reason?: string;
             documentServerUrl?: string;
             editorConfig?: OnlyOfficeConfig;
+            editable?: boolean;
           }
           | null;
 
@@ -232,6 +243,11 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
         }
 
         if (payload.kind === 'onlyoffice' && payload.documentServerUrl && payload.editorConfig) {
+          // The server may refuse edit (outside grant, non-office, …) and still
+          // return a view config. Trust the response, not the local flag.
+          if (editMode && payload.editable !== true) {
+            setEditMode(false);
+          }
           setState({
             status: 'onlyoffice',
             documentServerUrl: payload.documentServerUrl,
@@ -251,7 +267,7 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [directory, filePath, outsideWorkspaceQuery, reloadNonce, themeVariant]);
+  }, [directory, filePath, outsideWorkspaceQuery, reloadNonce, themeVariant, editMode]);
 
   React.useEffect(() => {
     // Only the visible tab keeps an editor alive: hiding the panel (or the
@@ -367,6 +383,22 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
           {fileName}
         </div>
         <div className="flex shrink-0 items-center gap-0.5">
+          {canEdit ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => setEditMode((value) => !value)}
+              title={editMode ? t('documentPreview.actions.stopEditing') : t('documentPreview.actions.edit')}
+              aria-label={editMode ? t('documentPreview.actions.stopEditing') : t('documentPreview.actions.edit')}
+            >
+              <Icon name={editMode ? 'eye' : 'edit'} className="h-3.5 w-3.5" />
+              <span className="ml-1 typography-micro">
+                {editMode ? t('documentPreview.actions.stopEditing') : t('documentPreview.actions.edit')}
+              </span>
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="ghost"

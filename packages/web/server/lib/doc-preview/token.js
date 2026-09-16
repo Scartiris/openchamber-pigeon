@@ -94,6 +94,36 @@ export const signJwt = ({ crypto, secret, payload }) => {
   return `${data}.${hmac(crypto, secret, data)}`;
 };
 
+/**
+ * Verify an HS256 JWT signature against the shared editor secret. Returns
+ * `{ ok: true, payload }` or `{ ok: false }`. The callback route uses this as
+ * a secondary check; the edit capability token remains the write authority.
+ */
+export const verifyJwt = ({ crypto, secret, token }) => {
+  const raw = typeof token === 'string' ? token.trim() : '';
+  const parts = raw.split('.');
+  if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) {
+    return { ok: false };
+  }
+
+  const expected = hmac(crypto, secret, `${parts[0]}.${parts[1]}`);
+  const expectedBuffer = Buffer.from(expected, 'utf8');
+  const providedBuffer = Buffer.from(parts[2], 'utf8');
+  if (expectedBuffer.length !== providedBuffer.length || !crypto.timingSafeEqual(expectedBuffer, providedBuffer)) {
+    return { ok: false };
+  }
+
+  try {
+    const payload = JSON.parse(fromBase64Url(parts[1]));
+    if (!payload || typeof payload !== 'object') {
+      return { ok: false };
+    }
+    return { ok: true, payload };
+  } catch {
+    return { ok: false };
+  }
+};
+
 /** Short, stable, OnlyOffice-safe document key (<=128 chars, `[0-9a-f]`). */
 export const buildDocumentKey = ({ crypto, canonicalPath, mtimeMs, size }) => crypto
   .createHash('sha1')

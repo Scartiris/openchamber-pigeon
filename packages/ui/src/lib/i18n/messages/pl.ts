@@ -3395,6 +3395,8 @@ export const dict: Record<I18nKey, string> = {
   'documentPreview.actions.fullscreen': 'Pełny ekran',
   'documentPreview.actions.exitFullscreen': 'Wyjdź z pełnego ekranu',
   'documentPreview.actions.reload': 'Odśwież',
+  'documentPreview.actions.edit': 'Edytuj',
+  'documentPreview.actions.stopEditing': 'Zakończ edycję',
   'documentPreview.state.loading': 'Ładowanie podglądu…',
   'documentPreview.error.notConfigured': 'Podgląd dokumentów nie jest skonfigurowany na tym serwerze.',
   'documentPreview.error.unavailable': 'Serwer dokumentów jest niedostępny. Oryginał nadal możesz pobrać.',

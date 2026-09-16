@@ -1,12 +1,13 @@
 # Document preview surface
 
 Office and PDF previews in the right-hand context panel (`mode: 'doc'`).
+Office documents opened from the active workspace can switch into editing.
 
 ## Where it lives
 
 - `DocumentPreviewView.tsx` — the surface. Fetches `/api/doc-preview/config`,
   loads the document server API once, creates/destroys the OnlyOffice editor, and
-  owns the toolbar (download / reload / fullscreen).
+  owns the toolbar (Edit / Stop editing / download / reload / fullscreen).
 - `@/lib/toolHelpers` — `isDocumentPreviewable()` / `getDocumentPreviewKind()`
   decide which files belong here and how they are rendered.
 - `@/stores/useUIStore` — the `doc` context panel mode and the
@@ -21,14 +22,30 @@ Office and PDF previews in the right-hand context panel (`mode: 'doc'`).
 
 | Kind | Renderer |
 |---|---|
-| `pdf` | `<iframe>` on the authenticated `/api/fs/raw` endpoint (browser-native viewer, no server round trip, no conversion). |
-| `word` / `cell` / `slide` | OnlyOffice editor in an iframe owned by the document server, in view mode (`permissions.edit: false`). |
+| `pdf` | `<iframe>` on the authenticated `/api/fs/raw` endpoint (browser-native viewer, no server round trip, no conversion). Never editable. |
+| `word` / `cell` / `slide` (workspace) | OnlyOffice editor. Opens in view mode; **Edit** refetches config with `edit=1` and remounts in edit mode with autosave write-back. |
+| `word` / `cell` / `slide` (outside workspace) | OnlyOffice view mode only. The Edit action is hidden. |
 | anything else | not previewable — callers fall back to the text editor or the download action. |
 
 Entry points that open this surface: file paths in assistant markdown, file paths
 in tool cards, and the "open document preview" action in the file view's binary
 state. All of them are gated on `hasContextPanelSurface()` (`@/lib/runtimeSurface`),
 because the panel is the only host of this surface.
+
+## Editing
+
+- **Default is preview.** The server mints a view config unless the client asks
+  for `edit=1`.
+- **Edit is workspace-only.** Outside-file grants never receive `editable: true`
+  or a callback URL. The client also hides the Edit action on that path.
+- **Autosave write-back.** Edit configs enable OnlyOffice autosave/forcesave and
+  set `callbackUrl` to `POST /doc-preview/callback`. The server downloads the
+  converted document and writes it back atomically to the original path.
+- **Stop editing** returns to a fresh view config. Prior autosaves have already
+  landed on disk, so no unsaved-work dialog is needed on the happy path.
+- **The editor is authoritative** during an open edit session: if the file
+  changes on disk mid-edit, the next autosave overwrites it. A later reload
+  mints a new `documentKey` from the new mtime/size.
 
 ## Deliberate limits
 
@@ -52,8 +69,7 @@ because the panel is the only host of this surface.
   the file viewer uses: whoever opens the tab mints it first and the surface
   picks it up from the grant cache (desktop only — the grant flow is a desktop
   capability).
-- **No editing.** `permissions.edit` is false and the editor runs in `view` mode.
-  Enabling editing later means relaxing both and adding a save callback endpoint.
+- **PDF is never editable.** It stays on the browser's native viewer.
 - **Degrades loudly.** `not-configured` / `document-server-unavailable` / failed
   conversions all render an explanatory card with a download action instead of a
   blank frame, so a document server outage never looks like a broken file.
@@ -62,4 +78,5 @@ because the panel is the only host of this surface.
 
 See `packages/web/server/lib/doc-preview/DOCUMENTATION.md`. Two response shapes
 matter here: `kind: 'pdf'`, and `kind: 'onlyoffice'` with `documentServerUrl` +
-`editorConfig` (already signed with the shared JWT secret).
+`editorConfig` (already signed with the shared JWT secret). Edit responses also
+carry `editable: true` and a `callbackUrl` inside `editorConfig.editorConfig`.
