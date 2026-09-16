@@ -87,6 +87,26 @@ const DOCS_API_PATH = '/web-apps/apps/api/documents/api.js';
 
 let docsApiPromise: Promise<void> | null = null;
 let editorPlaceholderSeq = 0;
+// Last document-server origin the client successfully used. Cached so the
+// next preview can start loading DocsAPI in parallel with the config request
+// instead of paying a full extra RTT after the config comes back.
+const DOCUMENT_SERVER_URL_STORAGE_KEY = 'oc-document-server-url';
+
+const rememberDocumentServerUrl = (url: string) => {
+  try {
+    window.localStorage.setItem(DOCUMENT_SERVER_URL_STORAGE_KEY, url);
+  } catch {
+    // Private mode / quota — the cache is purely opportunistic.
+  }
+};
+
+const recallDocumentServerUrl = (): string => {
+  try {
+    return window.localStorage.getItem(DOCUMENT_SERVER_URL_STORAGE_KEY) || '';
+  } catch {
+    return '';
+  }
+};
 
 const loadDocsApi = (documentServerUrl: string): Promise<void> => {
   const globalScope = window as unknown as DocsApiGlobal;
@@ -215,6 +235,13 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
     let cancelled = false;
     setState({ status: 'loading' });
 
+    // Warm DocsAPI in parallel with the config request. The recalled origin is
+    // only a cache hint: if the server hands back a different URL we reload.
+    const recalledServerUrl = recallDocumentServerUrl();
+    if (recalledServerUrl) {
+      void loadDocsApi(recalledServerUrl).catch(() => undefined);
+    }
+
     void (async () => {
       try {
         const response = await runtimeFetch('/api/doc-preview/config', {
@@ -253,6 +280,11 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
         }
 
         if (payload.kind === 'onlyoffice' && payload.documentServerUrl && payload.editorConfig) {
+          rememberDocumentServerUrl(payload.documentServerUrl);
+          if (recalledServerUrl && recalledServerUrl !== payload.documentServerUrl) {
+            docsApiPromise = null;
+            void loadDocsApi(payload.documentServerUrl).catch(() => undefined);
+          }
           setState({
             status: 'onlyoffice',
             documentServerUrl: payload.documentServerUrl,
