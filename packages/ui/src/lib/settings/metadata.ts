@@ -28,7 +28,6 @@ export type SettingsPageSlug =
   | 'about'
   | 'integrations'
   | 'pigeon-brain'
-  | 'memory-settings'
   | 'memory-browse'
   | 'knowledge-settings'
   | 'knowledge-browse'
@@ -221,18 +220,8 @@ export const SETTINGS_PAGE_METADATA: readonly SettingsPageMeta[] = [
     keywords: ['memory', 'brain', 'wiki', 'knowledge', '记忆', '知识库'],
     isAvailable: (ctx) => !ctx.isVSCode && !ctx.isMobile,
   },
-  // OpenViking 的四个页面。记忆与知识库在 OpenViking 里是同一套 viking://
-  // 文件系统的两个根，所以各拆成「设置 + 浏览」两页而不是一页内含切换：
-  // 浏览页是 split 形态（左边树、右边内容），需要整页宽度。
-  {
-    slug: 'memory-settings',
-    title: '记忆设置',
-    group: 'general',
-    kind: 'single',
-    description: 'OpenViking 记忆库的连接与就绪状态。',
-    keywords: ['memory', 'openviking', 'recall', '记忆', '记忆库'],
-    isAvailable: (ctx) => !ctx.isVSCode && !ctx.isMobile,
-  },
+  // OpenViking：记忆侧只留浏览（设置与浏览重复，已删 memory-settings）。
+  // 知识库暂仍保留「设置 + 浏览」两页；浏览页是 split，需要整页宽度。
   {
     slug: 'memory-browse',
     title: '记忆浏览',
@@ -367,9 +356,7 @@ export function getSettingsNavIcon(slug: SettingsPageSlug): IconName | null {
     case 'devices':
       return 'computer';
 
-    // OpenViking 的两个作用域各两项：设置用「齿轮感」的通用图标，
-    // 浏览用「树/文件夹」—— 浏览器形态一眼可辨。
-    case 'memory-settings':
+    // OpenViking 浏览用树图标；知识库设置仍是齿轮。
     case 'knowledge-settings':
       return 'settings-3';
     case 'memory-browse':

@@ -15,7 +15,6 @@ import type { SettingsPageSlug } from '@/lib/settings/metadata';
 export type OpenVikingScope = 'memory' | 'knowledge';
 
 export interface OpenVikingScopeMeta {
-  settingsSlug: SettingsPageSlug;
   browseSlug: SettingsPageSlug;
   sidebarTitleKey: I18nKey;
   sidebarDescriptionKey: I18nKey;
@@ -37,10 +36,10 @@ export interface OpenVikingScopeMeta {
 
 export const OPENVIKING_SCOPE_META: Record<OpenVikingScope, OpenVikingScopeMeta> = {
   memory: {
-    settingsSlug: 'memory-settings',
     browseSlug: 'memory-browse',
     sidebarTitleKey: 'settings.openviking.memory.sidebar.title',
     sidebarDescriptionKey: 'settings.openviking.memory.sidebar.description',
+    // 设置页已删；字段仍在类型上，知识库作用域仍在用同一结构。
     settingsTitleKey: 'settings.page.memorySettings.title',
     settingsDescriptionKey: 'settings.page.memorySettings.description',
     browseTitleKey: 'settings.page.memoryBrowse.title',
@@ -49,7 +48,6 @@ export const OPENVIKING_SCOPE_META: Record<OpenVikingScope, OpenVikingScopeMeta>
     scopeUri: 'viking://user',
   },
   knowledge: {
-    settingsSlug: 'knowledge-settings',
     browseSlug: 'knowledge-browse',
     sidebarTitleKey: 'settings.openviking.knowledge.sidebar.title',
     sidebarDescriptionKey: 'settings.openviking.knowledge.sidebar.description',
