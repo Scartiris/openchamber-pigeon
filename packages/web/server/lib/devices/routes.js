@@ -47,6 +47,7 @@ export function registerDeviceRoutes(app, runtime) {
     audit,
     toolRuntime,
     mcpHandler,
+    statusRuntime,
     express,
   } = runtime;
 
@@ -73,6 +74,18 @@ export function registerDeviceRoutes(app, runtime) {
       res.json({ devices: await registry.listDevices() });
     } catch (error) {
       sendError(res, error, 'Failed to list devices');
+    }
+  });
+
+  // Live health snapshot: online + TCP latency for SSH/MCP endpoints.
+  app.get('/api/devices/status', async (_req, res) => {
+    try {
+      if (!statusRuntime) {
+        return res.status(503).json({ error: 'Status runtime unavailable', code: 'status_unavailable' });
+      }
+      res.json(await statusRuntime.listStatus());
+    } catch (error) {
+      sendError(res, error, 'Failed to probe device status');
     }
   });
 

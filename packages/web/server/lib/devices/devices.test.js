@@ -12,6 +12,7 @@ import { createDeviceMcpHandler } from './mcp.js';
 import { createDeviceAuditLog } from './audit.js';
 import { createDeviceEnrollTokenRuntime } from './enroll.js';
 import { buildJoinScript } from './join-script.js';
+import { createDeviceStatusRuntime } from './status.js';
 
 let tempDir;
 
@@ -320,5 +321,59 @@ describe('enroll tokens + join script', () => {
     expect(script).toContain('auth_key');
     expect(script).toContain('Startup');
     expect(script).toContain('ANONYMIZED_TELEMETRY');
+  });
+});
+
+describe('device status snapshot', () => {
+  test('reports online latency and fails closed when nothing answers', async () => {
+    const registry = makeRegistry();
+    await registry.createDevice({
+      name: 'live',
+      approval: 'auto',
+      capabilities: { shell: true, files: true, screen: false },
+      connection: { tunnel: { sshPort: 2201 } },
+    });
+    await registry.createDevice({
+      name: 'dead',
+      approval: 'auto',
+      capabilities: { shell: true, files: true, screen: false },
+      connection: { tunnel: { sshPort: 2299 } },
+    });
+
+    const statusRuntime = createDeviceStatusRuntime({
+      net: {},
+      registry,
+    });
+    // Override probe via net.connect — simpler: inject by monkey-patching probeLatency is hard.
+    // Use a fake net that succeeds only for 2201.
+    const fakeNet = {
+      connect: ({ port }) => {
+        const listeners = {};
+        const socket = {
+          setTimeout: (_ms, cb) => {
+            if (port !== 2201) setTimeout(cb, 1);
+          },
+          once: (event, cb) => {
+            listeners[event] = cb;
+            if (event === 'connect' && port === 2201) setTimeout(cb, 0);
+            if (event === 'error' && port !== 2201) setTimeout(cb, 1);
+          },
+          destroy: () => {},
+        };
+        return socket;
+      },
+    };
+    const runtime = createDeviceStatusRuntime({ net: fakeNet, registry });
+    const snapshot = await runtime.listStatus();
+    expect(snapshot.total).toBe(2);
+    expect(snapshot.onlineCount).toBe(1);
+    const live = snapshot.devices.find((d) => d.name === 'live');
+    const dead = snapshot.devices.find((d) => d.name === 'dead');
+    expect(live?.online).toBe(true);
+    expect(Number.isFinite(live?.latencyMs)).toBe(true);
+    expect(dead?.online).toBe(false);
+    expect(dead?.latencyMs).toBeNull();
+    // unused var silence
+    void statusRuntime;
   });
 });

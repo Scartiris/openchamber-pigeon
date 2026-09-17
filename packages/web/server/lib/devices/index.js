@@ -7,6 +7,7 @@ import { createWindowsMcpClient } from './windows-mcp.js';
 import { createDeviceAuditLog } from './audit.js';
 import { createDeviceToolRuntime } from './tools.js';
 import { createDeviceMcpHandler } from './mcp.js';
+import { createDeviceStatusRuntime } from './status.js';
 import { registerDeviceRoutes } from './routes.js';
 
 export function createDeviceRuntime({
@@ -64,6 +65,7 @@ export function createDeviceRuntime({
     toolRuntime,
     authenticateToken: (token) => tokens.authenticate(token),
   });
+  const statusRuntime = createDeviceStatusRuntime({ net, registry });
 
   return {
     registry,
@@ -72,6 +74,7 @@ export function createDeviceRuntime({
     audit,
     toolRuntime,
     mcpHandler,
+    statusRuntime,
     express,
     registerRoutes: (app) => registerDeviceRoutes(app, {
       registry,
@@ -80,6 +83,7 @@ export function createDeviceRuntime({
       audit,
       toolRuntime,
       mcpHandler,
+      statusRuntime,
       express,
     }),
   };

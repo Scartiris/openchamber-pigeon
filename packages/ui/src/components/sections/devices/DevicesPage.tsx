@@ -189,6 +189,55 @@ const parseEnrollTokensPayload = (value: JsonValue): EnrollTokenView[] => {
   return out;
 };
 
+interface DeviceHealthView {
+  id: string;
+  name: string;
+  online: boolean;
+  latencyMs: number | null;
+  transport: string | null;
+  sshOk: boolean;
+  mcpOk: boolean;
+  checkedAt: string;
+}
+
+interface DeviceStatusSnapshot {
+  checkedAt: string;
+  onlineCount: number;
+  total: number;
+  devices: DeviceHealthView[];
+}
+
+const parseStatusPayload = (value: JsonValue): DeviceStatusSnapshot | null => {
+  const root = asObject(value);
+  if (!root) return null;
+  const list = Array.isArray(root.devices) ? root.devices : [];
+  const devices: DeviceHealthView[] = [];
+  for (const item of list) {
+    const record = asObject(item);
+    if (!record) continue;
+    const id = asText(record.id);
+    if (!id) continue;
+    const ssh = asObject(record.ssh) || {};
+    const mcp = asObject(record.mcp) || {};
+    devices.push({
+      id,
+      name: asText(record.name, id),
+      online: record.online === true,
+      latencyMs: asCount(record.latencyMs),
+      transport: asOptionalText(record.transport),
+      sshOk: ssh.ok === true,
+      mcpOk: mcp.ok === true,
+      checkedAt: asText(record.checkedAt),
+    });
+  }
+  return {
+    checkedAt: asText(root.checkedAt),
+    onlineCount: asCount(root.onlineCount) ?? 0,
+    total: asCount(root.total) ?? devices.length,
+    devices,
+  };
+};
+
 const joinCommandFor = (token: string): string => {
   const origin = globalThis.location?.origin || '';
   return `irm '${origin}/api/devices/join.ps1?t=${token}' | iex`;
@@ -216,6 +265,9 @@ export const DevicesPage: React.FC = () => {
   const [issuedToken, setIssuedToken] = React.useState<string | null>(null);
   const [enrollTokens, setEnrollTokens] = React.useState<EnrollTokenView[]>([]);
   const [issuedEnroll, setIssuedEnroll] = React.useState<{ token: string; expiresAt: string } | null>(null);
+  const [status, setStatus] = React.useState<DeviceStatusSnapshot | null>(null);
+  const [statusBusy, setStatusBusy] = React.useState(false);
+  const [statusError, setStatusError] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [draftName, setDraftName] = React.useState('');
@@ -248,6 +300,36 @@ export const DevicesPage: React.FC = () => {
   React.useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  const refreshStatus = React.useCallback(async () => {
+    setStatusBusy(true);
+    setStatusError(null);
+    try {
+      const response = await runtimeFetch('/api/devices/status');
+      if (!response.ok) throw new Error(`状态探测 HTTP ${response.status}`);
+      setStatus(parseStatusPayload(await readJson(response)));
+    } catch (err) {
+      setStatusError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setStatusBusy(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void refreshStatus();
+    const timer = window.setInterval(() => {
+      void refreshStatus();
+    }, 20_000);
+    return () => window.clearInterval(timer);
+  }, [refreshStatus]);
+
+  const healthById = React.useMemo(() => {
+    const map = new Map<string, DeviceHealthView>();
+    for (const entry of status?.devices || []) {
+      map.set(entry.id, entry);
+    }
+    return map;
+  }, [status]);
 
   const enroll = async () => {
     if (!draftName.trim()) {
@@ -384,43 +466,94 @@ export const DevicesPage: React.FC = () => {
       ) : null}
 
       <section className="mb-8 space-y-3">
-        <h2 className="text-sm font-semibold">已登记设备</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-semibold">已登记设备</h2>
+            {status ? (
+              <p className="text-xs opacity-70">
+                在线 {status.onlineCount}/{status.total}
+                {status.checkedAt ? ` · 探测于 ${status.checkedAt}` : ''}
+              </p>
+            ) : (
+              <p className="text-xs opacity-70">正在探测状态…</p>
+            )}
+          </div>
+          <Button variant="outline" size="sm" disabled={statusBusy} onClick={() => void refreshStatus()}>
+            {statusBusy ? '探测中…' : '刷新状态'}
+          </Button>
+        </div>
+        {statusError ? (
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs">
+            状态探测失败：{statusError}
+          </div>
+        ) : null}
         {devices.length === 0 ? (
           <p className="text-sm opacity-70">还没有设备。在下方登记第一台 Windows 机器。</p>
         ) : (
           <div className="space-y-2">
-            {devices.map((device) => (
-              <div key={device.id} className="rounded-md border border-border/60 p-3 text-sm">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium">{device.name}</span>
-                  <span className="opacity-60">{device.id}</span>
-                  <span className="rounded bg-muted px-1.5 py-0.5 text-xs">{device.status}</span>
-                  {device.capabilities.shell ? <span className="text-xs opacity-70">shell</span> : null}
-                  {device.capabilities.files ? <span className="text-xs opacity-70">files</span> : null}
-                  {device.capabilities.screen ? <span className="text-xs opacity-70">screen</span> : null}
+            {devices.map((device) => {
+              const health = healthById.get(device.id);
+              const online = health ? health.online : device.status === 'online';
+              return (
+                <div key={device.id} className="rounded-md border border-border/60 p-3 text-sm">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      aria-label={online ? '在线' : '离线'}
+                      className={
+                        online
+                          ? 'inline-block h-2 w-2 rounded-full bg-emerald-500'
+                          : 'inline-block h-2 w-2 rounded-full bg-zinc-400'
+                      }
+                    />
+                    <span className="font-medium">{device.name}</span>
+                    <span className="opacity-60">{device.id}</span>
+                    <span className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                      {online ? '在线' : '离线'}
+                    </span>
+                    {health?.latencyMs != null ? (
+                      <span className="rounded bg-muted px-1.5 py-0.5 text-xs tabular-nums">
+                        {health.latencyMs} ms
+                      </span>
+                    ) : null}
+                    {health?.transport ? (
+                      <span className="rounded bg-muted px-1.5 py-0.5 text-xs">{health.transport}</span>
+                    ) : null}
+                    {health ? (
+                      <span className="text-xs opacity-70">
+                        SSH {health.sshOk ? '✓' : '✗'}
+                        {' · '}
+                        MCP {health.mcpOk ? '✓' : '✗'}
+                      </span>
+                    ) : (
+                      <span className="text-xs opacity-50">{device.status}</span>
+                    )}
+                    {device.capabilities.shell ? <span className="text-xs opacity-70">shell</span> : null}
+                    {device.capabilities.files ? <span className="text-xs opacity-70">files</span> : null}
+                    {device.capabilities.screen ? <span className="text-xs opacity-70">screen</span> : null}
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <label className="text-xs opacity-70" htmlFor={`approval-${device.id}`}>审批</label>
+                    <select
+                      id={`approval-${device.id}`}
+                      className="rounded border border-border/60 bg-background px-2 py-1 text-xs"
+                      value={device.approval}
+                      disabled={busy}
+                      onChange={(event) => {
+                        const next = event.target.value;
+                        if (isApprovalMode(next)) void setApproval(device.id, next);
+                      }}
+                    >
+                      {APPROVAL_MODES.map((mode) => (
+                        <option key={mode} value={mode}>{APPROVAL_LABELS[mode]}</option>
+                      ))}
+                    </select>
+                    <Button variant="outline" size="sm" disabled={busy} onClick={() => void removeDevice(device.id)}>
+                      删除
+                    </Button>
+                  </div>
                 </div>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <label className="text-xs opacity-70" htmlFor={`approval-${device.id}`}>审批</label>
-                  <select
-                    id={`approval-${device.id}`}
-                    className="rounded border border-border/60 bg-background px-2 py-1 text-xs"
-                    value={device.approval}
-                    disabled={busy}
-                    onChange={(event) => {
-                      const next = event.target.value;
-                      if (isApprovalMode(next)) void setApproval(device.id, next);
-                    }}
-                  >
-                    {APPROVAL_MODES.map((mode) => (
-                      <option key={mode} value={mode}>{APPROVAL_LABELS[mode]}</option>
-                    ))}
-                  </select>
-                  <Button variant="outline" size="sm" disabled={busy} onClick={() => void removeDevice(device.id)}>
-                    删除
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
