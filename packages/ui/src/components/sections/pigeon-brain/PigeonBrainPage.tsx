@@ -15,6 +15,11 @@ import { runtimeFetch } from '@/lib/runtime-fetch';
  *
  * iframe 的代价是样式不完全融入，换来的是：**brain 改界面，这里自动跟着变**。
  *
+ * ## 扩展试点
+ *
+ * `packages/pigeon-guests/pigeon-brain` 是同一界面的 rail / 全页入口
+ * （上游 guest 体系）。设置页保留作 fallback，直到扩展试点验收。
+ *
  * ## 为什么走同源反代路径
  *
  * brain 只绑在服务器的 127.0.0.1 与 docker 网络里（刻意的，见它自己的 ADR-0002）。

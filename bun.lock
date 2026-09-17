@@ -95,7 +95,7 @@
     },
     "packages/electron": {
       "name": "@openchamber/electron",
-      "version": "1.23.2",
+      "version": "1.24.0",
       "dependencies": {
         "@openchamber/web": "workspace:*",
         "electron-context-menu": "^4.1.2",
@@ -131,9 +131,16 @@
         "typescript": "~5.9.0",
       },
     },
+    "packages/pigeon-guests/pigeon-brain": {
+      "name": "@pigeon/guest-pigeon-brain",
+      "version": "0.1.0",
+      "dependencies": {
+        "@openchamber/sdk": "workspace:*",
+      },
+    },
     "packages/sdk": {
       "name": "@openchamber/sdk",
-      "version": "1.23.1",
+      "version": "1.24.0",
       "bin": {
         "openchamber-guest-bundle": "./scripts/bundle-guest.ts",
       },
@@ -185,7 +192,7 @@
     },
     "packages/ui": {
       "name": "@openchamber/ui",
-      "version": "1.23.2",
+      "version": "1.24.0",
       "dependencies": {
         "@aparajita/capacitor-secure-storage": "^8.0.0",
         "@base-ui/react": "^1.4.0",
@@ -292,7 +299,7 @@
     },
     "packages/vscode": {
       "name": "openchamber",
-      "version": "1.23.2",
+      "version": "1.24.0",
       "dependencies": {
         "@openchamber/ui": "workspace:*",
         "@opencode-ai/sdk": "1.18.31",
@@ -315,7 +322,7 @@
     },
     "packages/web": {
       "name": "@openchamber/web",
-      "version": "1.23.2",
+      "version": "1.24.0",
       "bin": {
         "openchamber": "./bin/cli.js",
       },
@@ -1147,6 +1154,8 @@
     "@pierre/theme": ["@pierre/theme@1.1.0", "", {}, "sha512-GC2OWTAfTIIWWYhPCygwG8t2EtePQkRfON4MI2rwIkJylmiyqIttJID2dCL8sUD8cNdEvYkEyfEHHKMeCiDLoQ=="],
 
     "@pierre/theming": ["@pierre/theming@0.0.2", "", { "peerDependencies": { "@pierre/theme": "^1.1.0", "@shikijs/themes": "^3.0.0 || ^4.0.0", "react": "^18.3.1 || ^19.0.0", "react-dom": "^18.3.1 || ^19.0.0", "shiki": "^3.0.0 || ^4.0.0" }, "optionalPeers": ["@pierre/theme", "@shikijs/themes", "react", "react-dom", "shiki"] }, "sha512-QM1M4stXfnzfaE8I8YbjXSApV8c+2dBsXJj8eYg9WTpBR/cTmCZIcfGnN4p13iRrYu2Br/R/OJfEL7uR8Qjctw=="],
+
+    "@pigeon/guest-pigeon-brain": ["@pigeon/guest-pigeon-brain@workspace:packages/pigeon-guests/pigeon-brain"],
 
     "@pkgjs/parseargs": ["@pkgjs/parseargs@0.11.0", "", {}, "sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg=="],
 

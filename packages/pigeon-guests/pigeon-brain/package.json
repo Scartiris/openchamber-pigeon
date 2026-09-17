@@ -1,0 +1,23 @@
+{
+  "name": "@pigeon/guest-pigeon-brain",
+  "version": "0.1.0",
+  "private": true,
+  "openchamber": {
+    "apiVersion": 1,
+    "contributes": {
+      "panel": {
+        "id": "pigeon-brain",
+        "name": "记忆库",
+        "icon": "brain",
+        "entry": "panel/index.html"
+      },
+      "page": {
+        "entry": "panel/index.html",
+        "title": "记忆库"
+      }
+    }
+  },
+  "dependencies": {
+    "@openchamber/sdk": "workspace:*"
+  }
+}
