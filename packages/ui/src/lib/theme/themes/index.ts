@@ -1,6 +1,7 @@
 import type { Theme } from '@/types/theme';
 import { presetThemes } from './presets';
 import { withPrColors } from './prColors';
+import { requireTheme } from '../definition';
 import flexokiLightRaw from './flexoki-light.json';
 import flexokiDarkRaw from './flexoki-dark.json';
 import openchamberLightRaw from './openchamber-light.json';
@@ -10,16 +11,16 @@ import pigeonNightcityDarkRaw from './pigeon-nightcity-dark.json';
 import yamadaRyoLightRaw from './yamada-ryo-light.json';
 import yamadaRyoDarkRaw from './yamada-ryo-dark.json';
 
-const flexokiLightTheme = withPrColors(flexokiLightRaw as Theme);
-const flexokiDarkTheme = withPrColors(flexokiDarkRaw as Theme);
-const openchamberLightTheme = withPrColors(openchamberLightRaw as Theme);
-const openchamberDarkTheme = withPrColors(openchamberDarkRaw as Theme);
+const flexokiLightTheme = withPrColors(requireTheme(flexokiLightRaw));
+const flexokiDarkTheme = withPrColors(requireTheme(flexokiDarkRaw));
+const openchamberLightTheme = withPrColors(requireTheme(openchamberLightRaw));
+const openchamberDarkTheme = withPrColors(requireTheme(openchamberDarkRaw));
 // Pigeon: the pair sampled from the chat backdrop video (see `public/ambient`).
-const pigeonNightcityLightTheme = withPrColors(pigeonNightcityLightRaw as Theme);
-const pigeonNightcityDarkTheme = withPrColors(pigeonNightcityDarkRaw as Theme);
+const pigeonNightcityLightTheme = withPrColors(requireTheme(pigeonNightcityLightRaw));
+const pigeonNightcityDarkTheme = withPrColors(requireTheme(pigeonNightcityDarkRaw));
 // Pigeon: the backdrop's subject — indigo night, blue hair, cyan rim, amber eyes.
-const yamadaRyoLightTheme = withPrColors(yamadaRyoLightRaw as Theme);
-const yamadaRyoDarkTheme = withPrColors(yamadaRyoDarkRaw as Theme);
+const yamadaRyoLightTheme = withPrColors(requireTheme(yamadaRyoLightRaw));
+const yamadaRyoDarkTheme = withPrColors(requireTheme(yamadaRyoDarkRaw));
 
 // Pigeon: a fresh profile opens on the theme pair made for the backdrop.
 export const DEFAULT_LIGHT_THEME_ID = 'yamada-ryo-light' as const;

@@ -667,7 +667,7 @@ export function ScheduledTasksDialog() {
                     type="button"
                     onClick={() => selectProject(project.id)}
                     className={cn(
-                      'flex w-full min-w-0 items-center rounded-md px-2 py-1.5 text-left typography-ui-label focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                      'flex w-full min-w-0 items-center rounded-md px-2 py-1.5 text-left typography-ui-label focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                       selectedProjectID === project.id
                         ? 'bg-interactive-selection text-foreground'
                         : 'text-muted-foreground hover:bg-interactive-hover/50 hover:text-foreground',

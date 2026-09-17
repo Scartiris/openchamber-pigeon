@@ -13,8 +13,9 @@ import { Text } from '@/components/ui/text';
 import { Icon } from "@/components/icon/Icon";
 import { FadeInOnReveal } from '../FadeInOnReveal';
 import { getToolIcon } from './toolPresentation';
-import { getToolDisplayName } from '@/lib/toolHelpers';
+import { getToolDisplayName, getToolMetadata } from '@/lib/toolHelpers';
 import { useI18n } from '@/lib/i18n';
+import { useGuestToolPresentation } from '@/lib/guests/tool-presentation';
 import { isExpandableTool, isStandaloneTool, isStaticTool } from './toolRenderUtils';
 import { RuntimeAPIContext } from '@/contexts/runtimeAPIContext';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
@@ -560,8 +561,12 @@ const StaticToolRowInner: React.FC<{
 }> = ({ toolName, activities, animateTailText }) => {
     const showToolFileIcons = useUIStore((state) => state.showToolFileIcons);
     const { t } = useI18n();
-    const displayName = getToolDisplayName(toolName, t);
-    const icon = getToolIcon(toolName);
+    // Grouped rows share one normalized name; the registry wants the full
+    // name OpenCode reported, which every activity in the group carries.
+    const firstPart = activities[0]?.part;
+    const presentation = useGuestToolPresentation(firstPart?.type === 'tool' ? firstPart.tool : null);
+    const displayName = presentation?.name ?? getToolDisplayName(toolName, t);
+    const icon = getToolIcon(toolName, presentation);
     const isReadGroup = toolName.toLowerCase() === 'read';
     const runtime = React.useContext(RuntimeAPIContext);
     const mobileActions = useMobileAppActions();

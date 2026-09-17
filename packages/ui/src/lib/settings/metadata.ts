@@ -32,7 +32,8 @@ export type SettingsPageSlug =
   | 'memory-browse'
   | 'knowledge-settings'
   | 'knowledge-browse'
-  | 'devices';
+  | 'devices'
+  | 'extensions';
 
 type SettingsPageGroup =
   | 'general'
@@ -135,7 +136,7 @@ export const SETTINGS_PAGE_METADATA: readonly SettingsPageMeta[] = [
     title: '插件',
     group: 'opencode',
     kind: 'split',
-    keywords: ['plugin', 'plugins', 'extensions', 'addons', 'npm', 'opencode-wakatime'],
+    keywords: ['plugin', 'plugins', 'addons', 'npm', 'opencode-wakatime'],
   },
   {
     slug: 'skills.installed',
@@ -208,7 +209,7 @@ export const SETTINGS_PAGE_METADATA: readonly SettingsPageMeta[] = [
   { slug: 'voice', title: '语音', group: 'general', kind: 'single', keywords: ['tts', 'speech', 'voice'], isAvailable: (ctx) => !ctx.isVSCode },
   { slug: 'tunnel', title: '外部隧道', group: 'projects', kind: 'single', keywords: ['tunnel', 'external', 'cloudflare', 'qr', 'remote', 'mobile', 'share'], isAvailable: (ctx) => !ctx.isVSCode },
   { slug: 'about', title: '关于', group: 'general', kind: 'single', keywords: ['about', 'version', 'updates', 'release', 'changelog'], isAvailable: (ctx) => ctx.isMobile && !ctx.isVSCode },
-  { slug: 'integrations', title: '集成', group: 'general', kind: 'single', keywords: ['integration', 'connect', 'oauth', 'github', 'linear'], isAvailable: (ctx) => !ctx.isVSCode },
+  { slug: 'integrations', title: '集成', group: 'general', kind: 'single', keywords: ['integration', 'connect', 'oauth', 'github', 'linear', 'extension'], isAvailable: (ctx) => !ctx.isVSCode },
   // pigeon-brain 的管理界面。用 iframe 内嵌而不是用 React 重写：
   // 那是它自己的产品，重写等于把同一份界面维护两遍，两边必然漂移。
   {
@@ -267,6 +268,14 @@ export const SETTINGS_PAGE_METADATA: readonly SettingsPageMeta[] = [
     description: '登记 Windows 设备，供 agent 通过 MCP 操作。',
     keywords: ['device', 'devices', 'mcp', 'ssh', 'screen', 'computer use', '设备', '多设备'],
     isAvailable: (ctx) => !ctx.isVSCode,
+  },
+  {
+    slug: 'extensions',
+    title: '扩展',
+    group: 'general',
+    kind: 'single',
+    keywords: ['extension', 'extensions', 'guest', 'panel', 'rail', 'folder', 'zip', 'git', 'url'],
+    isAvailable: (ctx) => !ctx.isVSCode && !ctx.isMobile,
   },
 ] as const;
 
@@ -369,6 +378,8 @@ export function getSettingsNavIcon(slug: SettingsPageSlug): IconName | null {
       return 'node-tree';
     case 'integrations':
       return 'plug';
+    case 'extensions':
+      return 'apps';
 
     case 'usage':
       return 'bar-chart-2';
