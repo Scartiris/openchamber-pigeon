@@ -11,8 +11,10 @@ import { OpenVikingError, readBareObject, readProxyStatus } from '@/lib/openviki
  * `runtimeFetch` 把 `openVikingApi` 整个打一遍。
  */
 const fakeResponses = new Map<string, () => Response>();
-const runtimeFetchMock = mock(async (input: string | URL | Request) => {
+const lastRequest: { url: string; init: RequestInit | undefined }[] = [];
+const runtimeFetchMock = mock(async (input: string | URL | Request, init?: RequestInit) => {
   const url = typeof input === 'string' ? input : (input instanceof URL ? input.toString() : input.url);
+  lastRequest.push({ url, init });
   const path = url.startsWith('/api/openviking') ? url.slice('/api/openviking'.length) : url;
   const make = fakeResponses.get(path);
   if (!make) throw new Error(`没有为 ${path} 准备假响应`);
@@ -61,6 +63,32 @@ describe('openVikingApi 端点接线（真实故障就发生在这里）', () =>
     expect((await openVikingApi.ls('viking://'))[0]?.uri).toBe('viking://user');
     expect((await openVikingApi.tree('viking://user'))[0]?.rel_path).toBe('x');
     expect(await openVikingApi.read('viking://a.md')).toBe('# 内容');
+  });
+
+  test('★ write 走 content/write，带 uri/content/mode（不是 fs/write）', async () => {
+    lastRequest.length = 0;
+    fakeResponses.set('/api/v1/content/write', () => enveloped({ written_bytes: 4 }));
+    const result = await openVikingApi.write('viking://resources/note.md', '正文', 'create');
+    expect(result).toEqual({ written_bytes: 4 });
+    const request = lastRequest.at(-1);
+    expect(request?.url.endsWith('/api/openviking/api/v1/content/write')).toBe(true);
+    expect(request?.init?.method).toBe('POST');
+    expect(JSON.parse(String(request?.init?.body))).toEqual({
+      uri: 'viking://resources/note.md',
+      content: '正文',
+      mode: 'create',
+    });
+  });
+
+  test('★ remove 走 DELETE /fs?uri=…', async () => {
+    lastRequest.length = 0;
+    fakeResponses.set('/api/v1/fs?uri=viking%3A%2F%2Fresources%2Fnote.md', () =>
+      enveloped({ uri: 'viking://resources/note.md' }));
+    const result = await openVikingApi.remove('viking://resources/note.md');
+    expect(result.uri).toBe('viking://resources/note.md');
+    const request = lastRequest.at(-1);
+    expect(request?.init?.method).toBe('DELETE');
+    expect(request?.url).toContain('/api/v1/fs?uri=viking%3A%2F%2Fresources%2Fnote.md');
   });
 
   test('★ 把 health 接成信封就必须炸（证明这组测试真的能抓到那个 bug）', async () => {

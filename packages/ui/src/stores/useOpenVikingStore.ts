@@ -114,6 +114,36 @@ export interface LoadError {
   notConfigured: boolean;
 }
 
+/** 写操作失败：调用方据此 toast，不静默吞掉 */
+export class OpenVikingWriteError extends Error {
+  readonly notConfigured: boolean;
+  /** invalid_name 时 UI 应映射到本地化校验文案，而不是原样展示 message */
+  readonly code: 'invalid_name' | 'write_failed';
+
+  constructor(
+    message: string,
+    options?: { notConfigured?: boolean; code?: 'invalid_name' | 'write_failed' },
+  ) {
+    super(message);
+    this.name = 'OpenVikingWriteError';
+    this.notConfigured = options?.notConfigured ?? false;
+    this.code = options?.code ?? 'write_failed';
+  }
+}
+
+/**
+ * 新建条目文件名校验。与 `SidebarFilesTree` 一致：禁止路径分隔与 `.` / `..`；
+ * 派生文件名（.abstract.md / .overview.md）在树里隐藏，写了也看不见。
+ */
+export const validateCreateName = (name: string): string | null => {
+  const trimmed = name.trim();
+  if (!trimmed) return 'empty';
+  if (trimmed === '.' || trimmed === '..') return 'invalid';
+  if (trimmed.includes('/') || trimmed.includes('\\')) return 'invalid';
+  if (DERIVED_FILE_NAMES.has(trimmed)) return 'derived';
+  return null;
+};
+
 interface OpenVikingState {
   scope: OpenVikingScope;
   status: OpenVikingStatus | null;
@@ -134,11 +164,26 @@ interface OpenVikingState {
 
   expanded: Record<string, boolean>;
 
+  /** 正文是否处于编辑态；草稿只在编辑期间存在 */
+  editing: boolean;
+  draft: string;
+  saving: boolean;
+
   setScope: (scope: OpenVikingScope) => void;
   refresh: () => Promise<void>;
   loadStatus: () => Promise<void>;
   select: (node: TreeNode) => void;
   toggleExpanded: (uri: string) => void;
+
+  beginEdit: () => void;
+  updateDraft: (text: string) => void;
+  cancelEdit: () => void;
+  /** 保存当前编辑中的文件；成功退出编辑并更新本地正文 */
+  commitEdit: () => Promise<void>;
+  /** 在 parentUri 下新建文件（mode=create）；成功后刷新树并选中 */
+  createEntry: (parentUri: string, name: string, content: string) => Promise<string>;
+  /** 删除文件；若正选中它则清选中，再刷新树 */
+  removeEntry: (uri: string) => Promise<void>;
 }
 
 const toLoadError = (error: unknown): LoadError => {
@@ -162,6 +207,9 @@ export const useOpenVikingStore = create<OpenVikingState>((set, get) => ({
   contentLoading: false,
   contentError: null,
   expanded: {},
+  editing: false,
+  draft: '',
+  saving: false,
 
   setScope: (scope) => {
     if (get().scope === scope) return;
@@ -175,6 +223,9 @@ export const useOpenVikingStore = create<OpenVikingState>((set, get) => ({
       content: null,
       contentError: null,
       expanded: {},
+      editing: false,
+      draft: '',
+      saving: false,
     });
     void get().refresh();
   },
@@ -208,7 +259,13 @@ export const useOpenVikingStore = create<OpenVikingState>((set, get) => ({
   },
 
   select: (node) => {
-    set({ selectedNode: node, selectedUri: node.uri });
+    set({
+      selectedNode: node,
+      selectedUri: node.uri,
+      editing: false,
+      draft: '',
+      saving: false,
+    });
     if (node.isDir) {
       set({ content: null, contentError: null, contentLoading: false });
       return;
@@ -223,7 +280,111 @@ export const useOpenVikingStore = create<OpenVikingState>((set, get) => ({
   toggleExpanded: (uri) => {
     set((state) => ({ expanded: { ...state.expanded, [uri]: !state.expanded[uri] } }));
   },
+
+  beginEdit: () => {
+    const { content, contentLoading, contentError, selectedNode, selectedUri } = get();
+    if (contentLoading || contentError || !selectedNode || selectedNode.isDir || !selectedUri) return;
+    set({ editing: true, draft: content ?? '' });
+  },
+
+  updateDraft: (text) => {
+    if (!get().editing) return;
+    set({ draft: text });
+  },
+
+  cancelEdit: () => {
+    set({ editing: false, draft: '', saving: false });
+  },
+
+  commitEdit: async () => {
+    const { selectedUri, draft, editing, saving } = get();
+    if (!editing || !selectedUri || saving) return;
+    // 捕获本次写入目标：树在 saving 期间仍可点。迟到的成功/失败回写只能改
+    // 仍属于这次编辑会话的状态；用户已切走时 select() 已清 editing/draft/saving，
+    // 再 set 会抹掉新文件上正在进行的编辑。
+    const uri = selectedUri;
+    const text = draft;
+    set({ saving: true });
+    try {
+      await openVikingApi.write(uri, text, 'replace');
+      if (get().selectedUri === uri) {
+        set({ content: text, editing: false, draft: '', saving: false });
+      }
+      // 树上的 size 会过期，但整树重拉会打断阅读；留给用户主动 Refresh。
+    } catch (error) {
+      if (get().selectedUri === uri) {
+        set({ saving: false });
+      }
+      throw new OpenVikingWriteError(
+        error instanceof Error ? error.message : String(error),
+        {
+          notConfigured: error instanceof OpenVikingError && error.notConfigured,
+        },
+      );
+    }
+  },
+
+  createEntry: async (parentUri, name, content) => {
+    const invalid = validateCreateName(name);
+    if (invalid) {
+      throw new OpenVikingWriteError(`invalid file name: ${invalid}`, { code: 'invalid_name' });
+    }
+    const trimmed = name.trim();
+    const parent = parentUri.replace(/\/+$/, '');
+    const uri = `${parent}/${trimmed}`;
+    try {
+      await openVikingApi.write(uri, content, 'create');
+    } catch (error) {
+      throw new OpenVikingWriteError(
+        error instanceof Error ? error.message : String(error),
+        {
+          notConfigured: error instanceof OpenVikingError && error.notConfigured,
+        },
+      );
+    }
+    await get().refresh();
+    // 展开父目录，否则新文件藏在折叠里
+    set((state) => ({ expanded: { ...state.expanded, [parentUri]: true, [parent]: true } }));
+    const found = findNodeByUri(get().roots, uri);
+    if (found) get().select(found);
+    return uri;
+  },
+
+  removeEntry: async (uri) => {
+    try {
+      await openVikingApi.remove(uri);
+    } catch (error) {
+      throw new OpenVikingWriteError(
+        error instanceof Error ? error.message : String(error),
+        {
+          notConfigured: error instanceof OpenVikingError && error.notConfigured,
+        },
+      );
+    }
+    if (get().selectedUri === uri) {
+      set({
+        selectedUri: null,
+        selectedNode: null,
+        content: null,
+        contentError: null,
+        contentLoading: false,
+        editing: false,
+        draft: '',
+        saving: false,
+      });
+    }
+    await get().refresh();
+  },
 }));
+
+const findNodeByUri = (nodes: readonly TreeNode[], uri: string): TreeNode | null => {
+  for (const node of nodes) {
+    if (node.uri === uri) return node;
+    const hit = findNodeByUri(node.children, uri);
+    if (hit) return hit;
+  }
+  return null;
+};
 
 /**
  * 解析某个作用域的根 URI。
@@ -246,4 +407,17 @@ export const resolveScopeBase = async (scope: OpenVikingScope): Promise<string> 
     throw new Error('OpenViking 里还没有用户目录');
   }
   return `${firstUser.uri.replace(/\/+$/, '')}/${SCOPE_LABEL.memory}`;
+};
+
+/** 新建条目的默认父目录：选中目录自身，否则选中文件的父目录，否则作用域根 */
+export const resolveCreateParent = (state: {
+  selectedNode: TreeNode | null;
+  baseUri: string | null;
+}): string | null => {
+  if (state.selectedNode?.isDir) return state.selectedNode.uri.replace(/\/+$/, '');
+  if (state.selectedNode && !state.selectedNode.isDir) {
+    const slash = state.selectedNode.uri.lastIndexOf('/');
+    if (slash > 'viking://'.length) return state.selectedNode.uri.slice(0, slash);
+  }
+  return state.baseUri?.replace(/\/+$/, '') ?? null;
 };

@@ -303,6 +303,18 @@ export interface OpenVikingGrepMatch {
   content: string;
 }
 
+/** `POST /content/write` 的 result：写入字节数与索引刷新状态（字段以实际返回为准，均可选） */
+export interface OpenVikingWriteResult {
+  written_bytes?: number;
+  uri?: string;
+}
+
+/** `DELETE /fs` 的 result */
+export interface OpenVikingRemoveResult {
+  uri: string;
+  estimated_deleted_count?: number;
+}
+
 // ---------------------------------------------------------------------------
 // 端点
 // ---------------------------------------------------------------------------
@@ -338,6 +350,31 @@ export const openVikingApi = {
   read: (uri: string) => request<string>(withQuery('/api/v1/content/read', { uri })),
   abstract: (uri: string) => request<string>(withQuery('/api/v1/content/abstract', { uri })),
   overview: (uri: string) => request<string>(withQuery('/api/v1/content/overview', { uri })),
+
+  /**
+   * 写/覆盖/新建正文。OpenViking 的写端点是 `content/write`，不是 `fs/write`。
+   * `replace` 会创建或覆盖；`create` 已存在则失败。父目录由上游自动创建。
+   */
+  write: (
+    uri: string,
+    content: string,
+    mode: 'replace' | 'create' = 'replace',
+  ): Promise<OpenVikingWriteResult> =>
+    request<OpenVikingWriteResult>(
+      '/api/v1/content/write',
+      jsonInit('POST', { uri, content, mode }),
+    ),
+
+  /** 删除文件或目录。本轮 UI 只对文件用；目录递归删除留给调用方显式决定。 */
+  remove: (uri: string, options?: { recursive?: boolean; wait?: boolean }): Promise<OpenVikingRemoveResult> =>
+    request<OpenVikingRemoveResult>(
+      withQuery('/api/v1/fs', {
+        uri,
+        recursive: options?.recursive ? 'true' : undefined,
+        wait: options?.wait ? 'true' : undefined,
+      }),
+      { method: 'DELETE' },
+    ),
 
   find: (query: string, limit = 10) =>
     request<OpenVikingSearchResult>('/api/v1/search/find', jsonInit('POST', { query, limit })),
