@@ -144,6 +144,44 @@ describe('walkthrough routes', () => {
     expect(job).toBeNull();
   });
 
+  // A non-repo directory throws a raw GitError from rev-parse. That must become
+  // a short 400, not a 500 whose body/log is the full simple-git dump.
+  it('maps non-repository directories to a clean 400 on read and generate', async () => {
+    const gitError = Object.assign(
+      new Error('fatal: not a git repository (or any of the parent directories): .git'),
+      { stderr: 'fatal: not a git repository (or any of the parent directories): .git' },
+    );
+    const originalGet = service.getWalkthrough;
+    const originalGenerate = service.generateWalkthrough;
+    service.getWalkthrough = async () => { throw gitError; };
+    service.generateWalkthrough = async () => { throw gitError; };
+
+    try {
+      const read = await fetch(
+        `${base}/api/walkthrough?directory=/not-a-repo&source=${encodeURIComponent(JSON.stringify(SOURCE))}`,
+      );
+      expect(read.status).toBe(400);
+      expect(await read.json()).toEqual({
+        error: 'Walkthrough requires a git repository directory',
+        code: 'not-a-git-repository',
+      });
+
+      const generateResponse = await fetch(`${base}/api/walkthrough/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ directory: '/not-a-repo', source: SOURCE }),
+      });
+      expect(generateResponse.status).toBe(400);
+      expect(await generateResponse.json()).toEqual({
+        error: 'Walkthrough requires a git repository directory',
+        code: 'not-a-git-repository',
+      });
+    } finally {
+      service.getWalkthrough = originalGet;
+      service.generateWalkthrough = originalGenerate;
+    }
+  });
+
   // The language belongs to the request, not to a setting, so both the read
   // and the generation have to carry it: readiness is computed from a prompt
   // that contains the language instruction.

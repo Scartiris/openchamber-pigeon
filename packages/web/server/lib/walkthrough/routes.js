@@ -7,7 +7,36 @@ import { parseSource } from './sources.js';
 const clientIsGone = (res) => res.writableEnded || res.destroyed;
 
 export function registerWalkthroughRoutes(app, { getWalkthroughService }) {
+  // Walkthrough always needs a repository root. A non-repo directory throws a
+  // raw GitError from `rev-parse --show-toplevel`; logging that object dumps
+  // the full simple-git/Bun source frame instead of an actionable path.
+  const extractGitErrorText = (error) => {
+    if (error == null) return '';
+    const parts = [];
+    for (const value of [error.message, error.stderr, error.stdout]) {
+      if (value) parts.push(String(value));
+    }
+    if (parts.length === 0) parts.push(String(error));
+    return parts
+      .map((value) => String(value).trim())
+      .filter(Boolean)
+      .join('\n');
+  };
+
+  const isNonRepoGitError = (error) => /not a git repository/i.test(extractGitErrorText(error));
+
   const respondWithError = (res, error, fallback) => {
+    if (isNonRepoGitError(error)) {
+      console.warn(
+        'Walkthrough skipped for non-repository path:',
+        extractGitErrorText(error).split('\n').find((line) => /not a git repository/i.test(line)) || 'not a git repository',
+      );
+      return res.status(400).json({
+        error: 'Walkthrough requires a git repository directory',
+        code: 'not-a-git-repository',
+      });
+    }
+
     const statusCode = Number(error?.statusCode) || 500;
     if (statusCode >= 500) {
       console.error(`${fallback}:`, error);
