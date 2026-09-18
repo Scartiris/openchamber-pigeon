@@ -10,14 +10,18 @@ import {
   ArtifactApiError,
   fetchVersionContent,
   labelVersion,
+  listArtifactCandidates,
   listArtifacts,
   listVersions,
   pullVersion,
   restoreVersion,
   uncollectArtifact,
+  type ArtifactCandidate,
   type ArtifactRecord,
   type ArtifactVersion,
 } from '@/lib/artifacts/client';
+import { refreshArtifactsHub } from '@/lib/artifacts/useArtifactPath';
+import { ArtifactPathActions } from '@/components/artifacts/ArtifactPathActions';
 
 const formatBytes = (bytes: number): string => {
   if (!Number.isFinite(bytes) || bytes < 0) return '—';
@@ -43,8 +47,18 @@ export function ArtifactCenterView(): React.ReactNode {
   const open = useUIStore((state) => state.isArtifactCenterPageOpen);
   const setOpen = useUIStore((state) => state.setArtifactCenterOpen);
   const homeDirectory = useDirectoryStore((state) => state.homeDirectory);
+  const currentDirectory = useDirectoryStore((state) => state.currentDirectory);
+  // Candidates are scoped to the active workspace when one is selected;
+  // otherwise fall back to the workbench home root.
+  const candidateRoot = React.useMemo(() => {
+    const active = (currentDirectory || '').trim();
+    if (active && active !== '/' && active !== homeDirectory) return active;
+    return (homeDirectory || '').trim() || null;
+  }, [currentDirectory, homeDirectory]);
 
   const [artifacts, setArtifacts] = React.useState<ArtifactRecord[]>([]);
+  const [candidates, setCandidates] = React.useState<ArtifactCandidate[]>([]);
+  const [candidatesLoading, setCandidatesLoading] = React.useState(false);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [versions, setVersions] = React.useState<ArtifactVersion[]>([]);
   const [query, setQuery] = React.useState('');
@@ -69,6 +83,7 @@ export function ArtifactCenterView(): React.ReactNode {
         if (current && list.some((artifact) => artifact.id === current)) return current;
         return list[0]?.id ?? null;
       });
+      void refreshArtifactsHub();
     } catch (err) {
       // Failure is not an empty list.
       const message = err instanceof Error ? err.message : String(err);
@@ -79,9 +94,29 @@ export function ArtifactCenterView(): React.ReactNode {
     }
   }, [open]);
 
+  const reloadCandidates = React.useCallback(async () => {
+    if (!open || !candidateRoot) {
+      setCandidates([]);
+      return;
+    }
+    setCandidatesLoading(true);
+    try {
+      const list = await listArtifactCandidates(candidateRoot, 20);
+      setCandidates(list);
+    } catch {
+      // Keep the previous candidate rows. A failed fetch is not an empty inbox.
+    } finally {
+      setCandidatesLoading(false);
+    }
+  }, [candidateRoot, open]);
+
   React.useEffect(() => {
     void reload();
   }, [reload]);
+
+  React.useEffect(() => {
+    void reloadCandidates();
+  }, [reloadCandidates]);
 
   React.useEffect(() => {
     if (!open || !selectedId) {
@@ -205,11 +240,21 @@ export function ArtifactCenterView(): React.ReactNode {
       await uncollectArtifact(selected.id, false);
       setSelectedId(null);
       await reload();
+      await reloadCandidates();
       toast.success(t('artifacts.toast.uncollected'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
     }
-  }, [reload, selected, t]);
+  }, [reload, reloadCandidates, selected, t]);
+
+  const onCandidateCollected = React.useCallback(
+    async (artifact: ArtifactRecord) => {
+      setSelectedId(artifact.id);
+      await reload();
+      await reloadCandidates();
+    },
+    [reload, reloadCandidates],
+  );
 
   if (!open) return null;
 
@@ -234,7 +279,44 @@ export function ArtifactCenterView(): React.ReactNode {
               />
             </div>
           </div>
+
+          {candidateRoot ? (
+            <div className="border-b border-border/40 px-2 py-2">
+              <div className="mb-1.5 flex items-center justify-between gap-2 px-1">
+                <div className="typography-micro font-medium text-foreground">
+                  {t('artifacts.candidates.title')}
+                </div>
+                <span className="typography-micro text-muted-foreground">
+                  {candidatesLoading
+                    ? t('artifacts.list.loading')
+                    : t('artifacts.candidates.count', { count: candidates.length })}
+                </span>
+              </div>
+              {candidates.length === 0 && !candidatesLoading ? (
+                <div className="px-1 py-1 typography-micro text-muted-foreground">
+                  {t('artifacts.candidates.empty')}
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {candidates.map((candidate) => (
+                    <ArtifactPathActions
+                      key={candidate.path}
+                      path={candidate.path}
+                      directory={candidateRoot}
+                      variant="row"
+                      title={candidate.title}
+                      onCollected={onCandidateCollected}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
+
           <div className="min-h-0 flex-1 overflow-y-auto p-2">
+            <div className="mb-1 px-2 typography-micro font-medium text-foreground">
+              {t('artifacts.list.collectedTitle')}
+            </div>
             {loading ? (
               <div className="px-2 py-3 typography-ui-label text-muted-foreground">
                 {t('artifacts.list.loading')}

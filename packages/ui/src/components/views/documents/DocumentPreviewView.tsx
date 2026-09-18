@@ -13,6 +13,7 @@ import {
 import { getRuntimeUrlResolver } from '@/lib/runtime-url';
 import { getRuntimeApiBaseUrl } from '@/lib/runtime-switch';
 import { getOutsideFileGrant } from '@/lib/outsideFileGrants';
+import { ArtifactPathActions } from '@/components/artifacts/ArtifactPathActions';
 
 /**
  * Document preview surface (Word / Excel / PowerPoint / PDF) hosted in the
@@ -262,6 +263,12 @@ export const DocumentPreviewView: React.FC<DocumentPreviewViewProps> = ({
         <div className="min-w-0 flex-1 truncate typography-micro text-foreground" title={filePath}>
           {fileName}
         </div>
+        <ArtifactPathActions
+          path={filePath}
+          directory={directory}
+          variant="compact"
+          size="xs"
+        />
         <div className="flex shrink-0 items-center gap-0.5">
           <Button
             type="button"

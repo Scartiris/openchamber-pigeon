@@ -11,11 +11,14 @@ import crypto from 'crypto';
 import { createArtifactStore, hashBytes } from './store.js';
 import {
   collectArtifact,
+  findArtifactBySourcePath,
   getArtifact,
   listArtifacts,
+  listCollectedSourcePaths,
   patchArtifact,
   uncollectArtifact,
 } from './registry.js';
+import { listCandidateArtifacts } from './candidates.js';
 import {
   getVersion,
   labelVersion,
@@ -155,6 +158,26 @@ export const createArtifactRuntime = ({
       watcher.stop();
     },
     listArtifacts: (directory) => listArtifacts({ store, directory: asNonEmptyString(directory) || undefined }),
+    findArtifactBySourcePath: (sourcePath) => findArtifactBySourcePath({
+      store,
+      sourcePath: asNonEmptyString(sourcePath),
+    }),
+    listCandidates: async ({ directory, limit } = {}) => {
+      const dir = asNonEmptyString(directory);
+      if (!dir) {
+        throw Object.assign(new Error('Directory is required'), {
+          status: 400,
+          code: 'directory_required',
+        });
+      }
+      const collectedPaths = await listCollectedSourcePaths({ store });
+      return listCandidateArtifacts({
+        directory: dir,
+        collectedPaths,
+        limit,
+        fsPromises,
+      });
+    },
     getArtifact: (artifactId) => getArtifact({ store, artifactId }),
     collect: async ({ path: sourcePath, directory, title, origin }) => {
       const resolved = path.resolve(asNonEmptyString(sourcePath));
@@ -279,8 +302,49 @@ export const createArtifactRuntime = ({
 export const registerArtifactRoutes = (app, { runtime, resolveReadPathFromContext, fsPromises, path: pathModule }) => {
   app.get('/api/artifacts', async (req, res) => {
     try {
+      const pathQuery = asNonEmptyString(req.query?.path);
+      if (pathQuery) {
+        const artifact = await runtime.findArtifactBySourcePath(pathQuery);
+        res.json({ artifact });
+        return;
+      }
       const artifacts = await runtime.listArtifacts(req.query?.directory);
       res.json({ artifacts });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.get('/api/artifacts/candidates', async (req, res) => {
+    try {
+      const directory = asNonEmptyString(req.query?.directory);
+      if (!directory) {
+        res.status(400).json({ error: 'Directory is required', code: 'directory_required' });
+        return;
+      }
+      // Same workspace isolation as collect: never walk arbitrary server paths.
+      const resolved = await resolveReadPathFromContext({
+        req,
+        targetPath: directory,
+        scope: 'raw',
+      });
+      if (!resolved?.ok) {
+        res.status(400).json({
+          error: resolved?.error || 'Directory is outside of active workspace',
+          code: 'directory_outside_workspace',
+        });
+        return;
+      }
+      const canonicalDirectory = await fsPromises.realpath(resolved.resolved);
+      const limitRaw = req.query?.limit;
+      const limit = limitRaw === undefined || limitRaw === null || limitRaw === ''
+        ? undefined
+        : Number(limitRaw);
+      const candidates = await runtime.listCandidates({
+        directory: canonicalDirectory,
+        limit,
+      });
+      res.json({ candidates });
     } catch (error) {
       sendError(res, error);
     }

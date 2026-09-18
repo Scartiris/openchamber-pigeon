@@ -52,6 +52,16 @@ export const listArtifacts = async ({ store, directory }) => {
     .sort((a, b) => b.updatedAt - a.updatedAt);
 };
 
+export const findArtifactBySourcePath = async ({ store, sourcePath }) => {
+  const index = await store.getIndex();
+  return Object.values(index.artifacts).find((artifact) => artifact.sourcePath === sourcePath) ?? null;
+};
+
+export const listCollectedSourcePaths = async ({ store }) => {
+  const index = await store.getIndex();
+  return Object.values(index.artifacts).map((artifact) => artifact.sourcePath);
+};
+
 export const getArtifact = async ({ store, artifactId }) => {
   const index = await store.getIndex();
   return index.artifacts[artifactId] ?? null;

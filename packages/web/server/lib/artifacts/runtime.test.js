@@ -5,9 +5,11 @@ import path from 'path';
 import { createArtifactStore, hashBytes } from './store.js';
 import {
   collectArtifact,
+  findArtifactBySourcePath,
   listArtifacts,
   uncollectArtifact,
 } from './registry.js';
+import { isDeliverablePath, listCandidateArtifacts } from './candidates.js';
 import {
   labelVersion,
   listVersions,
@@ -341,3 +343,149 @@ describe('runtime HTTP surface', () => {
     runtime.stop();
   });
 });
+
+describe('candidate inbox and path lookup', () => {
+  test('deliverable allowlist and skip rules', () => {
+    expect(isDeliverablePath('a/report.docx')).toBe(true);
+    expect(isDeliverablePath('a/report.PDF')).toBe(true);
+    expect(isDeliverablePath('a/report.ts')).toBe(false);
+    expect(isDeliverablePath('a/report')).toBe(false);
+  });
+
+  test('candidates exclude collected paths and sort by mtime', async () => {
+    const workDir = await makeTempDir();
+    const older = path.join(workDir, 'older.md');
+    const newer = path.join(workDir, 'newer.docx');
+    const code = path.join(workDir, 'code.ts');
+    const collected = path.join(workDir, 'already.pdf');
+    const nestedSkip = path.join(workDir, 'node_modules', 'junk.md');
+    const nestedOk = path.join(workDir, 'reports', 'q1.xlsx');
+
+    await fs.promises.mkdir(path.dirname(nestedSkip), { recursive: true });
+    await fs.promises.mkdir(path.dirname(nestedOk), { recursive: true });
+    await fs.promises.writeFile(older, 'old');
+    await fs.promises.writeFile(newer, 'new');
+    await fs.promises.writeFile(code, 'code');
+    await fs.promises.writeFile(collected, 'pdf');
+    await fs.promises.writeFile(nestedSkip, 'junk');
+    await fs.promises.writeFile(nestedOk, 'sheet');
+    await fs.promises.utimes(older, new Date(Date.now() - 60_000), new Date(Date.now() - 60_000));
+    await fs.promises.utimes(newer, new Date(), new Date());
+
+    const candidates = await listCandidateArtifacts({
+      directory: workDir,
+      collectedPaths: [collected],
+      limit: 10,
+      fsPromises: fs.promises,
+    });
+
+    const paths = candidates.map((entry) => entry.path);
+    expect(paths).toContain(older);
+    expect(paths).toContain(newer);
+    expect(paths).toContain(nestedOk);
+    expect(paths).not.toContain(code);
+    expect(paths).not.toContain(collected);
+    expect(paths).not.toContain(nestedSkip);
+    expect(paths.indexOf(newer)).toBeLessThan(paths.indexOf(older));
+  });
+
+  test('candidates honor limit', async () => {
+    const workDir = await makeTempDir();
+    for (let index = 0; index < 5; index += 1) {
+      await fs.promises.writeFile(path.join(workDir, `doc-${index}.md`), `# ${index}\n`);
+    }
+    const limited = await listCandidateArtifacts({
+      directory: workDir,
+      limit: 2,
+      fsPromises: fs.promises,
+    });
+    expect(limited.length).toBe(2);
+  });
+
+  test('unreadable or missing directory is an error, not empty success', async () => {
+    await expect(listCandidateArtifacts({
+      directory: path.join(os.tmpdir(), `oc-missing-${Date.now()}`),
+      fsPromises: fs.promises,
+    })).rejects.toMatchObject({ code: 'directory_unreadable' });
+  });
+
+  test('runtime path lookup and candidates endpoints', async () => {
+    const dataDir = await makeTempDir();
+    const workDir = await makeTempDir();
+    const sourcePath = path.join(workDir, 'brief.pdf');
+    await fs.promises.writeFile(sourcePath, 'pdf-bytes');
+
+    const runtime = createArtifactRuntime({ openchamberDataDir: dataDir, env: {} });
+    await runtime.start();
+    const { artifact } = await runtime.collect({ path: sourcePath, directory: workDir });
+
+    const found = await runtime.findArtifactBySourcePath(sourcePath);
+    expect(found?.id).toBe(artifact.id);
+    expect(await findArtifactBySourcePath({ store: runtime.store, sourcePath: path.join(workDir, 'nope.pdf') })).toBeNull();
+
+    const uncollected = path.join(workDir, 'draft.md');
+    await fs.promises.writeFile(uncollected, '# draft');
+    const candidates = await runtime.listCandidates({ directory: workDir });
+    expect(candidates.map((entry) => entry.path)).toContain(uncollected);
+    expect(candidates.map((entry) => entry.path)).not.toContain(sourcePath);
+
+    const handlers = new Map();
+    const app = {
+      get: (p, h) => handlers.set(`GET ${p}`, h),
+      post: (p, h) => handlers.set(`POST ${p}`, h),
+      patch: (p, h) => handlers.set(`PATCH ${p}`, h),
+      delete: (p, h) => handlers.set(`DELETE ${p}`, h),
+    };
+    const resolveReadPathFromContext = async ({ targetPath }) => {
+      if (targetPath === workDir || targetPath === `${workDir}`) {
+        return { ok: true, resolved: workDir, base: workDir };
+      }
+      return { ok: false, error: 'Directory is outside of active workspace' };
+    };
+    registerArtifactRoutes(app, {
+      runtime,
+      fsPromises: fs.promises,
+      path,
+      resolveReadPathFromContext,
+    });
+    expect(handlers.has('GET /api/artifacts/candidates')).toBe(true);
+
+    const makeRes = () => ({
+      statusCode: 200,
+      body: null,
+      status(code) {
+        this.statusCode = code;
+        return this;
+      },
+      json(payload) {
+        this.body = payload;
+      },
+    });
+
+    const listRes = makeRes();
+    await handlers.get('GET /api/artifacts')({ query: { path: sourcePath } }, listRes);
+    expect(listRes.body.artifact?.id).toBe(artifact.id);
+
+    const missingRes = makeRes();
+    await handlers.get('GET /api/artifacts')({ query: { path: path.join(workDir, 'absent.pdf') } }, missingRes);
+    expect(missingRes.body.artifact).toBeNull();
+
+    const candRes = makeRes();
+    await handlers.get('GET /api/artifacts/candidates')({ query: { directory: workDir } }, candRes);
+    expect(Array.isArray(candRes.body.candidates)).toBe(true);
+    expect(candRes.body.candidates.map((entry) => entry.path)).toContain(uncollected);
+
+    const outsideRes = makeRes();
+    await handlers.get('GET /api/artifacts/candidates')({ query: { directory: '/etc' } }, outsideRes);
+    expect(outsideRes.statusCode).toBe(400);
+    expect(outsideRes.body.code).toBe('directory_outside_workspace');
+
+    const noDirRes = makeRes();
+    await handlers.get('GET /api/artifacts/candidates')({ query: {} }, noDirRes);
+    expect(noDirRes.statusCode).toBe(400);
+    expect(noDirRes.body.code).toBe('directory_required');
+
+    runtime.stop();
+  });
+});
+

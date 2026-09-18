@@ -3,7 +3,8 @@ import { runtimeFetch } from '@/lib/runtime-fetch';
 
 import { toast } from '@/components/ui';
 import { copyTextToClipboard } from '@/lib/clipboard';
-import { collectArtifact } from '@/lib/artifacts/client';
+import { collectPathAsArtifact, refreshArtifactsHub } from '@/lib/artifacts/useArtifactPath';
+import { ArtifactPathActions } from '@/components/artifacts/ArtifactPathActions';
 import { lazyWithChunkRecovery } from '@/lib/chunkLoadRecovery';
 
 // Office/PDF preview sits in the file-management pane itself; keep the iframe
@@ -471,7 +472,7 @@ const FileRow: React.FC<FileRowProps> = ({
         <Item
           onClick={(e: React.MouseEvent) => {
             e.stopPropagation();
-            void collectArtifact({
+            void collectPathAsArtifact({
               path: node.path,
               directory: root || undefined,
               origin: 'user',
@@ -482,6 +483,7 @@ const FileRow: React.FC<FileRowProps> = ({
                     ? t('artifacts.toast.collected')
                     : t('artifacts.toast.alreadyCollected'),
                 );
+                void refreshArtifactsHub();
                 useUIStore.getState().setArtifactCenterOpen(true);
               })
               .catch((error) => {
@@ -489,7 +491,7 @@ const FileRow: React.FC<FileRowProps> = ({
               });
           }}
         >
-          <Icon name="folder-open" className="mr-2 size-4" /> {t('artifacts.actions.collect')}
+          <Icon name="inbox-archive" className="mr-2 size-4" /> {t('artifacts.actions.collect')}
         </Item>
       )}
       {!isDir && downloadFile && (
@@ -3350,6 +3352,15 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full', visible = t
 
     return (
       <div className={wrapperCls}>
+        {selectedFilePath ? (
+          <ArtifactPathActions
+            path={selectedFilePath}
+            directory={root}
+            variant="compact"
+            size="sm"
+            className="mr-1"
+          />
+        ) : null}
         {canEdit && isEditingFile && (
           <>
             {isSaving ? (

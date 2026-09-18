@@ -16,14 +16,15 @@ directory, so collecting a report cannot dirty git.
 
 - `store.js` — atomic index + content-addressed blobs under
   `<openchamberDataDir>/artifacts/`
-- `registry.js` — collect / uncollect / list / patch identity
+- `registry.js` — collect / uncollect / list / patch identity, path lookup
+- `candidates.js` — uncollected deliverable-looking files for the hub inbox
 - `versions.js` — snapshot, label, restore-to-source, content stream
 - `watcher.js` — debounced watch of collected source paths
 - `drive/auth.js` — Google OAuth (PKCE) + token refresh
 - `drive/client.js` — Drive REST via `fetch` (no googleapis dependency)
 - `drive/tier.js` — hot budget policy and promote/demote
 - `runtime.js` — composition + `registerArtifactRoutes`
-- `runtime.test.js` — engine and route-shape tests
+- `runtime.test.js` — engine, candidates, and route-shape tests
 
 ## Persistence
 
@@ -67,7 +68,9 @@ JSON bodies enabled for `/api/artifacts` in `core-routes.js`.
 | Method | Path |
 |---|---|
 | GET | `/api/artifacts` |
+| GET | `/api/artifacts?path=` | one artifact by source path (`{ artifact \| null }`) |
 | POST | `/api/artifacts` |
+| GET | `/api/artifacts/candidates` |
 | GET | `/api/artifacts/storage` |
 | GET | `/api/artifacts/drive/status` |
 | POST | `/api/artifacts/drive/auth` |
@@ -83,6 +86,13 @@ JSON bodies enabled for `/api/artifacts` in `core-routes.js`.
 
 Collect resolves the path with the shared workspace read resolver
 (`createReadPathResolver`). Failure is never an empty successful list.
+
+`GET /api/artifacts/candidates?directory=&limit=` lists recent
+deliverable-looking files under a directory that are not yet collected. It is
+inbox data for the Artifact Center UI, not auto-collect. The directory goes
+through the same workspace read resolver as collect, then realpath. Depth is
+capped, common build/vendor dirs are skipped, and an unreadable or
+out-of-workspace directory is an error.
 
 ## Agent API (reserved)
 
