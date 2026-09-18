@@ -2,6 +2,10 @@ import { asBoolean, asFiniteNumber, asNonEmptyString, asObject } from './parse.j
 
 const REGISTRY_VERSION = 1;
 const APPROVAL_MODES = new Set(['deny', 'smart', 'auto']);
+// Windows is still the default because the join script and the file tools are
+// Windows-only; Linux devices exist so the same monitoring channel can cover
+// POSIX hosts without inventing a second device concept.
+const DEVICE_PLATFORMS = new Set(['windows', 'linux']);
 
 const nowIso = () => new Date().toISOString();
 
@@ -11,6 +15,11 @@ const safeJsonParse = (raw) => {
   } catch {
     return null;
   }
+};
+
+const normalizePlatform = (value, fallback = 'windows') => {
+  const platform = asNonEmptyString(value);
+  return platform && DEVICE_PLATFORMS.has(platform) ? platform : fallback;
 };
 
 const normalizeConnection = (connection) => {
@@ -29,9 +38,15 @@ const normalizeConnection = (connection) => {
 
   const tunnelSshPort = tunnelRaw ? asFiniteNumber(tunnelRaw.sshPort, null) : null;
   const tunnelMcpPort = tunnelRaw ? asFiniteNumber(tunnelRaw.mcpPort, null) : null;
-  const tunnel = tunnelSshPort || tunnelMcpPort
-    ? { sshPort: tunnelSshPort, mcpPort: tunnelMcpPort }
-    : null;
+  // `host` exists because a containerised workbench cannot reach a tunnel that
+  // listens on the *host's* loopback: 127.0.0.1 inside the container is the
+  // container itself. Deployments record the docker bridge gateway instead.
+  const tunnelHost = tunnelRaw ? asNonEmptyString(tunnelRaw.host) : null;
+  let tunnel = null;
+  if (tunnelSshPort || tunnelMcpPort) {
+    tunnel = { sshPort: tunnelSshPort, mcpPort: tunnelMcpPort };
+    if (tunnelHost) tunnel.host = tunnelHost;
+  }
 
   return { tailscale, tunnel };
 };
@@ -106,7 +121,7 @@ export const createDeviceRegistry = ({ fsPromises, path, crypto, storePath, secr
     return {
       id,
       name: asNonEmptyString(source.name) || id,
-      platform: 'windows',
+      platform: normalizePlatform(source.platform),
       status,
       capabilities: normalizeCapabilities(source.capabilities),
       connection: normalizeConnection(source.connection),
@@ -211,7 +226,7 @@ export const createDeviceRegistry = ({ fsPromises, path, crypto, storePath, secr
         ...source,
         id: existing.id,
         enrolledAt: existing.enrolledAt,
-        platform: 'windows',
+        platform: normalizePlatform(source.platform, existing.platform),
         auth: {
           sshUser: asNonEmptyString(authPatch.sshUser) || existing.auth.sshUser,
           sshKeyRef: existing.auth.sshKeyRef,
@@ -284,4 +299,5 @@ export const createDeviceRegistry = ({ fsPromises, path, crypto, storePath, secr
 };
 
 export const DEVICE_APPROVAL_MODES = [...APPROVAL_MODES];
+export const DEVICE_PLATFORM_IDS = [...DEVICE_PLATFORMS];
 export { publicDeviceView };

@@ -34,6 +34,18 @@ export const DEVICE_TOOL_DEFINITIONS = [
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
   },
   {
+    name: 'devices.metrics',
+    description: 'Read memory, disk, CPU load and network counters from a registered device. Read-only; allowed under smart approval.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        device_id: { type: 'string' },
+      },
+      required: ['device_id'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'devices.shell.exec',
     description: 'Run a shell command on a registered device over SSH.',
     inputSchema: {
@@ -153,6 +165,7 @@ export const createDeviceToolRuntime = ({
   sshClient,
   windowsMcp,
   audit,
+  metricsRuntime,
 }) => {
   const requireDevice = async (deviceId) => {
     const id = asNonEmptyString(deviceId);
@@ -175,18 +188,23 @@ export const createDeviceToolRuntime = ({
     return { transport };
   };
 
-  const guard = async ({ tool, args, actor }) => {
+  const guard = async ({ tool, args, actor, audit: auditEnabled = true }) => {
     const started = Date.now();
     const finish = async (result, deviceId, summary) => {
-      await audit.record({
-        deviceId: deviceId || null,
-        tool,
-        actor,
-        decision: result.ok ? 'allow' : (result.error?.code || 'deny'),
-        durationMs: Date.now() - started,
-        error: result.ok ? null : result.error?.message,
-        summary,
-      });
+      // Passive fleet polling reads metrics on a timer for every device. Letting
+      // those into the 500-entry ring would flush real actions within hours, so
+      // the caller opts out; direct agent calls ({ actor: 'mcp' }) stay audited.
+      if (auditEnabled) {
+        await audit.record({
+          deviceId: deviceId || null,
+          tool,
+          actor,
+          decision: result.ok ? 'allow' : (result.error?.code || 'deny'),
+          durationMs: Date.now() - started,
+          error: result.ok ? null : result.error?.message,
+          summary,
+        });
+      }
       return result;
     };
 
@@ -211,7 +229,7 @@ export const createDeviceToolRuntime = ({
     return { device, started, finish };
   };
 
-  const callTool = async ({ tool, args = {}, actor = 'mcp' }) => {
+  const callTool = async ({ tool, args = {}, actor = 'mcp', audit: auditEnabled = true }) => {
     const toolName = asNonEmptyString(tool);
     const input = asObject(args) || {};
 
@@ -220,7 +238,7 @@ export const createDeviceToolRuntime = ({
       return { ok: true, data: { devices } };
     }
 
-    const guardResult = await guard({ tool: toolName, args: input, actor });
+    const guardResult = await guard({ tool: toolName, args: input, actor, audit: auditEnabled });
     if (guardResult.error) {
       return guardResult.finish(guardResult.error, guardResult.deviceId, toolName);
     }
@@ -232,6 +250,23 @@ export const createDeviceToolRuntime = ({
     }
 
     try {
+      if (toolName === 'devices.metrics') {
+        if (!device.capabilities.shell) {
+          return finish(toolError('capability_missing', 'Device does not advertise shell'), device.id, toolName);
+        }
+        if (!metricsRuntime) {
+          return finish(toolError('metrics_unavailable', 'Device metrics runtime is unavailable'), device.id, toolName);
+        }
+        const result = await metricsRuntime.collect({ device, transport });
+        if (!result.ok) {
+          return finish(toolError(result.code, result.message, {
+            deviceId: device.id,
+            exitCode: result.exitCode ?? null,
+          }), device.id, `metrics ${result.code}`);
+        }
+        return finish(toolOk(result.metrics), device.id, 'metrics');
+      }
+
       if (toolName === 'devices.shell.exec') {
         if (!device.capabilities.shell) {
           return finish(toolError('capability_missing', 'Device does not advertise shell'), device.id, toolName);

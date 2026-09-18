@@ -377,3 +377,129 @@ describe('device status snapshot', () => {
     void statusRuntime;
   });
 });
+
+describe('device platforms and tunnel addressing', () => {
+  test('platform is explicit, defaults to windows, and survives updates', async () => {
+    const registry = makeRegistry();
+    const linux = await registry.createDevice({ name: 'relay', platform: 'linux' });
+    const implicit = await registry.createDevice({ name: 'pc' });
+    const bogus = await registry.createDevice({ name: 'weird', platform: 'plan9' });
+
+    expect(linux.platform).toBe('linux');
+    expect(implicit.platform).toBe('windows');
+    expect(bogus.platform).toBe('windows');
+
+    // An approval change must not quietly turn a Linux device into a Windows one.
+    const updated = await registry.updateDevice(linux.id, { approval: 'auto' });
+    expect(updated.approval).toBe('auto');
+    expect(updated.platform).toBe('linux');
+    expect((await registry.updateDevice(linux.id, { platform: 'windows' })).platform).toBe('windows');
+  });
+
+  test('a tunnel host other than loopback is honoured — a container cannot reach the host loopback', async () => {
+    const seen = [];
+    const resolver = createDeviceTransportResolver({
+      net: {},
+      probe: async ({ host, port }) => {
+        seen.push(`${host}:${port}`);
+        return host === '172.17.0.1' && port === 2201;
+      },
+    });
+    const resolved = await resolver.resolve({
+      connection: { tunnel: { host: '172.17.0.1', sshPort: 2201 } },
+    });
+    expect(resolved.kind).toBe('tunnel');
+    expect(resolved.ssh).toEqual({ host: '172.17.0.1', port: 2201 });
+    expect(seen).toContain('172.17.0.1:2201');
+
+    const defaulted = await createDeviceTransportResolver({
+      net: {},
+      probe: async ({ host }) => host === '127.0.0.1',
+    }).resolve({ connection: { tunnel: { sshPort: 2201 } } });
+    expect(defaulted.ssh).toEqual({ host: '127.0.0.1', port: 2201 });
+  });
+
+  test('registry keeps the tunnel host it was given', async () => {
+    const registry = makeRegistry();
+    const device = await registry.createDevice({
+      name: 'tunnelled',
+      connection: { tunnel: { host: '172.17.0.1', sshPort: 2201, mcpPort: 8001 } },
+    });
+    expect(device.connection.tunnel).toEqual({ host: '172.17.0.1', sshPort: 2201, mcpPort: 8001 });
+  });
+});
+
+describe('devices.metrics tool', () => {
+  const buildMetricsTool = async ({ approval = 'smart' } = {}) => {
+    const registry = makeRegistry();
+    await registry.createDevice({
+      name: 'relay',
+      platform: 'linux',
+      approval,
+      capabilities: { shell: true, files: true, screen: false },
+      connection: { tunnel: { sshPort: 2201 } },
+    });
+    const audit = createDeviceAuditLog({
+      fsPromises: fs.promises,
+      path,
+      storePath: path.join(tempDir, 'metrics-audit.json'),
+    });
+    const collected = [];
+    const toolRuntime = createDeviceToolRuntime({
+      registry,
+      transportResolver: createDeviceTransportResolver({
+        net: {},
+        probe: async ({ port }) => port === 2201,
+      }),
+      sshClient: { exec: async () => ({ ok: true, exitCode: 0, stdout: '', stderr: '' }) },
+      windowsMcp: {},
+      audit,
+      metricsRuntime: {
+        collect: async ({ device }) => {
+          collected.push(device.id);
+          return {
+            ok: true,
+            metrics: {
+              platform: device.platform,
+              hostname: 'relay',
+              memory: { totalBytes: 2048, availableBytes: 1024, usedBytes: 1024, usedPercent: 50 },
+              disks: [],
+              network: { interfaces: [] },
+            },
+          };
+        },
+      },
+    });
+    const id = (await registry.listDevices())[0].id;
+    return { toolRuntime, audit, id, collected };
+  };
+
+  test('smart approval allows the read and reports the device platform', async () => {
+    const { toolRuntime, id, collected } = await buildMetricsTool({ approval: 'smart' });
+    const result = await toolRuntime.callTool({ tool: 'devices.metrics', args: { device_id: id }, actor: 'test' });
+    expect(result.ok).toBe(true);
+    expect(result.data.platform).toBe('linux');
+    expect(collected).toEqual([id]);
+  });
+
+  test('deny mode refuses metrics like any other tool', async () => {
+    const { toolRuntime, id, collected } = await buildMetricsTool({ approval: 'deny' });
+    const result = await toolRuntime.callTool({ tool: 'devices.metrics', args: { device_id: id } });
+    expect(result.ok).toBe(false);
+    expect(result.error.code).toBe('permission_denied');
+    expect(collected).toEqual([]);
+  });
+
+  test('audit can be skipped for timer-driven polling but stays on by default', async () => {
+    const { toolRuntime, audit, id } = await buildMetricsTool({ approval: 'smart' });
+
+    await toolRuntime.callTool({ tool: 'devices.metrics', args: { device_id: id }, actor: 'ui-fleet', audit: false });
+    expect(await audit.listRecent(10)).toHaveLength(0);
+
+    await toolRuntime.callTool({ tool: 'devices.metrics', args: { device_id: id }, actor: 'mcp' });
+    const entries = await audit.listRecent(10);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].actor).toBe('mcp');
+    expect(entries[0].tool).toBe('devices.metrics');
+  });
+});

@@ -1,4 +1,5 @@
 import { asFiniteNumber } from './parse.js';
+import { resolveTunnelHost } from './transport.js';
 
 const DEFAULT_TIMEOUT_MS = 1200;
 
@@ -67,7 +68,7 @@ export const createDeviceStatusRuntime = ({ net, registry }) => {
     }
 
     if ((!ssh.ok || !mcp.ok) && connection.tunnel) {
-      const host = '127.0.0.1';
+      const host = resolveTunnelHost(connection);
       const sshPort = asFiniteNumber(connection.tunnel.sshPort, null);
       const mcpPort = asFiniteNumber(connection.tunnel.mcpPort, null);
 

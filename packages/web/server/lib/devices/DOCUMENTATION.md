@@ -46,11 +46,39 @@ device-MCP prefix; the handler still validates the token.
 
 ## Fixed MCP tools
 
-`devices.list`, `devices.shell.exec`, `devices.fs.list`, `devices.fs.read`,
-`devices.fs.write`, `devices.screen.capture`, `devices.ui.click`,
+`devices.list`, `devices.metrics`, `devices.shell.exec`, `devices.fs.list`,
+`devices.fs.read`, `devices.fs.write`, `devices.screen.capture`, `devices.ui.click`,
 `devices.ui.type`, `devices.ui.elements`.
 
 Tools do **not** change with online devices. Callers pass `device_id`.
+
+`devices.metrics` reads memory / disk / CPU load / network counters through the
+same SSH channel. It is classified as a **read** tool, so the default `smart`
+approval mode allows it — a monitoring panel that needed approval per refresh
+would be unusable — and `deny` still refuses it. Byte rates are not produced
+here: they need two samples, which `../fleet/snapshot.js` owns.
+
+## Platforms
+
+`platform` is `windows` (default) or `linux`. Windows is still the default
+because the join script and the file tools are PowerShell; `linux` exists so the
+same monitoring channel can cover POSIX hosts without a second device concept.
+Only `devices.metrics` and `devices.shell.exec` are platform-neutral today —
+`fs.list` / `fs.read` / `fs.write` remain Windows-only and will fail loudly on a
+Linux device rather than pretending to work.
+
+## Connection addressing
+
+Beyond `tailscale`, a device may be reachable through a reverse tunnel. Its
+candidates are `{ host?, sshPort, mcpPort }`: `host` defaults to `127.0.0.1`
+(workbench running on the tunnel host) and must be set to the docker bridge
+gateway (e.g. `172.17.0.1`) when the workbench runs in a container, where
+`127.0.0.1` is the container itself.
+
+## Auditing
+
+`callTool({ …, audit: false })` suppresses the audit entry. The fleet snapshot
+uses it for timer-driven polling; agent calls keep the default (`audit: true`).
 
 ## Invariants
 

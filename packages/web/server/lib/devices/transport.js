@@ -20,6 +20,23 @@ const tcpProbe = ({ host, port, timeoutMs = 1200, net }) => new Promise((resolve
   socket.once('error', () => finish(false));
 });
 
+const DEFAULT_TUNNEL_HOST = '127.0.0.1';
+
+/**
+ * Where a device's reverse tunnel actually lands.
+ *
+ * The historical default is loopback, which only holds when the workbench runs
+ * on the same host as the tunnel listener. Inside a container `127.0.0.1` is the
+ * container itself, so deployments record the bridge gateway (or any other
+ * address the tunnel is bound to) on the device connection.
+ */
+export const resolveTunnelHost = (connection) => {
+  const host = connection?.tunnel?.host;
+  if (typeof host !== 'string') return DEFAULT_TUNNEL_HOST;
+  const trimmed = host.trim();
+  return trimmed.length > 0 ? trimmed : DEFAULT_TUNNEL_HOST;
+};
+
 /**
  * Resolve a usable transport for a device.
  * Preference: Tailscale direct, then loopback tunnel ports.
@@ -64,24 +81,25 @@ export const createDeviceTransportResolver = ({ net, probe = tcpProbe }) => {
     if (connection.tunnel) {
       const sshPort = connection.tunnel.sshPort;
       const mcpPort = connection.tunnel.mcpPort;
+      const tunnelHost = resolveTunnelHost(connection);
       const sshOk = Number.isFinite(sshPort)
-        ? await probe({ host: '127.0.0.1', port: sshPort, net })
+        ? await probe({ host: tunnelHost, port: sshPort, net })
         : false;
       if (Number.isFinite(sshPort)) {
-        attempted.push({ kind: 'tunnel-ssh', target: `127.0.0.1:${sshPort}`, ok: sshOk });
+        attempted.push({ kind: 'tunnel-ssh', target: `${tunnelHost}:${sshPort}`, ok: sshOk });
       }
 
       let mcpBase = null;
       if (Number.isFinite(mcpPort) && mcpPort > 0) {
-        const mcpOk = await probe({ host: '127.0.0.1', port: mcpPort, net });
-        attempted.push({ kind: 'tunnel-mcp', target: `127.0.0.1:${mcpPort}`, ok: mcpOk });
-        if (mcpOk) mcpBase = `http://127.0.0.1:${mcpPort}`;
+        const mcpOk = await probe({ host: tunnelHost, port: mcpPort, net });
+        attempted.push({ kind: 'tunnel-mcp', target: `${tunnelHost}:${mcpPort}`, ok: mcpOk });
+        if (mcpOk) mcpBase = `http://${tunnelHost}:${mcpPort}`;
       }
 
       if (sshOk || mcpBase) {
         return {
           kind: 'tunnel',
-          ssh: sshOk ? { host: '127.0.0.1', port: sshPort } : null,
+          ssh: sshOk ? { host: tunnelHost, port: sshPort } : null,
           mcpBase,
           attempted,
         };

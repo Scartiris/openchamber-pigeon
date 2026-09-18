@@ -5,6 +5,7 @@ import { registerQuotaRoutes } from '../quota/routes.js';
 import { registerSmallModelRoutes } from '../small-model/routes.js';
 import { registerWalkthroughRoutes } from '../walkthrough/routes.js';
 import { createDeviceRuntime } from '../devices/index.js';
+import { createFleetRuntime } from '../fleet/index.js';
 import { registerSessionGoalRoutes } from '../session-goal/routes.js';
 import { registerGitHubRoutes } from '../github/routes.js';
 import { registerLinearRoutes } from '../linear/routes.js';
@@ -346,6 +347,19 @@ export const createFeatureRoutesRuntime = (dependencies) => {
       openchamberDataDir,
     });
     deviceRuntime.registerRoutes(app);
+
+    // Host + device resource snapshot for the header chip. Reads the host
+    // helper file when the deployment installs one, and degrades to in-process
+    // /proc collection (no network column) when it does not.
+    const fleetRuntime = createFleetRuntime({
+      fsPromises,
+      path,
+      os,
+      spawn,
+      openchamberDataDir,
+      deviceRuntime,
+    });
+    fleetRuntime.registerRoutes(app);
     registerSessionGoalRoutes(app);
     registerGitHubRoutes(app);
     registerLinearRoutes(app);

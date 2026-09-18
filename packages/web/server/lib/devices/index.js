@@ -8,6 +8,7 @@ import { createDeviceAuditLog } from './audit.js';
 import { createDeviceToolRuntime } from './tools.js';
 import { createDeviceMcpHandler } from './mcp.js';
 import { createDeviceStatusRuntime } from './status.js';
+import { createDeviceMetricsRuntime } from './metrics.js';
 import { registerDeviceRoutes } from './routes.js';
 
 export function createDeviceRuntime({
@@ -54,12 +55,14 @@ export function createDeviceRuntime({
     path,
     storePath: path.join(devicesDir, 'audit.json'),
   });
+  const metricsRuntime = createDeviceMetricsRuntime({ sshClient, registry });
   const toolRuntime = createDeviceToolRuntime({
     registry,
     transportResolver,
     sshClient,
     windowsMcp,
     audit,
+    metricsRuntime,
   });
   const mcpHandler = createDeviceMcpHandler({
     toolRuntime,
@@ -75,6 +78,7 @@ export function createDeviceRuntime({
     toolRuntime,
     mcpHandler,
     statusRuntime,
+    metricsRuntime,
     express,
     registerRoutes: (app) => registerDeviceRoutes(app, {
       registry,

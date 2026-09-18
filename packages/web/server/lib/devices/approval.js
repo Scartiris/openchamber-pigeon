@@ -4,6 +4,9 @@ const READ_TOOLS = new Set([
   'devices.fs.read',
   'devices.screen.capture',
   'devices.ui.elements',
+  // Metrics are a passive read of counters the device already exposes. Requiring
+  // approval for them would make the fleet panel unusable in the default mode.
+  'devices.metrics',
 ]);
 
 const WRITE_TOOLS = new Set([
