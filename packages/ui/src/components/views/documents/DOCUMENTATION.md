@@ -16,7 +16,9 @@ mount this surface.
 
 - `DocumentPreviewView.tsx` — the surface. Fetches `/api/doc-preview/config`,
   asks for the PDF to be produced when the file needs converting, renders it in an
-  iframe, and owns the toolbar (download / reload / fullscreen).
+  iframe, and owns the toolbar (download / reload / fullscreen / artifact status).
+  Artifact collect/version status uses `ArtifactPathActions` against the same
+  path; version timeline still lives in Artifact Center.
 - `@/lib/toolHelpers` — `isDocumentPreviewable()` / `getDocumentPreviewKind()`
   decide which files belong here and how they are rendered.
 - `@/stores/useUIStore` — the `doc` context panel mode and the

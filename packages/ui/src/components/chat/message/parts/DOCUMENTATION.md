@@ -23,6 +23,9 @@ Use this doc when you ask an agent to change tool/header/description behavior.
 - `ToolPart.tsx`
   - Renders expandable tool rows (bash/edit/write/question/task + fallback).
   - Controls expandable header title/description/diff stats/timer and expanded output body.
+  - Completed `write` / `create` / `file_write` tools with a workspace path render
+    `ArtifactPathActions` as a delivery card under the row so agent-produced files
+    are visibly collectable into Artifact Center.
   - If you want to change expandable tool layout, edit here.
 
 - `taskToolModel.ts`

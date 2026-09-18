@@ -140,7 +140,6 @@ export const settingsDict = {
   'settings.page.tunnel.title': '外部トンネル',
   'settings.page.tunnel.description': 'このインスタンスをリモートトンネルで公開します。',
   'settings.page.about.title': '概要',
-  'settings.page.pigeonBrain.title': 'Memory',
   'settings.page.memorySettings.title': 'メモリ設定',
   'settings.page.memorySettings.description': 'OpenViking メモリストアの接続と準備状態。',
   'settings.page.memoryBrowse.title': 'メモリ閲覧',

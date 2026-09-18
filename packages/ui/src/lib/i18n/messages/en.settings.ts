@@ -139,7 +139,6 @@ export const settingsDict = {
   'settings.page.tunnel.title': 'External Tunnel',
   'settings.page.tunnel.description': 'Expose this instance over a remote tunnel.',
   'settings.page.about.title': 'About',
-  'settings.page.pigeonBrain.title': 'Memory',
   'settings.page.memorySettings.title': 'Memory settings',
   'settings.page.memorySettings.description': 'Connection and readiness of the OpenViking memory store.',
   'settings.page.memoryBrowse.title': 'Memory browser',

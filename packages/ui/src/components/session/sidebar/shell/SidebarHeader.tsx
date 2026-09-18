@@ -32,6 +32,8 @@ type Props = {
   onOpenMultiRun: () => void;
   canOpenMultiRun: boolean;
   onOpenArchive: () => void;
+  onOpenArtifactCenter: () => void;
+  artifactCount?: number | null;
   headerActionIconClass: string;
   headerActionButtonClass: string;
   isSessionSearchOpen: boolean;
@@ -57,6 +59,8 @@ export function SidebarHeader(props: Props): React.ReactNode {
     onOpenMultiRun,
     canOpenMultiRun,
     onOpenArchive,
+    onOpenArtifactCenter,
+    artifactCount,
     headerActionIconClass,
     headerActionButtonClass,
     isSessionSearchOpen,
@@ -153,6 +157,31 @@ export function SidebarHeader(props: Props): React.ReactNode {
                 </button>
               </TooltipTrigger>
               <TooltipContent side="bottom" sideOffset={4}><p>{t('sessions.sidebar.nav.archive')}</p></TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={onOpenArtifactCenter}
+                  className={cn(
+                    headerActionButtonClass,
+                    'relative text-muted-foreground hover:text-foreground hover:bg-transparent',
+                  )}
+                  aria-label={t('sessions.sidebar.nav.artifacts')}
+                >
+                  <Icon name="stack" className={headerActionIconClass} />
+                  {artifactCount !== null && artifactCount !== undefined && artifactCount > 0 ? (
+                    <span
+                      className="pointer-events-none absolute -right-0.5 -top-0.5 min-w-[14px] rounded-full bg-primary px-1 text-center text-[9px] font-medium leading-[14px] text-primary-foreground"
+                      aria-label={t('artifacts.sidebar.badgeAria', { count: artifactCount })}
+                    >
+                      {artifactCount > 99 ? '99+' : artifactCount}
+                    </span>
+                  ) : null}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" sideOffset={4}><p>{t('sessions.sidebar.nav.artifacts')}</p></TooltipContent>
             </Tooltip>
             {guestPages.length > 0 && <DropdownMenu>
               <DropdownMenuTrigger asChild>

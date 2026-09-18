@@ -87,6 +87,24 @@ export const listArtifacts = (directory?: string) =>
     directory ? `?directory=${encodeURIComponent(directory)}` : '',
   ).then((payload) => payload.artifacts);
 
+export const findArtifactByPath = (sourcePath: string) =>
+  requestJson<{ artifact: ArtifactRecord | null }>(
+    `?path=${encodeURIComponent(sourcePath)}`,
+  ).then((payload) => payload.artifact);
+
+export interface ArtifactCandidate {
+  path: string;
+  title: string;
+  sizeBytes: number;
+  mtimeMs: number;
+  mimeType: string;
+}
+
+export const listArtifactCandidates = (directory: string, limit = 20) =>
+  requestJson<{ candidates: ArtifactCandidate[] }>(
+    `/candidates?directory=${encodeURIComponent(directory)}&limit=${encodeURIComponent(String(limit))}`,
+  ).then((payload) => payload.candidates);
+
 export const collectArtifact = (input: {
   path: string;
   directory?: string;

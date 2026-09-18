@@ -4,6 +4,9 @@ Sidebar code is organized by the business object it owns. Shared contracts are
 kept at this root in `types.ts` and `utils.tsx`.
 
 - `shell/` owns sidebar chrome, navigation, search, confirmations, and switcher effects.
+The header surface toolbar opens Archive and Artifact Center side by side. The
+artifact button uses the shared hub count badge from `useArtifactsHubStore`;
+count refreshes when the sidebar is visible and after collect/uncollect.
 - `list/` owns global-first session collection, directory bootstrap demand,
   layout-owned synchronization, authoritative cleanup, and nearby-session prefetch.
 - `projects/` owns project zones, grouping, ordering, scroller behavior, project

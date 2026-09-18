@@ -78,6 +78,8 @@ import { isEmbeddedSessionChat } from '@/components/layout/contextPanelEmbeddedC
 import { useStreamingTextThrottle } from '../../hooks/useStreamingTextThrottle';
 import { getStreamingOutputAppend, getToolOutput } from './toolOutput';
 import { toAbsoluteFilePath } from '@/lib/path-utils';
+import { ArtifactPathActions } from '@/components/artifacts/ArtifactPathActions';
+import { isDeliverableArtifactPath } from '@/lib/artifacts/deliverable';
 import { getToolDescriptionFallback } from './toolRenderUtils';
 import { ApplyPatchFileButtons } from './ApplyPatchFileButtons';
 import { openApplyPatchFileInEditor } from './applyPatchEditorAction';
@@ -2058,6 +2060,25 @@ const ToolPartContent: React.FC<ToolPartProps> = ({
     );
     const description = guestHeader?.subtitle ?? builtInDescription;
     const displayName = guestHeader?.title ?? getToolDisplayName(normalizedPartTool || part.tool, t);
+    const isWriteLikeDeliverableTool =
+        normalizedPartTool === 'write'
+        || normalizedPartTool === 'create'
+        || normalizedPartTool === 'file_write';
+    // Product contract is completed write-like tools that produced a
+    // deliverable-looking file. Source-code writes stay out of hub chrome;
+    // isFinalized also covers error/aborted/failed and must not offer collect.
+    const isCompletedWrite = status === 'completed' && isWriteLikeDeliverableTool;
+    const artifactDeliveryPath = React.useMemo(() => {
+        if (!isCompletedWrite || !descriptionPath) return null;
+        const absolutePath = descriptionPath.startsWith('/') || /^[A-Za-z]:[\\/]/.test(descriptionPath)
+            ? descriptionPath
+            : currentDirectory
+                ? `${currentDirectory.replace(/[\\/]+$/, '')}/${descriptionPath}`
+                : descriptionPath;
+        if (!isDeliverableArtifactPath(absolutePath)) return null;
+        return absolutePath;
+    }, [currentDirectory, descriptionPath, isCompletedWrite]);
+    const showArtifactDeliveryCard = Boolean(artifactDeliveryPath && isCompletedWrite);
     
     // Tool title/description — shown inline as context. A subtitle the
     // extension declared replaces it, since both land in the same slot.
@@ -2399,6 +2420,15 @@ const ToolPartContent: React.FC<ToolPartProps> = ({
                     </div>
                 )}
             </div>
+
+            {showArtifactDeliveryCard && artifactDeliveryPath ? (
+                <ArtifactPathActions
+                    path={artifactDeliveryPath}
+                    directory={currentDirectory}
+                    variant="card"
+                    showPath
+                />
+            ) : null}
 
             {}
             {shouldRenderTaskSummary ? (

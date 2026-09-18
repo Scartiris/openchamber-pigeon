@@ -140,7 +140,6 @@ export const settingsDict = {
   'settings.page.tunnel.title': '外部隧道',
   'settings.page.tunnel.description': '通过远程隧道公开此实例。',
   'settings.page.about.title': '关于',
-  'settings.page.pigeonBrain.title': '记忆库',
   'settings.page.memorySettings.title': '记忆设置',
   'settings.page.memorySettings.description': 'OpenViking 记忆库的连接与就绪状态。',
   'settings.page.memoryBrowse.title': '记忆浏览',

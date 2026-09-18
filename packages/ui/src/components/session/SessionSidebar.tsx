@@ -9,6 +9,8 @@ import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useArtifactsHubStore } from '@/stores/useArtifactsHubStore';
+import { refreshArtifactsHub } from '@/lib/artifacts/useArtifactPath';
 import { getDeferredSafeStorage } from '@/stores/utils/safeStorage';
 import { useGitStore, useGitAllBranches, useGitRepoStatusMap } from '@/stores/useGitStore';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -131,10 +133,18 @@ const SessionSidebarComponent: React.FC<SessionSidebarProps> = ({
   const setSessionSwitcherOpen = useUIStore((state) => state.setSessionSwitcherOpen);
   const setScheduledTasksDialogOpen = useUIStore((state) => state.setScheduledTasksDialogOpen);
   const setArchivePageOpen = useUIStore((state) => state.setArchivePageOpen);
+  const setArtifactCenterOpen = useUIStore((state) => state.setArtifactCenterOpen);
   const setWorktreesPageProjectId = useUIStore((state) => state.setWorktreesPageProjectId);
+  const artifactCount = useArtifactsHubStore((state) => state.artifactCount);
   const openMultiRunLauncher = useUIStore((state) => state.openMultiRunLauncher);
   const notifyOnSubtasks = useUIStore((state) => state.notifyOnSubtasks);
 
+  React.useEffect(() => {
+    if (!isVisible) return;
+    void refreshArtifactsHub();
+  }, [isVisible]);
+
+  const debouncedSessionSearchQuery = useDebouncedValue(sessionSearchQuery, 120);
   const normalizedSessionSearchQuery = React.useMemo(
     () => sessionSearchQuery.trim().toLowerCase(),
     [sessionSearchQuery],
@@ -642,6 +652,11 @@ const SessionSidebarComponent: React.FC<SessionSidebarProps> = ({
           if (mobileVariant) setSessionSwitcherOpen(false);
           setArchivePageOpen(true);
         }}
+        onOpenArtifactCenter={() => {
+          if (mobileVariant) setSessionSwitcherOpen(false);
+          setArtifactCenterOpen(true);
+        }}
+        artifactCount={artifactCount}
         headerActionIconClass={headerActionIconClass}
         headerActionButtonClass={headerActionButtonClass}
         isSessionSearchOpen={isSessionSearchOpen}
