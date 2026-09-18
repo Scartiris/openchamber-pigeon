@@ -4,6 +4,7 @@ import os from 'os';
 import { getNpmInfo as defaultGetNpmInfo } from './npm-registry.js';
 import { isExactSemver as defaultIsExactSemver, isPathSpec as defaultIsPathSpec, parseNpmSpec as defaultParseNpmSpec, parsePathSpec as defaultParsePathSpec } from './plugin-spec.js';
 import { buildDeferredRestartResponse } from './config-mutation-response.js';
+import { serverMessage } from '../server-html/page-copy.js';
 
 const ENTRY_EXISTS_CODES = new Set(['ENTRY_EXISTS', 'EEXIST']);
 const FILE_EXISTS_CODES = new Set(['FILE_EXISTS', 'EEXIST']);
@@ -42,12 +43,18 @@ export const registerPluginRoutes = (app, dependencies) => {
     return directory || null;
   };
 
-  const completePluginMutation = async (res, operation, _noun, applyChange) => {
+  const completePluginMutation = async (req, res, operation, _noun, applyChange) => {
     applyChange();
-
-    const pastTense = operation.replace(/ion$/, 'ed').replace(/update$/, 'updated');
+    const messageKey = {
+      'entry creation': 'server.opencode.plugin.entryCreated',
+      'entry update': 'server.opencode.plugin.entryUpdated',
+      'entry deletion': 'server.opencode.plugin.entryDeleted',
+      'file creation': 'server.opencode.plugin.fileCreated',
+      'file update': 'server.opencode.plugin.fileUpdated',
+      'file deletion': 'server.opencode.plugin.fileDeleted',
+    }[operation] ?? 'server.opencode.plugin.entryUpdated';
     return res.json(buildDeferredRestartResponse(
-      `Plugin ${pastTense}. Restart OpenCode to apply.`,
+      serverMessage(req, messageKey),
     ));
   };
 
@@ -234,7 +241,7 @@ export const registerPluginRoutes = (app, dependencies) => {
       const directory = await resolveDirectory(req, res);
       if (directory === null && res.headersSent) return;
 
-      await completePluginMutation(res, 'entry creation', 'entry', () => {
+      await completePluginMutation(req, res, 'entry creation', 'entry', () => {
         createPluginEntry({
           spec: req.body?.spec,
           options: req.body?.options,
@@ -252,7 +259,7 @@ export const registerPluginRoutes = (app, dependencies) => {
       if (directory === null && res.headersSent) return;
       validateEntryId(req.params.id);
 
-      await completePluginMutation(res, 'entry update', 'entry', () => {
+      await completePluginMutation(req, res, 'entry update', 'entry', () => {
         updatePluginEntry(req.params.id, {
           spec: req.body?.spec,
           options: req.body?.options,
@@ -269,7 +276,7 @@ export const registerPluginRoutes = (app, dependencies) => {
       if (directory === null && res.headersSent) return;
       validateEntryId(req.params.id);
 
-      await completePluginMutation(res, 'entry deletion', 'entry', () => {
+      await completePluginMutation(req, res, 'entry deletion', 'entry', () => {
         deletePluginEntry(req.params.id, directory);
       });
     } catch (error) {
@@ -299,7 +306,7 @@ export const registerPluginRoutes = (app, dependencies) => {
       if (directory === null && res.headersSent) return;
       const id = encodePluginId('file', `${req.body?.scope || 'user'}:${req.body?.fileName || ''}`);
 
-      await completePluginMutation(res, 'file creation', 'file', () => {
+      await completePluginMutation(req, res, 'file creation', 'file', () => {
         validateFileId(id);
         writePluginDirFile({
           fileName: req.body?.fileName,
@@ -323,7 +330,7 @@ export const registerPluginRoutes = (app, dependencies) => {
         return res.status(404).json({ error: 'Plugin file not found' });
       }
 
-      await completePluginMutation(res, 'file update', 'file', () => {
+      await completePluginMutation(req, res, 'file update', 'file', () => {
         writePluginDirFile({
           fileName: existing.fileName,
           content: req.body?.content,
@@ -341,7 +348,7 @@ export const registerPluginRoutes = (app, dependencies) => {
       if (directory === null && res.headersSent) return;
       validateFileId(req.params.id);
 
-      await completePluginMutation(res, 'file deletion', 'file', () => {
+      await completePluginMutation(req, res, 'file deletion', 'file', () => {
         deletePluginDirFile(req.params.id, directory);
       });
     } catch (error) {

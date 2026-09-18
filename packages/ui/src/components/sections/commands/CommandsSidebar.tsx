@@ -213,7 +213,7 @@ export const CommandsSidebar: React.FC<CommandsSidebarProps> = ({ onItemSelect }
       // Delete old command
       const deleteSuccess = await deleteCommand(renameDialogCommand.name, settingsDirectory);
       if (deleteSuccess) {
-        toast.success(`Command renamed to "${sanitizedName}"`);
+        toast.success(t('settings.commands.sidebar.toast.commandRenamed', { name: sanitizedName }));
         setSelectedCommand(sanitizedName);
       } else {
         toast.error(t('settings.commands.sidebar.toast.removeOldAfterRenameFailed'));

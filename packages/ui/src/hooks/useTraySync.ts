@@ -594,7 +594,9 @@ export const useTraySync = (): void => {
       switch (action.type) {
         case 'respond-permission':
           void respondToPermission(action.sessionId, action.id, action.response).catch(() => {
-            toast.error('无法响应权限请求');
+            void import('@/lib/i18n/store').then(({ useI18nStore, formatMessage }) => {
+              toast.error(formatMessage(useI18nStore.getState().dictionary, 'tray.respondPermissionFailed'));
+            }).catch(() => undefined);
           });
           break;
       }

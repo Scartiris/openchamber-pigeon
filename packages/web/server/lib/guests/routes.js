@@ -26,6 +26,12 @@ import {
   toPublicGuest,
 } from './catalog.js';
 import { runGuestFileOperation } from './files.js';
+import {
+  formatServerPageCopy,
+  normalizeServerPageLocale,
+  serverPageCopy,
+  serverPageLang,
+} from '../server-html/page-copy.js';
 import { injectGuestAssetTokens, parseGuestUrlToken } from './html-tokens.js';
 import { injectGuestDocumentStyles } from './html-styles.js';
 import { installGuest, installGuestFromZipBuffer, parseInstallRequest, uninstallGuest } from './install.js';
@@ -145,12 +151,12 @@ const escapeHtml = (value) => String(value)
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#39;');
 
-const renderOauthCallbackPage = ({ title, message }) => `<!doctype html>
-<html lang="en">
+const renderOauthCallbackPage = ({ title, message, copy }) => `<!doctype html>
+<html lang="${escapeHtml(copy.lang)}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(title)} — OpenChamber</title>
+<title>${escapeHtml(title)} ${escapeHtml(copy.titleSuffix)}</title>
 <style>
   :root { color-scheme: light dark; }
   body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
@@ -452,13 +458,24 @@ export const registerGuestRoutes = (app, {
   });
 
   app.get('/api/guests/:id/oauth/callback', async (req, res) => {
-    const finish = (status, title, message) => {
-      res.status(status).type('html').send(renderOauthCallbackPage({ title, message }));
+    const locale = normalizeServerPageLocale(req?.headers?.['accept-language']);
+    const copy = serverPageCopy(req);
+    const htmlLang = serverPageLang(req);
+    const finish = (status, titleKey, messageOrKey) => {
+      const title = formatServerPageCopy(copy, titleKey);
+      const message = String(messageOrKey ?? '').startsWith('server.')
+        ? formatServerPageCopy(copy, String(messageOrKey))
+        : String(messageOrKey || '');
+      res.status(status).type('html').send(renderOauthCallbackPage({
+        title,
+        message,
+        copy: { ...copy, lang: htmlLang },
+      }));
     };
     try {
       const guest = await loadGuest(req.params.id);
       if (!guest?.integration) {
-        return finish(404, 'Unknown extension', 'That extension is not installed.');
+        return finish(404, 'server.oauth.guests.title.unknownExtension', 'server.oauth.guests.message.notInstalled');
       }
       await consumeGuestAuthorization({
         guest,
@@ -468,13 +485,15 @@ export const registerGuestRoutes = (app, {
         error: queryValue(req, 'error'),
         errorDescription: queryValue(req, 'error_description'),
       });
-      finish(200, 'Connected', 'You can close this tab and return to OpenChamber.');
+      finish(200, 'server.oauth.guests.title.connected', 'server.oauth.message.closeTab');
     } catch (error) {
       if (error instanceof GuestOAuthError) {
-        return finish(400, 'Could not connect', error.message);
+        const codeKey = error.code ? `server.oauth.guests.code.${error.code}` : null;
+        const detail = codeKey && copy[codeKey] ? codeKey : error.message;
+        return finish(400, 'server.oauth.guests.title.couldNotConnect', detail);
       }
       console.error('Failed to finish guest oauth:', error);
-      finish(500, 'Could not connect', 'The authorization callback failed.');
+      finish(500, 'server.oauth.guests.title.couldNotConnect', 'server.oauth.guests.message.callbackFailed');
     }
   });
 

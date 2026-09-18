@@ -485,7 +485,9 @@ const FileRow: React.FC<FileRowProps> = ({
                 useUIStore.getState().setArtifactCenterOpen(true);
               })
               .catch((error) => {
-                toast.error(error instanceof Error ? error.message : String(error));
+                toast.error(t('artifacts.toast.collectFailed'), {
+                  description: error instanceof Error ? error.message : undefined,
+                });
               });
           }}
         >
@@ -2018,7 +2020,11 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full', visible = t
         }
         setFileContent('');
         setDraftContent('');
-        setFileError(error instanceof Error ? error.message : t('filesView.error.readFileFailed'));
+        setFileError(
+          error instanceof Error && error.message
+            ? `${t('filesView.error.readFileFailed')}: ${error.message}`
+            : t('filesView.error.readFileFailed'),
+        );
         lastLoadedFileStatRef.current = null;
       })
       .finally(() => {
@@ -2727,7 +2733,9 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full', visible = t
         setDiagramSaved(true);
         setTimeout(() => setDiagramSaved(false), 1500);
       }).catch((error) => {
-        toast.error(error instanceof Error ? error.message : t('filesView.toast.saveFailed'));
+        toast.error(t('filesView.toast.saveFailed'), {
+          description: error instanceof Error ? error.message : undefined,
+        });
       });
     }, AUTO_SAVE_DELAY);
   }, [autoSaveEnabled, drawioViewMode, files.writeFile, saveDiagramXml, selectedFile?.path, t]);
@@ -3196,7 +3204,11 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full', visible = t
         .catch((error) => {
           if (!cancelled) {
             setDesktopImageSrc('');
-            setFileError(error instanceof Error ? error.message : t('filesView.error.readFileFailed'));
+            setFileError(
+              error instanceof Error && error.message
+                ? `${t('filesView.error.readFileFailed')}: ${error.message}`
+                : t('filesView.error.readFileFailed'),
+            );
             setLoadedFilePath(null);
           }
         })

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { formatMessage, useI18nStore } from '@/lib/i18n';
 import type { StoreApi, UseBoundStore } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import type { Agent, PermissionConfig } from "@opencode-ai/sdk/v2";
@@ -487,7 +488,7 @@ export const useAgentsStore = create<AgentsStore>()(
               return { ok: true, restartDeferred: true };
             }
 
-            startConfigUpdate("Creating agent configuration…");
+            startConfigUpdate(formatMessage(useI18nStore.getState().dictionary, 'configUpdate.creatingAgent'));
             const needsReload = payload?.requiresReload ?? true;
             if (needsReload) {
               await refreshAfterOpenCodeRestart({
@@ -557,7 +558,7 @@ export const useAgentsStore = create<AgentsStore>()(
               return { ok: true, restartDeferred: true };
             }
 
-            startConfigUpdate("Updating agent configuration…");
+            startConfigUpdate(formatMessage(useI18nStore.getState().dictionary, 'configUpdate.updatingAgent'));
             const needsReload = payload?.requiresReload ?? true;
             if (needsReload) {
               await refreshAfterOpenCodeRestart({
@@ -623,7 +624,7 @@ export const useAgentsStore = create<AgentsStore>()(
               return { ok: true, restartDeferred: true };
             }
 
-            startConfigUpdate("Deleting agent configuration…");
+            startConfigUpdate(formatMessage(useI18nStore.getState().dictionary, 'configUpdate.deletingAgent'));
             const needsReload = payload?.requiresReload ?? true;
             if (needsReload) {
               await refreshAfterOpenCodeRestart({
@@ -837,7 +838,7 @@ export async function reloadOpenCodeConfiguration(options?: {
   scopes?: ConfigChangeScope[];
   mode?: ConfigRefreshMode;
 }) {
-  startConfigUpdate(options?.message || "Reloading OpenCode configuration…");
+  startConfigUpdate(options?.message || formatMessage(useI18nStore.getState().dictionary, 'configUpdate.reloadingOpenCode'));
 
   try {
 

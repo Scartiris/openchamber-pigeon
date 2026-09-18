@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { formatMessage, useI18nStore } from '@/lib/i18n';
 import { devtools, persist } from 'zustand/middleware';
 import { createDeferredSafeJSONStorage } from './utils/safeStorage';
 import { startConfigUpdate } from '@/lib/configUpdate';
@@ -275,7 +276,7 @@ export const useMcpConfigStore = create<McpConfigStore>()(
             }
 
             if (payload?.requiresReload) {
-              startConfigUpdate('Creating MCP server configuration…');
+              startConfigUpdate(formatMessage(useI18nStore.getState().dictionary, 'configUpdate.creatingMcp'));
               await refreshAfterOpenCodeRestart({
                 message: payload.message,
                 delayMs: payload.reloadDelayMs ?? CLIENT_RELOAD_DELAY_MS,
@@ -347,7 +348,7 @@ export const useMcpConfigStore = create<McpConfigStore>()(
             }
 
             if (payload?.requiresReload) {
-              startConfigUpdate('Updating MCP server configuration…');
+              startConfigUpdate(formatMessage(useI18nStore.getState().dictionary, 'configUpdate.updatingMcp'));
               await refreshAfterOpenCodeRestart({
                 message: payload.message,
                 delayMs: payload.reloadDelayMs ?? CLIENT_RELOAD_DELAY_MS,
@@ -418,7 +419,7 @@ export const useMcpConfigStore = create<McpConfigStore>()(
             }
 
             if (payload?.requiresReload) {
-              startConfigUpdate('Deleting MCP server configuration…');
+              startConfigUpdate(formatMessage(useI18nStore.getState().dictionary, 'configUpdate.deletingMcp'));
               await refreshAfterOpenCodeRestart({
                 message: payload.message,
                 delayMs: payload.reloadDelayMs ?? CLIENT_RELOAD_DELAY_MS,

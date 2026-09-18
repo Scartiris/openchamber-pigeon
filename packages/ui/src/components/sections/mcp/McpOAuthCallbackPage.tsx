@@ -5,6 +5,7 @@ import { parseMcpOAuthCallbackContext, parseMcpOAuthCallbackStateKey } from '@/c
 import { MCP_OAUTH_ORIGIN_DESKTOP } from '@/components/sections/mcp/startMcpAuthorization';
 import { runtimeFetch } from '@/lib/runtime-fetch';
 import { SETTINGS_PAGE_TITLE_CLASS } from '@/components/sections/shared/SettingsSection';
+import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 /**
@@ -35,24 +36,35 @@ const parseQueryParam = (params: URLSearchParams, key: string): string | null =>
   return trimmed || null;
 };
 
-const normalizeMcpAuthErrorMessage = (error: unknown, fallback: string): string => {
-  const message = error instanceof Error ? error.message : fallback;
-  if (/oauth state required/i.test(message)) {
-    return 'Authorization session expired or was cleared during reload. 返回 OpenChamber and click Authorize again.';
-  }
-  return message;
-};
+type McpOauthMessageKey =
+  | 'settings.mcp.oauth.callback.working'
+  | 'settings.mcp.oauth.callback.success'
+  | 'settings.mcp.oauth.callback.browserUnavailable'
+  | 'settings.mcp.oauth.callback.sessionExpired'
+  | 'settings.mcp.oauth.callback.missingCode'
+  | 'settings.mcp.oauth.callback.sessionUnavailable'
+  | 'settings.mcp.oauth.callback.completeFailed';
 
 export const McpOAuthCallbackPage: React.FC = () => {
   const completeAuth = useMcpStore((state) => state.completeAuth);
+  const { t } = useI18n();
   const [status, setStatus] = React.useState<'working' | 'success' | 'error'>('working');
   const [returnToDesktop, setReturnToDesktop] = React.useState(false);
-  const [message, setMessage] = React.useState('Completing MCP authorization...');
+  const [messageKey, setMessageKey] = React.useState<McpOauthMessageKey | null>('settings.mcp.oauth.callback.working');
+  const [rawMessage, setRawMessage] = React.useState<string | null>(null);
+
+  const title =
+    status === 'working'
+      ? t('settings.mcp.oauth.callback.titles.working')
+      : status === 'success'
+        ? t('settings.mcp.oauth.callback.titles.success')
+        : t('settings.mcp.oauth.callback.titles.error');
+  const message = rawMessage ?? (messageKey ? t(messageKey) : t('settings.mcp.oauth.callback.completeFailed'));
 
   React.useEffect(() => {
     if (typeof window === 'undefined') {
       setStatus('error');
-      setMessage('Browser context unavailable.');
+      setMessageKey('settings.mcp.oauth.callback.browserUnavailable');
       return;
     }
 
@@ -68,14 +80,15 @@ export const McpOAuthCallbackPage: React.FC = () => {
         void runtimeFetch(`/api/mcp/auth/pending?state=${encodeURIComponent(callbackStateKey)}`, { method: 'DELETE' }).catch(() => undefined);
       }
       setStatus('error');
-      setMessage(errorDescription ?? error);
+      setRawMessage(errorDescription ?? error);
       return;
     }
 
     void (async () => {
       try {
         if (!code) {
-          throw new Error('Missing OAuth authorization code. Start authorization again from MCP Settings or paste the returned code into OpenChamber manually.');
+          setMessageKey('settings.mcp.oauth.callback.missingCode');
+          throw new Error('missing-code');
         }
 
         let pendingContext = callbackContext;
@@ -103,7 +116,8 @@ export const McpOAuthCallbackPage: React.FC = () => {
         }
 
         if (!pendingContext?.name) {
-          throw new Error('Authorization session details were not available. Start authorization again from MCP Settings or paste the returned code into OpenChamber manually.');
+          setMessageKey('settings.mcp.oauth.callback.sessionUnavailable');
+          throw new Error('session-unavailable');
         }
 
         await completeAuth(pendingContext.name, code, pendingContext.directory);
@@ -111,19 +125,29 @@ export const McpOAuthCallbackPage: React.FC = () => {
           await runtimeFetch(`/api/mcp/auth/pending?state=${encodeURIComponent(callbackStateKey)}`, { method: 'DELETE' }).catch(() => undefined);
         }
         setStatus('success');
+        setMessageKey('settings.mcp.oauth.callback.success');
+        setRawMessage(null);
         // Attempted straight away: the user's attention is in a browser tab,
         // and the app they were working in is behind it. The button below
         // stays as the fallback for a browser that blocks the protocol jump.
         if (startedFromDesktop) {
           returnToApp(true);
         }
-        setMessage('Authorization completed. You can close this tab and return to OpenChamber.');
       } catch (authError) {
         if (callbackStateKey) {
           await runtimeFetch(`/api/mcp/auth/pending?state=${encodeURIComponent(callbackStateKey)}`, { method: 'DELETE' }).catch(() => undefined);
         }
         setStatus('error');
-        setMessage(normalizeMcpAuthErrorMessage(authError, 'Failed to complete MCP authorization.'));
+        const raw = authError instanceof Error ? authError.message : '';
+        if (raw === 'missing-code' || raw === 'session-unavailable') {
+          setRawMessage(null);
+        } else if (/oauth state required/i.test(raw)) {
+          setMessageKey('settings.mcp.oauth.callback.sessionExpired');
+          setRawMessage(null);
+        } else {
+          setMessageKey('settings.mcp.oauth.callback.completeFailed');
+          setRawMessage(raw || null);
+        }
       }
     })();
   }, [completeAuth]);
@@ -132,9 +156,7 @@ export const McpOAuthCallbackPage: React.FC = () => {
     <div className="flex min-h-screen items-center justify-center bg-background px-6 py-12 text-foreground">
       <div className="w-full max-w-xl rounded-xl border border-[var(--interactive-border)] bg-[var(--surface-elevated)] p-8 shadow-sm">
         <div className="space-y-3 text-center">
-          <h1 className={SETTINGS_PAGE_TITLE_CLASS}>
-            {status === 'working' ? 'Completing Authorization' : status === 'success' ? 'Authorization Complete' : 'Authorization Failed'}
-          </h1>
+          <h1 className={SETTINGS_PAGE_TITLE_CLASS}>{title}</h1>
           <p
             className={cn(
               'typography-body',
@@ -155,7 +177,7 @@ export const McpOAuthCallbackPage: React.FC = () => {
               type="button"
               onClick={() => returnToApp(returnToDesktop)}
             >
-              返回 OpenChamber
+              {t('settings.mcp.oauth.callback.return')}
             </Button>
           </div>
         )}

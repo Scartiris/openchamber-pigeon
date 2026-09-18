@@ -43,10 +43,9 @@ export const OpenCodeReloadFooterAction: React.FC<OpenCodeReloadFooterActionProp
         toast.success(t('settings.view.pendingRestart.applied'));
       }
     } catch (error) {
-      const message = error instanceof Error && error.message
-        ? error.message
-        : t('settings.view.pendingRestart.applyFailed');
-      toast.error(message);
+      toast.error(t('settings.view.pendingRestart.applyFailed'), {
+        description: error instanceof Error && error.message ? error.message : undefined,
+      });
     }
   }, [t]);
 

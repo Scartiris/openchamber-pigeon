@@ -24,7 +24,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
-import { useI18n } from '@/lib/i18n';
+import { useI18n, useI18nStore } from '@/lib/i18n';
+import { localizeServerMessage } from '@/lib/i18n/serverMessage';
 import { SETTINGS_PANEL_TITLE_CLASS } from '@/components/sections/shared/SettingsSection';
 
 interface McpSidebarProps {
@@ -155,12 +156,16 @@ export const McpSidebar: React.FC<McpSidebarProps> = ({ onItemSelect }) => {
     setIsDeleting(true);
     const result = await deleteMcp(deleteTarget.name, settingsDirectory);
     if (result.ok) {
+      const localized = localizeServerMessage(useI18nStore.getState().dictionary, result.message);
       if (result.reloadFailed) {
-        toast.warning(result.message || `MCP server "${deleteTarget.name}" deleted, but OpenCode reload failed`, {
-          description: result.warning || t('settings.mcp.sidebar.toast.refreshListIfStale'),
-        });
+        toast.warning(
+          localized || t('settings.mcp.sidebar.toast.serverDeleted', { name: deleteTarget.name }),
+          { description: t('settings.mcp.sidebar.toast.refreshListIfStale') },
+        );
       } else {
-        toast.success(result.message || t('settings.mcp.sidebar.toast.serverDeleted', { name: deleteTarget.name }));
+        toast.success(
+          localized || t('settings.mcp.sidebar.toast.serverDeleted', { name: deleteTarget.name }),
+        );
       }
     } else {
       toast.error(t('settings.mcp.sidebar.toast.deleteFailed'));

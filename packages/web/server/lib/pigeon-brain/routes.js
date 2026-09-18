@@ -1,4 +1,5 @@
 import { createProxyMiddleware } from 'http-proxy-middleware';
+import { serverMessage } from '../server-html/page-copy.js';
 
 /**
  * pigeon-brain 的同源反代。
@@ -92,10 +93,10 @@ export function registerPigeonBrainRoutes(app, options = {}) {
     // 返回工作台自己的 index.html（HTTP 200）—— 于是 iframe 会**把工作台嵌进它自己**，
     // 表现为一个诡异的递归空白框。前端虽然会先查 status 不渲染 iframe，
     // 但这层不该指望调用方自觉。
-    app.use(prefix, (_req, res) => {
+    app.use(prefix, (req, res) => {
       res.status(404).json({
         error: 'pigeon_brain_not_configured',
-        message: '这台工作台没有配置 pigeon-brain（环境变量 PIGEON_BRAIN_URL 为空）。',
+        message: serverMessage(req, 'server.pigeonBrain.notConfigured'),
       });
     });
     return { enabled: false, upstream: null };
@@ -126,7 +127,7 @@ export function registerPigeonBrainRoutes(app, options = {}) {
           res.end(
             JSON.stringify({
               error: 'pigeon_brain_unreachable',
-              message: `连不上 pigeon-brain（${brainUrl}）。容器在跑吗？`,
+              message: serverMessage(req, 'server.pigeonBrain.unreachable', { url: brainUrl }),
             }),
           );
         }

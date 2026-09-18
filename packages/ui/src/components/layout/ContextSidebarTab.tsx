@@ -583,7 +583,7 @@ export const ContextPanelContent: React.FC = () => {
                         <span
                           className="min-w-0 truncate text-muted-foreground"
                         >
-                          <span className="typography-ui-label text-foreground">用户：</span>{' '}
+                          <span className="typography-ui-label text-foreground">{t('contextSidebar.message.userLabel')}</span>{' '}
                           {userSnippet}
                         </span>
                       ) : (

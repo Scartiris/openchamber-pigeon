@@ -118,14 +118,20 @@ export const useMenuActions = (
       .then(() => {
         const { available, error } = useUpdateStore.getState();
         if (error) {
-          toast.error('无法检查更新', {
-            description: error,
+          void import('@/lib/i18n/store').then(({ useI18nStore, formatMessage }) => {
+            toast.error(formatMessage(useI18nStore.getState().dictionary, 'sessions.sidebar.updateCheck.errorTitle'), {
+              description: error,
+            });
+          }).catch(() => {
+            toast.error('Update check failed', { description: error });
           });
           return;
         }
 
         if (!available) {
-          toast.success('已是最新版本');
+          void import('@/lib/i18n/store').then(({ useI18nStore, formatMessage }) => {
+            toast.success(formatMessage(useI18nStore.getState().dictionary, 'sessions.sidebar.updateCheck.latestVersion'));
+          }).catch(() => undefined);
         }
       })
       .finally(() => {
@@ -324,7 +330,11 @@ export const useMenuActions = (
 
         case 'download-logs': {
           void showOpenCodeStatus().catch(() => {
-            toast.error('无法获取 OpenCode 状态');
+            void import('@/lib/i18n/store').then(({ useI18nStore, formatMessage }) => {
+              toast.error(formatMessage(useI18nStore.getState().dictionary, 'settings.menu.opencodeStatusFailed'));
+            }).catch(() => {
+              toast.error('OpenCode');
+            });
           });
           break;
         }

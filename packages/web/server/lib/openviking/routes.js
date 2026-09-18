@@ -1,4 +1,5 @@
 import { createProxyMiddleware } from 'http-proxy-middleware';
+import { serverMessage } from '../server-html/page-copy.js';
 
 /**
  * OpenViking 的同源反代。
@@ -116,10 +117,10 @@ export function registerOpenVikingRoutes(app, options = {}) {
     //
     // 与 pigeon-brain 同一个坑：不堵的话 `/api/openviking/` 会命中静态资源的
     // 兜底路由、返回工作台自己的 index.html（HTTP 200）。
-    app.use(prefix, (_req, res) => {
+    app.use(prefix, (req, res) => {
       res.status(404).json({
         error: 'openviking_not_configured',
-        message: '这台工作台没有配置 OpenViking（环境变量 OPENVIKING_URL / OPENVIKING_API_KEY 未配全）。',
+        message: serverMessage(req, 'server.openviking.notConfigured'),
       });
     });
     return { enabled: false, upstream: null };
@@ -151,7 +152,7 @@ export function registerOpenVikingRoutes(app, options = {}) {
           res.end(
             JSON.stringify({
               error: 'openviking_unreachable',
-              message: `连不上 OpenViking（${upstream}）。容器在跑吗？`,
+              message: serverMessage(req, 'server.openviking.unreachable', { upstream }),
             }),
           );
         }

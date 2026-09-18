@@ -1102,7 +1102,7 @@ const TaskToolSummary: React.FC<{
         return (
             <div className="relative pr-2 pb-2 pt-2 space-y-2 pl-[1.4375rem]">
                 <div className="typography-meta text-muted-foreground/70">
-                    {isActive ? 'Waiting for subagent activity...' : 'No subagent session id on task metadata.'}
+                    {isActive ? t('chat.toolPart.subagent.waiting') : t('chat.toolPart.subagent.missingSessionId')}
                 </div>
             </div>
         );

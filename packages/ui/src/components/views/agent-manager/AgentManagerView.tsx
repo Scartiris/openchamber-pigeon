@@ -9,6 +9,7 @@ import { useMultiRunStore } from '@/stores/useMultiRunStore';
 import { useConfigStore } from '@/stores/useConfigStore';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
+import { useI18n } from '@/lib/i18n';
 import type { CreateMultiRunParams } from '@/types/multirun';
 
 interface AgentManagerViewProps {
@@ -16,6 +17,7 @@ interface AgentManagerViewProps {
 }
 
 export const AgentManagerView: React.FC<AgentManagerViewProps> = ({ className }) => {
+  const { t } = useI18n();
   const { runtime } = useRuntimeAPIs();
   const isVSCodeRuntime = runtime.isVSCode;
   const [connectionStatus, setConnectionStatus] = React.useState<'connecting' | 'connected' | 'error' | 'disconnected'>(
@@ -96,20 +98,20 @@ export const AgentManagerView: React.FC<AgentManagerViewProps> = ({ className })
 
   const handleCreateGroup = React.useCallback(async (params: CreateMultiRunParams) => {
     const totalModels = params.groups.reduce((sum, g) => sum + g.models.length, 0);
-    toast.info(`Creating agent group "${params.name}" with ${totalModels} run(s)...`);
+    toast.info(t('agentManager.view.toast.creatingGroup', { name: params.name, count: totalModels }));
 
     const result = await createMultiRun(params);
 
     if (result) {
-      toast.success(`Agent group "${params.name}" created with ${result.sessionIds.length} session(s)`);
+      toast.success(t('agentManager.view.toast.groupCreated', { name: params.name, count: result.sessionIds.length }));
       // Refresh groups — new worktrees + sessions now exist
       await loadGroups();
       selectGroup(result.groupSlug);
     } else {
       const error = useMultiRunStore.getState().error;
-      toast.error(error || 'Failed to create agent group');
+      toast.error(error || t('agentManager.empty.toast.failedToCreateGroup'));
     }
-  }, [createMultiRun, loadGroups, selectGroup]);
+  }, [createMultiRun, loadGroups, selectGroup, t]);
 
   return (
     <div className={cn('flex h-full w-full bg-background', className)}>

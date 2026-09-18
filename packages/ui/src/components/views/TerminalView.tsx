@@ -24,7 +24,8 @@ import { useDeviceInfo } from '@/lib/device';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { terminalSnapshotSize } from '@/lib/terminalApi';
 import { extractTerminalPreviewUrl, isTerminalPreviewUrlAvailable } from '@/lib/terminalPreview';
-import { useI18n } from '@/lib/i18n';
+import { useI18n, useI18nStore } from '@/lib/i18n';
+import { localizeServerMessage } from '@/lib/i18n/serverMessage';
 import { PROJECT_ACTION_ICONS } from '@/lib/projectActions';
 import { useInlineCommentDraftStore } from '@/stores/useInlineCommentDraftStore';
 import { applyTerminalModifier, terminalControlCharacter, terminalSequenceForKey, type TerminalModifier as Modifier, type TerminalQuickKey as MobileKey } from '@/lib/terminalInput';
@@ -459,7 +460,8 @@ export const TerminalView: React.FC<TerminalViewProps> = ({ visible, directory }
                             }
                         }
                         const superseded = error.code === 'SUPERSEDED';
-                        setConnectionError(superseded ? null : t('terminalView.error.connectionFailed', { message: error.message }));
+                        const localizedConnection = localizeServerMessage(useI18nStore.getState().dictionary, error.message) ?? error.message;
+                        setConnectionError(superseded ? null : t('terminalView.error.connectionFailed', { message: localizedConnection }));
                         setIsFatalError(!superseded);
                         setConnecting(directory, tabId, false);
                         setTabLifecycle(directory, tabId, 'exited');
@@ -547,9 +549,11 @@ export const TerminalView: React.FC<TerminalViewProps> = ({ visible, directory }
             // leave a tab spinning that no longer owns the request.
             if (directoryRef.current !== directory || activeTabIdRef.current !== tabId) return;
             setConnectionError(
-                error instanceof Error
-                    ? error.message
-                    : t('terminalView.error.startSessionFailed')
+                t('terminalView.error.startSessionFailed') + (
+                    error instanceof Error && error.message
+                        ? `: ${error.message}`
+                        : ''
+                )
             );
             setIsFatalError(true);
             setIsReconnectPending(false);
@@ -725,7 +729,11 @@ export const TerminalView: React.FC<TerminalViewProps> = ({ visible, directory }
                 || activeTabIdRef.current !== tabId
             ) return;
             setConnectionError(
-                error instanceof Error ? error.message : t('terminalView.error.restartFailed')
+                t('terminalView.error.restartFailed') + (
+                    error instanceof Error && error.message
+                        ? `: ${error.message}`
+                        : ''
+                )
             );
             setIsFatalError(false);
             setIsReconnectPending(false);
@@ -806,7 +814,13 @@ export const TerminalView: React.FC<TerminalViewProps> = ({ visible, directory }
             void (async () => {
                 if (sessionId) await terminal.close(sessionId);
                 closeTab(terminalDirectory, tabId);
-            })().catch((error) => setConnectionError(error instanceof Error ? error.message : t('terminalView.error.sessionEnded')));
+            })().catch((error) => setConnectionError(
+                t('terminalView.error.sessionEnded') + (
+                    error instanceof Error && error.message
+                        ? `: ${error.message}`
+                        : ''
+                ),
+            ));
         },
         [activeTabId, closeTab, disconnectStream, terminalDirectory, t, terminal]
     );
@@ -831,7 +845,11 @@ export const TerminalView: React.FC<TerminalViewProps> = ({ visible, directory }
             void terminal.sendInput(terminalId, payload).catch((error) => {
                 if (!isReconnectPending) {
                     setConnectionError(
-                        error instanceof Error ? error.message : t('terminalView.error.sendInputFailed')
+                        t('terminalView.error.sendInputFailed') + (
+                            error instanceof Error && error.message
+                                ? `: ${error.message}`
+                                : ''
+                        )
                     );
                 }
             });

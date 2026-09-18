@@ -15,7 +15,8 @@ import { toast } from '@/components/ui';
 import { Icon } from '@/components/icon/Icon';
 import { SortableTabsStrip, type SortableTabsStripItem } from '@/components/ui/sortable-tabs-strip';
 import { cn } from '@/lib/utils';
-import { useI18n } from '@/lib/i18n';
+import { useI18n, useI18nStore } from '@/lib/i18n';
+import { localizeServerMessage } from '@/lib/i18n/serverMessage';
 import { usePluginsStore, type PluginScope } from '@/stores/usePluginsStore';
 
 type TabKey = 'npm' | 'path' | 'file';
@@ -112,14 +113,16 @@ export const AddPluginDialog: React.FC<AddPluginDialogProps> = ({
         if (result.restartDeferred) {
           toast.success(t('settings.view.pendingRestart.saved'));
         } else {
-          toast.success(result.message || t('settings.plugins.toast.created'));
+          const localized = localizeServerMessage(useI18nStore.getState().dictionary, result.message);
+          toast.success(localized || t('settings.plugins.toast.created'));
         }
         if (result.reloadFailed) {
           toast.warning(t('settings.plugins.toast.reloadFailed'));
         }
         onOpenChange(false);
       } else {
-        toast.error(result.message || t('settings.plugins.sidebar.toast.deleteFailed'));
+        const localized = localizeServerMessage(useI18nStore.getState().dictionary, result.message);
+        toast.error(localized || t('settings.plugins.sidebar.toast.deleteFailed'));
       }
     } finally {
       setSubmitting(false);

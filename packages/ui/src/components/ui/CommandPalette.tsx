@@ -40,7 +40,7 @@ import { createWorktreeSession } from '@/lib/worktreeSessionCreator';
 import { formatShortcutForDisplay, getEffectiveShortcutCombo, shortcutRegistry } from '@/lib/shortcuts';
 import { showOpenCodeStatus } from '@/lib/openCodeStatus';
 import { canUseElectronDesktopIPC, invokeDesktop, isDesktopShell, isVSCodeRuntime, isWebRuntime } from '@/lib/desktop';
-import { SETTINGS_PAGE_METADATA, type SettingsRuntimeContext } from '@/lib/settings/metadata';
+import { SETTINGS_PAGE_METADATA, settingsPageTitleKey, type SettingsRuntimeContext } from '@/lib/settings/metadata';
 
 const EMPTY_PINNED_SESSION_IDS = new Set<string>();
 import { getSettingsNavIcon } from '@/lib/settings/metadata';
@@ -427,20 +427,21 @@ export const CommandPalette: React.FC = () => {
       .map((page) => {
         const iconName = getSettingsNavIcon(page.slug) ?? 'settings-3';
         const keywords = (page.keywords ?? []).join(' ');
+        const localizedTitle = t(settingsPageTitleKey(page.slug));
         return {
           id: `settings:${page.slug}`,
-          title: page.title,
+          title: localizedTitle,
           icon: page.slug === 'mcp'
             ? <McpIcon className="mr-2 h-4 w-4" />
             : <Icon name={iconName} className="mr-2 h-4 w-4" />,
-          searchText: `${page.title} ${page.group} ${keywords}`,
+          searchText: `${localizedTitle} ${page.title} ${page.group} ${keywords}`,
           onSelect: run(() => {
             setSettingsPage(page.slug);
             setSettingsDialogOpen(true);
           }),
         } satisfies CommandEntry;
       });
-  }, [settingsRuntimeCtx, run, setSettingsPage, setSettingsDialogOpen]);
+  }, [settingsRuntimeCtx, run, setSettingsPage, setSettingsDialogOpen, t]);
 
   // ---------------------------------------------------------------------------
   // Sessions

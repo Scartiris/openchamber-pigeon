@@ -1,4 +1,5 @@
 import { buildExternalManualRestartResponse } from './config-mutation-response.js';
+import { serverMessage } from '../server-html/page-copy.js';
 import { ThemeImportStorageError } from './theme-runtime.js';
 import { registerThemeCatalogRoutes } from './theme-catalog.js';
 
@@ -1074,20 +1075,20 @@ export const registerSettingsUtilityRoutes = (app, dependencies) => {
 
       if (refreshResult?.external) {
         return res.json(buildExternalManualRestartResponse(
-          'Configuration is saved on disk. Restart your connected OpenCode server to apply the changes.',
+          serverMessage(req, 'server.opencode.config.manualRestart'),
         ));
       }
 
       res.json({
         success: true,
         requiresReload: true,
-        message: 'Configuration reloaded successfully. Refreshing interface…',
+        message: serverMessage(req, 'server.opencode.config.reloaded'),
         reloadDelayMs: clientReloadDelayMs,
       });
     } catch (error) {
       console.error('[Server] Failed to reload configuration:', error);
       res.status(500).json({
-        error: error.message || 'Failed to reload configuration',
+        error: serverMessage(req, 'server.opencode.config.applyFailed'),
         success: false,
       });
     }

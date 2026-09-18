@@ -218,7 +218,9 @@ export const McpDropdownContent: React.FC<McpDropdownContentProps> = ({ active, 
                     }
                     await connect(serverName, directory);
                   } catch (error) {
-                    toast.error(error instanceof Error ? error.message : t('mcpDropdown.toast.authorizeFailed'));
+                    toast.error(t('mcpDropdown.toast.authorizeFailed'), {
+                      description: error instanceof Error ? error.message : undefined,
+                    });
                   } finally {
                     setBusyName(null);
                   }

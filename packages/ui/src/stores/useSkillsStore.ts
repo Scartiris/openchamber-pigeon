@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { formatMessage, useI18nStore } from '@/lib/i18n';
 import type { StoreApi, UseBoundStore } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { emitConfigChange, scopeMatches, subscribeToConfigChanges } from "@/lib/configSync";
@@ -468,7 +469,7 @@ export const useSkillsStore = create<SkillsStore>()(
             }
 
             if (payload?.requiresReload) {
-              startConfigUpdate("Creating skill...");
+              startConfigUpdate(formatMessage(useI18nStore.getState().dictionary, 'configUpdate.creatingSkill'));
               await refreshSkillsAfterOpenCodeRestart({
                 message: payload?.message,
                 delayMs: payload?.reloadDelayMs,
@@ -527,7 +528,7 @@ export const useSkillsStore = create<SkillsStore>()(
             }
 
             if (payload?.requiresReload) {
-              startConfigUpdate("Updating skill...");
+              startConfigUpdate(formatMessage(useI18nStore.getState().dictionary, 'configUpdate.updatingSkill'));
               await refreshSkillsAfterOpenCodeRestart({
                 message: payload?.message,
                 delayMs: payload?.reloadDelayMs,
@@ -546,7 +547,7 @@ export const useSkillsStore = create<SkillsStore>()(
         },
 
         renameSkill: async (name: string, newName: string, requestedDirectory?: string | null) => {
-          startConfigUpdate("Renaming skill...");
+          startConfigUpdate(formatMessage(useI18nStore.getState().dictionary, 'configUpdate.renamingSkill'));
           let requiresReload = false;
           try {
             const directory = resolveDirectory(requestedDirectory);
@@ -622,7 +623,7 @@ export const useSkillsStore = create<SkillsStore>()(
             }
 
             if (payload?.requiresReload) {
-              startConfigUpdate("Deleting skill...");
+              startConfigUpdate(formatMessage(useI18nStore.getState().dictionary, 'configUpdate.deletingSkill'));
               await refreshSkillsAfterOpenCodeRestart({
                 message: payload?.message,
                 delayMs: payload?.reloadDelayMs,

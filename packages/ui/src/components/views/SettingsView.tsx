@@ -406,6 +406,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
         return t('settings.page.knowledgeSettings.title');
       case 'knowledge-browse':
         return t('settings.page.knowledgeBrowse.title');
+      case 'devices':
+        return t('settings.page.devices.title');
       case 'home':
       default:
         return t('settings.view.home.title');

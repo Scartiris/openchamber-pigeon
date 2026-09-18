@@ -25,9 +25,22 @@ describe('static routes runtime', () => {
     const response = await request(app).get('/sessions/abc').set('Accept', 'text/html');
 
     expect(response.status).toBe(200);
-    expect(response.text).toContain('OpenChamber is running in headless mode');
-    expect(response.text).toContain('Open it from the OpenChamber desktop or mobile app');
+    expect(response.text).toContain('OpenChamber 正在以 headless 模式运行');
+    expect(response.text).toContain('服务器已就绪。请从 OpenChamber 桌面端或移动端打开后使用。');
     expect(response.text).toContain('openchamber connect-url --help');
+    expect(response.text).toContain('复制命令');
+  });
+
+  it('returns English API-only HTML when the browser asks for English', async () => {
+    const app = express();
+    createRuntime().registerApiOnlyFallbackRoutes(app);
+
+    const response = await request(app)
+      .get('/sessions/abc')
+      .set('Accept', 'text/html')
+      .set('Accept-Language', 'en-US,en;q=0.9');
+
+    expect(response.text).toContain('OpenChamber is running in headless mode');
     expect(response.text).toContain('Copy command');
   });
 
@@ -41,7 +54,7 @@ describe('static routes runtime', () => {
     expect(response.body).toEqual({
       ok: true,
       mode: 'api-only',
-      message: 'OpenChamber is running in API-only mode',
+      message: 'OpenChamber 正在以 API-only 模式运行',
     });
   });
 
@@ -53,8 +66,8 @@ describe('static routes runtime', () => {
     const auth = await request(app).get('/auth/session');
     const health = await request(app).get('/health');
 
-    expect(api.body).not.toEqual({ ok: true, mode: 'api-only', message: 'OpenChamber is running in API-only mode' });
-    expect(auth.body).not.toEqual({ ok: true, mode: 'api-only', message: 'OpenChamber is running in API-only mode' });
-    expect(health.body).not.toEqual({ ok: true, mode: 'api-only', message: 'OpenChamber is running in API-only mode' });
+    expect(api.body).not.toEqual({ ok: true, mode: 'api-only', message: 'OpenChamber 正在以 API-only 模式运行' });
+    expect(auth.body).not.toEqual({ ok: true, mode: 'api-only', message: 'OpenChamber 正在以 API-only 模式运行' });
+    expect(health.body).not.toEqual({ ok: true, mode: 'api-only', message: 'OpenChamber 正在以 API-only 模式运行' });
   });
 });

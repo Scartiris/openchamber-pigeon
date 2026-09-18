@@ -2648,14 +2648,18 @@ export const RemoteInstancesPage: React.FC = () => {
               }));
             };
 
-            const localLabel = forward.type === 'remote' ? 'Local target' : 'Local listen';
+            const localLabel = forward.type === 'remote'
+              ? t('settings.remoteInstances.page.forward.localTarget')
+              : t('settings.remoteInstances.page.forward.localListen');
             const localHint = forward.type === 'remote'
-              ? 'Local host and port on your machine that receives traffic from remote -R listener.'
-              : 'Local host and port where this forward listens on your machine.';
-            const remoteLabel = forward.type === 'remote' ? 'Remote listen' : 'Remote target';
+              ? t('settings.remoteInstances.page.forward.localTargetHint')
+              : t('settings.remoteInstances.page.forward.localListenHint');
+            const remoteLabel = forward.type === 'remote'
+              ? t('settings.remoteInstances.page.forward.remoteListen')
+              : t('settings.remoteInstances.page.forward.remoteTarget');
             const remoteHint = forward.type === 'remote'
-              ? 'Remote host and port where SSH creates the -R listener.'
-              : 'Remote host and port that receives traffic from local -L listener.';
+              ? t('settings.remoteInstances.page.forward.remoteListenHint')
+              : t('settings.remoteInstances.page.forward.remoteTargetHint');
 
             const localEndpoint = formatEndpoint(forward.localHost || 'localhost', forward.localPort);
             const remoteEndpoint = formatEndpoint(forward.remoteHost || 'localhost', forward.remotePort);

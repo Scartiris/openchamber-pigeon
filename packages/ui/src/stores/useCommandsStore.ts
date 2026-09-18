@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { formatMessage, useI18nStore } from '@/lib/i18n';
 import type { StoreApi, UseBoundStore } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { opencodeClient } from "@/lib/opencode/client";
@@ -423,7 +424,7 @@ export const useCommandsStore = create<CommandsStore>()(
             }
 
             if (payload?.requiresReload) {
-              startConfigUpdate("Creating command configuration…");
+              startConfigUpdate(formatMessage(useI18nStore.getState().dictionary, 'configUpdate.creatingCommand'));
               await performFullConfigRefresh({
                 message: payload?.message,
                 delayMs: payload?.reloadDelayMs,
@@ -490,7 +491,7 @@ export const useCommandsStore = create<CommandsStore>()(
             }
 
             if (payload?.requiresReload) {
-              startConfigUpdate("Updating command configuration…");
+              startConfigUpdate(formatMessage(useI18nStore.getState().dictionary, 'configUpdate.updatingCommand'));
               await performFullConfigRefresh({
                 message: payload?.message,
                 delayMs: payload?.reloadDelayMs,
@@ -545,7 +546,7 @@ export const useCommandsStore = create<CommandsStore>()(
             }
 
             if (payload?.requiresReload) {
-              startConfigUpdate("Deleting command configuration…");
+              startConfigUpdate(formatMessage(useI18nStore.getState().dictionary, 'configUpdate.deletingCommand'));
               await performFullConfigRefresh({
                 message: payload?.message,
                 delayMs: payload?.reloadDelayMs,

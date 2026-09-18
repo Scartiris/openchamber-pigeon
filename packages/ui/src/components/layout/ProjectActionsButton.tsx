@@ -957,7 +957,9 @@ export const ProjectActionsButton = ({
         toast.error(t('projectActions.error.failedToCreateTerminalSession'));
         return;
       }
-      toast.error(error instanceof Error ? error.message : t('projectActions.error.failedToRunAction'));
+      toast.error(t('projectActions.error.failedToRunAction'), {
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       startingRunKeysRef.current.delete(runKey);
     }

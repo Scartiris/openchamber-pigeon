@@ -188,8 +188,10 @@ const createInstantWorktreeDraft = async (options?: {
 
   const activeProject = useProjectsStore.getState().getActiveProject();
   if (!activeProject?.path) {
-    toast.error('没有活动项目', {
-      description: '请先选择一个项目。',
+    const { useI18nStore, formatMessage } = await import('@/lib/i18n/store');
+    const { dictionary } = useI18nStore.getState();
+    toast.error(formatMessage(dictionary, 'session.newWorktree.toast.noActiveProject'), {
+      description: formatMessage(dictionary, 'session.newWorktree.error.noActiveProject'),
     });
     return null;
   }
@@ -204,8 +206,10 @@ const createInstantWorktreeDraft = async (options?: {
   }
 
   if (!isGitRepo) {
-    toast.error('不是 Git 仓库', {
-      description: '只能在 Git 仓库中创建工作树。',
+    const { useI18nStore, formatMessage } = await import('@/lib/i18n/store');
+    const { dictionary } = useI18nStore.getState();
+    toast.error(formatMessage(dictionary, 'session.newWorktree.toast.notGitRepository'), {
+      description: formatMessage(dictionary, 'gitView.empty.notGitRepository'),
     });
     return null;
   }
@@ -339,8 +343,10 @@ export async function createWorktreeSessionForNewBranch(
     }
 
     if (!isGitRepo) {
-      toast.error('不是 Git 仓库', {
-        description: '只能在 Git 仓库中创建工作树。',
+      const { useI18nStore, formatMessage } = await import('@/lib/i18n/store');
+      const { dictionary } = useI18nStore.getState();
+      toast.error(formatMessage(dictionary, 'session.newWorktree.toast.notGitRepository'), {
+        description: formatMessage(dictionary, 'gitView.empty.notGitRepository'),
       });
       return null;
     }

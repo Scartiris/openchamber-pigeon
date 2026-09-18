@@ -8,6 +8,12 @@ import {
 import { getClaudeCliAuthStatus } from './claude-cli-auth.js';
 import { OPENCODE_CONFIG_DIR } from './shared.js';
 import { settingsSurfaceOf } from './settings-files.js';
+import {
+  formatServerPageCopy,
+  serverMessage,
+  serverPageCopy,
+  serverPageLang,
+} from '../server-html/page-copy.js';
 
 export const registerOpenCodeRoutes = (app, dependencies) => {
   const {
@@ -61,12 +67,12 @@ export const registerOpenCodeRoutes = (app, dependencies) => {
   // needs ships inline. `openchamber://focus/mcp-auth` raises the desktop app;
   // the link stays visible because some browsers only follow custom-protocol
   // URLs from a user gesture.
-  const renderMcpOAuthCallbackPage = ({ title, message, desktopReturn }) => `<!doctype html>
-<html lang="en">
+  const renderMcpOAuthCallbackPage = ({ title, message, desktopReturn, copy }) => `<!doctype html>
+<html lang="${escapeHtml(copy.lang)}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(title)} — OpenChamber</title>
+<title>${escapeHtml(title)} ${escapeHtml(copy.titleSuffix)}</title>
 <style>
   :root { color-scheme: light dark; }
   body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
@@ -83,7 +89,7 @@ export const registerOpenCodeRoutes = (app, dependencies) => {
 <main>
 <h1>${escapeHtml(title)}</h1>
 <p>${escapeHtml(message)}</p>
-${desktopReturn ? `<a class="return" href="openchamber://focus/mcp-auth">Return to OpenChamber</a>
+${desktopReturn ? `<a class="return" href="openchamber://focus/mcp-auth">${escapeHtml(copy.desktopReturn)}</a>
 <script>window.location.href = 'openchamber://focus/mcp-auth';</script>` : ''}
 </main>
 </body>
@@ -537,34 +543,38 @@ ${desktopReturn ? `<a class="return" href="openchamber://focus/mcp-auth">Return 
     const context = state ? pendingMcpAuthContextByState.get(state) ?? null : null;
     const startedFromDesktop = context?.origin === 'desktop';
 
-    const finish = (status, { title, message }) => {
+    const pageCopy = serverPageCopy(req);
+    const htmlCopy = { ...pageCopy, lang: serverPageLang(req) };
+    const finish = (status, { titleKey, messageKey, message }) => {
       if (state) pendingMcpAuthContextByState.delete(state);
       res.status(status).type('html').send(renderMcpOAuthCallbackPage({
-        title,
-        message,
+        title: formatServerPageCopy(pageCopy, titleKey),
+        message: message
+          || (messageKey ? formatServerPageCopy(pageCopy, messageKey) : ''),
         // Browsers only follow custom-protocol links from a user gesture in
         // some configurations, so the page both tries the jump and keeps a
         // visible link as the fallback.
         desktopReturn: startedFromDesktop,
+        copy: htmlCopy,
       }));
     };
 
     if (providerError) {
       return finish(400, {
-        title: 'Authorization Failed',
+        titleKey: 'server.oauth.mcp.title.failed',
         message: providerErrorDescription || providerError,
       });
     }
     if (!code) {
       return finish(400, {
-        title: 'Authorization Failed',
-        message: 'The provider did not return an authorization code. Start authorization again from MCP Settings.',
+        titleKey: 'server.oauth.mcp.title.failed',
+        messageKey: 'server.oauth.mcp.message.noCode',
       });
     }
     if (!context?.name) {
       return finish(400, {
-        title: 'Authorization Failed',
-        message: 'This authorization session has expired or is unknown to the running app. Return to OpenChamber and click Authorize again.',
+        titleKey: 'server.oauth.mcp.title.failed',
+        messageKey: 'server.oauth.mcp.message.unknownSession',
       });
     }
 
@@ -579,18 +589,18 @@ ${desktopReturn ? `<a class="return" href="openchamber://focus/mcp-auth">Return 
       if (!upstream.ok) {
         const payload = await upstream.json().catch(() => null);
         return finish(502, {
-          title: 'Authorization Failed',
-          message: payload?.error || payload?.message || `OpenCode rejected the authorization code (${upstream.status}). Start authorization again from MCP Settings.`,
+          titleKey: 'server.oauth.mcp.title.failed',
+          message: payload?.error || payload?.message || formatServerPageCopy(pageCopy, 'server.oauth.mcp.message.upstreamRejected', { status: upstream.status }),
         });
       }
       return finish(200, {
-        title: 'Authorization Complete',
-        message: 'You can close this tab and return to OpenChamber.',
+        titleKey: 'server.oauth.mcp.title.complete',
+        messageKey: 'server.oauth.message.closeTab',
       });
     } catch (error) {
       return finish(502, {
-        title: 'Authorization Failed',
-        message: error?.message || 'Failed to complete MCP authorization.',
+        titleKey: 'server.oauth.mcp.title.failed',
+        message: error?.message || formatServerPageCopy(pageCopy, 'server.oauth.mcp.message.completeFailed'),
       });
     }
   });
@@ -677,7 +687,7 @@ ${desktopReturn ? `<a class="return" href="openchamber://focus/mcp-auth">Return 
 
       return res.json({
         ...buildDeferredRestartResponse(
-          `Provider ${providerID} saved. Restart OpenCode to apply.`,
+          serverMessage(req, 'server.opencode.provider.savedDeferred', { id: providerID }),
         ),
         providerId: upsertResult.providerId,
         path: upsertResult.path,
@@ -739,7 +749,7 @@ ${desktopReturn ? `<a class="return" href="openchamber://focus/mcp-auth">Return 
         return res.json({
           success: true,
           removed,
-          ...buildDeferredRestartResponse('Provider disconnected successfully. Restart OpenCode to apply.'),
+          ...buildDeferredRestartResponse(serverMessage(req, 'server.opencode.provider.disconnectedDeferred')),
         });
       }
 
@@ -846,7 +856,7 @@ ${desktopReturn ? `<a class="return" href="openchamber://focus/mcp-auth">Return 
       await fs.promises.writeFile(AGENTS_MD_PATH, content, 'utf8');
 
       return res.json(buildDeferredRestartResponse(
-        'AGENTS.md saved. Restart OpenCode to apply.',
+        serverMessage(req, 'server.opencode.agentsMd.savedDeferred'),
       ));
     } catch (error) {
       console.error('Failed to write AGENTS.md:', error);

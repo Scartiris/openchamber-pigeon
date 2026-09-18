@@ -1,5 +1,6 @@
 import { createOpencodeClient } from '@opencode-ai/sdk/v2';
 import { buildDeferredRestartResponse } from './config-mutation-response.js';
+import { serverMessage } from '../server-html/page-copy.js';
 import { OPENCODE_CONFIG_DIR } from './shared.js';
 
 /**
@@ -517,10 +518,10 @@ export const registerSkillRoutes = (app, dependencies) => {
         installed,
         skipped,
         ...(requiresRestart
-          ? buildDeferredRestartResponse('Skills installed successfully. Restart OpenCode to apply.')
+          ? buildDeferredRestartResponse(serverMessage(req, 'server.opencode.skills.installedDeferred'))
           : {
             requiresReload: false,
-            message: 'No skills were installed',
+            message: serverMessage(req, 'server.opencode.skills.noneInstalled'),
           }),
       });
     } catch (error) {
@@ -603,7 +604,7 @@ export const registerSkillRoutes = (app, dependencies) => {
 
       createSkill(skillName, { ...config, source: skillSource }, directory, scope);
       res.json(buildDeferredRestartResponse(
-        `Skill ${skillName} created successfully. Restart OpenCode to apply.`,
+        serverMessage(req, 'server.opencode.skill.createdDeferred', { name: skillName }),
       ));
     } catch (error) {
       console.error('Failed to create skill:', error);
@@ -631,7 +632,7 @@ export const registerSkillRoutes = (app, dependencies) => {
           success: true,
           name: newName,
           requiresReload: true,
-          message: `Skill renamed to ${newName} successfully. Reloading interface…`,
+          message: serverMessage(req, 'server.opencode.skill.renamed', { name: newName }),
           reloadDelayMs: clientReloadDelayMs,
         });
       }
@@ -641,7 +642,7 @@ export const registerSkillRoutes = (app, dependencies) => {
 
       updateSkill(skillName, updates, directory, updates?.targetPath);
       res.json(buildDeferredRestartResponse(
-        `Skill ${skillName} updated successfully. Restart OpenCode to apply.`,
+        serverMessage(req, 'server.opencode.skill.updatedDeferred', { name: skillName }),
       ));
     } catch (error) {
       console.error('[Server] Failed to update skill:', error);
@@ -673,7 +674,7 @@ export const registerSkillRoutes = (app, dependencies) => {
 
       res.json({
         success: true,
-        message: `File ${filePath} saved successfully`,
+        message: serverMessage(req, 'server.opencode.skill.fileSaved', { path: filePath }),
       });
     } catch (error) {
       if (error && typeof error === 'object' && (error.code === 'EACCES' || error.code === 'EPERM')) {
@@ -707,7 +708,7 @@ export const registerSkillRoutes = (app, dependencies) => {
 
       res.json({
         success: true,
-        message: `File ${filePath} deleted successfully`,
+        message: serverMessage(req, 'server.opencode.skill.fileDeleted', { path: filePath }),
       });
     } catch (error) {
       if (error && typeof error === 'object' && (error.code === 'EACCES' || error.code === 'EPERM')) {
@@ -728,7 +729,7 @@ export const registerSkillRoutes = (app, dependencies) => {
 
       deleteSkill(skillName, directory);
       res.json(buildDeferredRestartResponse(
-        `Skill ${skillName} deleted successfully. Restart OpenCode to apply.`,
+        serverMessage(req, 'server.opencode.skill.deletedDeferred', { name: skillName }),
       ));
     } catch (error) {
       console.error('Failed to delete skill:', error);

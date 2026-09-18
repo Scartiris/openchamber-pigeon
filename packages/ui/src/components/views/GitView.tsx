@@ -964,9 +964,9 @@ export const GitView: React.FC<GitViewProps> = ({ isActive }) => {
         ]);
       } catch (err) {
         if (showErrors) {
-          const message =
-            err instanceof Error ? err.message : t('gitView.toast.refreshRepositoryFailed');
-          toast.error(message);
+          toast.error(t('gitView.toast.refreshRepositoryFailed'), {
+            description: err instanceof Error ? err.message : undefined,
+          });
         }
       }
     },
@@ -1158,11 +1158,9 @@ export const GitView: React.FC<GitViewProps> = ({ isActive }) => {
       await refreshStatusAndBranches(false);
       await refreshLog();
     } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : t('gitView.toast.syncActionFailed', { action: action === 'sync' ? t('gitView.sync.syncChanges') : action === 'pull' ? t('gitView.sync.pull') : action });
-      toast.error(message);
+      toast.error(t('gitView.toast.syncActionFailed', { action: action === 'sync' ? t('gitView.sync.syncChanges') : action === 'pull' ? t('gitView.sync.pull') : action }), {
+        description: err instanceof Error ? err.message : undefined,
+      });
     } finally {
       setSyncAction(null);
     }
@@ -1190,8 +1188,9 @@ export const GitView: React.FC<GitViewProps> = ({ isActive }) => {
         refreshRemotes(),
       ]);
     } catch (error) {
-      const message = error instanceof Error ? error.message : `Failed to remove ${remoteName}`;
-      toast.error(message);
+      toast.error(t('gitView.toast.removeRemoteFailed', { name: remoteName }), {
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setRemovingRemoteName(null);
     }
@@ -1251,8 +1250,9 @@ export const GitView: React.FC<GitViewProps> = ({ isActive }) => {
       await refreshLog();
       setIntegrateRefreshKey((v) => v + 1);
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('gitView.toast.createCommitFailed');
-      toast.error(message);
+      toast.error(t('gitView.toast.createCommitFailed'), {
+        description: err instanceof Error ? err.message : undefined,
+      });
     } finally {
       setCommitAction(null);
       if (options.pushAfter) {
@@ -1301,9 +1301,9 @@ export const GitView: React.FC<GitViewProps> = ({ isActive }) => {
         message: error instanceof Error ? error.message : String(error),
         error,
       });
-      const message =
-        error instanceof Error ? error.message : t('gitView.toast.generateCommitMessageFailed');
-      toast.error(message);
+      toast.error(t('gitView.toast.generateCommitMessageFailed'), {
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setIsGeneratingMessage(false);
     }
@@ -1347,14 +1347,14 @@ export const GitView: React.FC<GitViewProps> = ({ isActive }) => {
         });
         pushSucceeded = true;
       } catch (pushError) {
-        const message =
+        const detail =
           pushError instanceof Error
             ? pushError.message
-            : `Unable to push new branch to ${remoteName}.`;
+            : t('gitView.toast.upstreamSetFailed');
         toast.warning(t('gitView.toast.branchCreatedLocally'), {
           description: (
             <span className="text-foreground/80 dark:text-foreground/70">
-              上游设置失败：{message}
+              {t('gitView.toast.upstreamSetFailed')}：{detail}
             </span>
           ),
         });
@@ -1367,8 +1367,9 @@ export const GitView: React.FC<GitViewProps> = ({ isActive }) => {
         toast.success(t('gitView.toast.upstreamSet', { branch: branchName, remote: remoteName }));
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('gitView.toast.createBranchFailed');
-      toast.error(message);
+      toast.error(t('gitView.toast.createBranchFailed'), {
+        description: err instanceof Error ? err.message : undefined,
+      });
       throw err;
     }
   };
@@ -1388,9 +1389,9 @@ export const GitView: React.FC<GitViewProps> = ({ isActive }) => {
       await refreshStatusAndBranches();
       await refreshLog();
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : t('gitView.toast.renameBranchFailed', { oldName, newName });
-      toast.error(message);
+      toast.error(t('gitView.toast.renameBranchFailed', { oldName, newName }), {
+        description: err instanceof Error ? err.message : undefined,
+      });
     }
   };
 
@@ -1433,9 +1434,9 @@ export const GitView: React.FC<GitViewProps> = ({ isActive }) => {
       await refreshStatusAndBranches();
       await refreshLog();
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : t('gitView.toast.checkoutFailed', { name: normalized });
-      toast.error(message);
+      toast.error(t('gitView.toast.checkoutFailed', { name: normalized }), {
+        description: err instanceof Error ? err.message : undefined,
+      });
     }
   };
 
@@ -1448,8 +1449,9 @@ export const GitView: React.FC<GitViewProps> = ({ isActive }) => {
       toast.success(t('gitView.toast.appliedIdentity', { name: profile.name }));
       await refreshIdentity();
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('gitView.toast.applyIdentityFailed');
-      toast.error(message);
+      toast.error(t('gitView.toast.applyIdentityFailed'), {
+        description: err instanceof Error ? err.message : undefined,
+      });
     } finally {
       endIdentityApply();
     }
@@ -1753,8 +1755,9 @@ export const GitView: React.FC<GitViewProps> = ({ isActive }) => {
         toast.success(t('gitView.toast.revertedFile', { path: filePath }));
         await refreshStatusAndBranches(false);
       } catch (err) {
-        const message = err instanceof Error ? err.message : t('gitView.toast.revertFailed');
-        toast.error(message);
+        toast.error(t('gitView.toast.revertFailed'), {
+        description: err instanceof Error ? err.message : undefined,
+      });
       } finally {
         setRevertingPaths((previous) => {
           const next = new Set(previous);
@@ -2124,8 +2127,9 @@ export const GitView: React.FC<GitViewProps> = ({ isActive }) => {
       await refreshStatusAndBranches();
       await refreshLog();
     } catch (err) {
-      const message = err instanceof Error ? err.message : `Failed to abort ${conflictOperation}`;
-      toast.error(message);
+      toast.error(t('gitView.toast.abortOperationFailed'), {
+        description: err instanceof Error ? err.message : undefined,
+      });
     }
   }, [gitDirectory, git, conflictOperation, refreshStatusAndBranches, refreshLog, clearConflictState, t]);
 
@@ -2176,8 +2180,9 @@ export const GitView: React.FC<GitViewProps> = ({ isActive }) => {
         }
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('gitView.toast.continueOperationFailed');
-      toast.error(message);
+      toast.error(t('gitView.toast.continueOperationFailed'), {
+        description: err instanceof Error ? err.message : undefined,
+      });
     }
   }, [gitDirectory, git, status, refreshStatusAndBranches, refreshLog, persistConflictState, clearConflictState, t]);
 
@@ -2197,8 +2202,9 @@ export const GitView: React.FC<GitViewProps> = ({ isActive }) => {
       await refreshStatusAndBranches();
       await refreshLog();
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('gitView.toast.abortOperationFailed');
-      toast.error(message);
+      toast.error(t('gitView.toast.abortOperationFailed'), {
+        description: err instanceof Error ? err.message : undefined,
+      });
     }
   }, [gitDirectory, git, status, refreshStatusAndBranches, refreshLog, clearConflictState, t]);
 

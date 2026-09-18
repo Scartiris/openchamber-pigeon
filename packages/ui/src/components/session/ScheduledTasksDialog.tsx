@@ -249,7 +249,9 @@ export function ScheduledTasksDialog() {
       });
       setTasks(nextTasks);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('sessions.scheduledTasks.dialog.toast.loadFailed'));
+      toast.error(t('sessions.scheduledTasks.dialog.toast.loadFailed'), {
+        description: error instanceof Error ? error.message : undefined,
+      });
       if (!options?.silent) {
         setTasks([]);
       }
@@ -324,7 +326,9 @@ export function ScheduledTasksDialog() {
       }
       await reloadTasks(selectedProjectID, { silent: true });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('sessions.scheduledTasks.dialog.toast.updateFailed'));
+      toast.error(t('sessions.scheduledTasks.dialog.toast.updateFailed'), {
+        description: error instanceof Error ? error.message : undefined,
+      });
       await reloadTasks(selectedProjectID, { silent: true });
     } finally {
       setMutatingTaskID(null);
@@ -352,7 +356,9 @@ export function ScheduledTasksDialog() {
       await reloadTasks(selectedProjectID, { silent: true });
       toast.success(t('sessions.scheduledTasks.dialog.toast.deleted'));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('sessions.scheduledTasks.dialog.toast.deleteFailed'));
+      toast.error(t('sessions.scheduledTasks.dialog.toast.deleteFailed'), {
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setMutatingTaskID(null);
     }
@@ -395,7 +401,9 @@ export function ScheduledTasksDialog() {
         useSessionUIStore.getState().setCurrentSession(sessionId, project?.path ?? null);
         }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('sessions.scheduledTasks.dialog.toast.runFailed'));
+      toast.error(t('sessions.scheduledTasks.dialog.toast.runFailed'), {
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setMutatingTaskID(null);
     }

@@ -16,7 +16,8 @@ import { Icon } from '@/components/icon/Icon';
 import type { IconName } from '@/components/icon/icons';
 import { SettingsSidebarLayout } from '@/components/sections/shared/SettingsSidebarLayout';
 import { SettingsSidebarItem } from '@/components/sections/shared/SettingsSidebarItem';
-import { useI18n } from '@/lib/i18n';
+import { useI18n, useI18nStore } from '@/lib/i18n';
+import { localizeServerMessage } from '@/lib/i18n/serverMessage';
 import {
   usePluginsStore,
   type PluginEntry,
@@ -161,8 +162,9 @@ export const PluginsSidebar: React.FC<PluginsSidebarProps> = ({
         ? await deleteEntry(deleteTarget.id)
         : await deleteFile(deleteTarget.id);
     if (result.ok) {
+      const localized = localizeServerMessage(useI18nStore.getState().dictionary, result.message);
       toast.success(
-        result.message ||
+        localized ||
           t('settings.plugins.sidebar.toast.deleted', { name: deleteTarget.label }),
       );
     } else {

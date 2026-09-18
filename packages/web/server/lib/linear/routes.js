@@ -1,5 +1,10 @@
 import express from 'express';
 import { readTrimmedString } from './parse.js';
+import {
+  formatServerPageCopy,
+  serverPageCopy,
+  serverPageLang,
+} from '../server-html/page-copy.js';
 
 const PENDING_JSON_LIMIT = '16kb';
 const parseJsonBody = express.json({ limit: PENDING_JSON_LIMIT });
@@ -23,13 +28,13 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-function renderLinearOAuthCallbackPage({ title, message, desktopReturn }) {
+function renderLinearOAuthCallbackPage({ title, message, desktopReturn, copy }) {
   return `<!doctype html>
-<html lang="en">
+<html lang="${escapeHtml(copy.lang)}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(title)} — OpenChamber</title>
+<title>${escapeHtml(title)} ${escapeHtml(copy.titleSuffix)}</title>
 <style>
   :root { color-scheme: light dark; }
   body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
@@ -46,7 +51,7 @@ function renderLinearOAuthCallbackPage({ title, message, desktopReturn }) {
 <main>
 <h1>${escapeHtml(title)}</h1>
 <p>${escapeHtml(message)}</p>
-${desktopReturn ? `<a class="return" href="openchamber://focus/linear-auth">Return to OpenChamber</a>
+${desktopReturn ? `<a class="return" href="openchamber://focus/linear-auth">${escapeHtml(copy.desktopReturn)}</a>
 <script>window.location.href = 'openchamber://focus/linear-auth';</script>` : ''}
 </main>
 </body>
@@ -85,8 +90,18 @@ export function registerLinearRoutes(app) {
   };
 
   app.get('/linear/oauth/callback', async (req, res) => {
-    const finish = (status, { title, message, desktopReturn = false }) => {
-      res.status(status).type('html').send(renderLinearOAuthCallbackPage({ title, message, desktopReturn }));
+    const pageCopy = serverPageCopy(req);
+    const htmlCopy = { ...pageCopy, lang: serverPageLang(req) };
+    const finish = (status, { titleKey, messageKey, message, desktopReturn = false }) => {
+      const title = formatServerPageCopy(pageCopy, titleKey);
+      const body = message
+        || (messageKey ? formatServerPageCopy(pageCopy, messageKey) : '');
+      res.status(status).type('html').send(renderLinearOAuthCallbackPage({
+        title,
+        message: body,
+        desktopReturn,
+        copy: htmlCopy,
+      }));
     };
 
     try {
@@ -102,8 +117,8 @@ export function registerLinearRoutes(app) {
       await storeAuthorizationResult(libraries, result);
 
       return finish(200, {
-        title: 'Authorization Complete',
-        message: 'You can close this tab and return to OpenChamber.',
+        titleKey: 'server.oauth.linear.title.complete',
+        messageKey: 'server.oauth.message.closeTab',
         desktopReturn: result.origin === 'desktop',
       });
     } catch (error) {
@@ -111,9 +126,13 @@ export function registerLinearRoutes(app) {
       const status = code === 'UNKNOWN_STATE' || code === 'MISSING_CODE' || code === 'ACCESS_DENIED'
         ? 400
         : 502;
+      const codeKey = code ? `server.oauth.linear.code.${code}` : null;
+      const message = error instanceof Error && error.message
+        ? (codeKey && pageCopy[codeKey] ? formatServerPageCopy(pageCopy, codeKey) : error.message)
+        : formatServerPageCopy(pageCopy, 'server.oauth.linear.message.failed');
       return finish(status, {
-        title: 'Authorization Failed',
-        message: error instanceof Error ? error.message : 'Linear authorization failed. Return to OpenChamber and click Connect again.',
+        titleKey: 'server.oauth.linear.title.failed',
+        message,
         desktopReturn: error?.origin === 'desktop',
       });
     }

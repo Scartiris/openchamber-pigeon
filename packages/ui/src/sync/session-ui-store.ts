@@ -2048,11 +2048,15 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
       await forkFromMessageAction(sessionId, messageId)
 
       const { toast } = await import("sonner")
-      toast.success(`Forked from ${existingSession.title}`)
+      const { useI18nStore, formatMessage } = await import("@/lib/i18n/store")
+      const { dictionary } = useI18nStore.getState()
+      toast.success(formatMessage(dictionary, "sessions.sidebar.session.fork.toast.forkedFrom", { title: existingSession.title }))
     } catch (error) {
       console.error("Failed to fork session:", error)
       const { toast } = await import("sonner")
-      toast.error("无法派生会话")
+      const { useI18nStore, formatMessage } = await import("@/lib/i18n/store")
+      const { dictionary } = useI18nStore.getState()
+      toast.error(formatMessage(dictionary, "sessions.sidebar.session.fork.toast.failed"))
     }
   },
 

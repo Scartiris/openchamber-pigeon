@@ -300,7 +300,7 @@ const ImagePreviewDialog: React.FC<{
     }, [gallery, popup.image?.index, popup.image?.url, popup.open]);
 
     const currentImage = gallery[currentIndex] ?? gallery[0] ?? popup.image;
-    const imageTitle = currentImage?.filename || popup.title || 'Image preview';
+    const imageTitle = currentImage?.filename || popup.title || t('chat.toolOutputDialog.imagePreview');
     const hasMultipleImages = gallery.length > 1;
 
     const showPrevious = React.useCallback(() => {
@@ -992,10 +992,10 @@ const ToolOutputDialog: React.FC<ToolOutputDialogProps> = ({ popup, onOpenChange
                                 <div className="border-b border-border/20 p-4 -mx-3">
                                     <div className="typography-markdown font-medium text-muted-foreground mb-2 px-3">
                                         {meta.tool === 'bash'
-                                            ? 'Command:'
+                                            ? t('chat.toolOutputDialog.labels.command')
                                             : meta.tool === 'task'
-                                                ? 'Task Details:'
-                                                : 'Input:'}
+                                                ? t('chat.toolOutputDialog.labels.task')
+                                                : t('chat.toolOutputDialog.labels.input')}
                                     </div>
                                     {meta.tool === 'bash' && getInputValue('command') ? (
                                         <div className="tool-input-surface bg-transparent rounded-xl border border-border/20 mx-3">
@@ -1012,9 +1012,9 @@ const ToolOutputDialog: React.FC<ToolOutputDialogProps> = ({ popup, onOpenChange
                                             className="tool-input-surface bg-transparent rounded-xl border border-border/20 font-mono whitespace-pre-wrap text-foreground/90 mx-3"
                                             style={toolDisplayStyles.getPopupStyles()}
                                         >
-                                            {getInputValue('description') ? `Task: ${getInputValue('description')}\n` : ''}
-                                            {getInputValue('subagent_type') ? `Agent Type: ${getInputValue('subagent_type')}\n` : ''}
-                                            {`Instructions:\n${getInputValue('prompt')}`}
+                                            {getInputValue('description') ? `${t('chat.toolOutputDialog.taskFields.task')} ${getInputValue('description')}\n` : ''}
+                                            {getInputValue('subagent_type') ? `${t('chat.toolOutputDialog.taskFields.agentType')} ${getInputValue('subagent_type')}\n` : ''}
+                                            {`${t('chat.toolOutputDialog.taskFields.instructions')}\n${getInputValue('prompt')}`}
                                         </div>
                                     ) : meta.tool === 'write' && getInputValue('content') ? (
                                         <div className="tool-input-surface bg-transparent rounded-xl border border-border/20 mx-3">

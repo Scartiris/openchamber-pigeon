@@ -1,4 +1,5 @@
 const SESSION_COOLDOWN_DURATION_MS = 2000;
+import { serverMessage } from '../server-html/page-copy.js';
 const SESSION_STATE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const SESSION_ATTENTION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const SESSION_ACTIVITY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -310,7 +311,7 @@ export const createSessionRuntime = ({ writeSseEvent, getNotificationClients, br
     const eventId = `opencode-restart-${Date.now()}`;
     for (const sessionId of interruptedSessionIds) {
       updateSessionState(sessionId, 'idle', eventId, {
-        message: 'Interrupted by OpenCode restart',
+        message: serverMessage(undefined, 'server.session.interruptedByRestart'),
         reason: 'opencode-restart',
       });
       broadcastEvent?.({
@@ -319,7 +320,7 @@ export const createSessionRuntime = ({ writeSseEvent, getNotificationClients, br
           sessionID: sessionId,
           error: {
             name: 'MessageAbortedError',
-            message: 'The running turn was interrupted when OpenCode restarted.',
+            message: serverMessage(undefined, 'server.session.interruptedByRestartDetail'),
           },
         },
       });

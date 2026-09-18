@@ -2,6 +2,7 @@ import React from 'react';
 
 import { SettingsPageLayout } from '@/components/sections/shared/SettingsPageLayout';
 import { Button } from '@/components/ui/button';
+import { useI18n } from '@/lib/i18n';
 import { runtimeFetch } from '@/lib/runtime-fetch';
 
 type ApprovalMode = 'deny' | 'smart' | 'auto';
@@ -44,11 +45,11 @@ interface TokenView {
 }
 
 const APPROVAL_MODES = ['deny', 'smart', 'auto'] as const;
-const APPROVAL_LABELS = {
-  deny: '禁止操作',
-  smart: '智能审批',
-  auto: '全自动',
-} as const satisfies { [K in ApprovalMode]: string };
+const APPROVAL_KEYS = {
+  deny: 'settings.devices.approval.deny',
+  smart: 'settings.devices.approval.smart',
+  auto: 'settings.devices.approval.auto',
+} as const satisfies { [K in ApprovalMode]: 'settings.devices.approval.deny' | 'settings.devices.approval.smart' | 'settings.devices.approval.auto' };
 
 const isApprovalMode = (value: string): value is ApprovalMode =>
   value === 'deny' || value === 'smart' || value === 'auto';
@@ -259,6 +260,7 @@ const readJson = async (response: Response): Promise<JsonValue> => {
 };
 
 export const DevicesPage: React.FC = () => {
+  const { t } = useI18n();
   const [devices, setDevices] = React.useState<DevicePublicView[]>([]);
   const [audit, setAudit] = React.useState<AuditEntry[]>([]);
   const [tokens, setTokens] = React.useState<TokenView[]>([]);
@@ -286,7 +288,7 @@ export const DevicesPage: React.FC = () => {
         runtimeFetch('/api/devices/mcp/tokens'),
         runtimeFetch('/api/devices/enroll/tokens'),
       ]);
-      if (!devicesRes.ok) throw new Error(`设备列表 HTTP ${devicesRes.status}`);
+      if (!devicesRes.ok) throw new Error(t('settings.devices.error.loadDevices', { status: devicesRes.status }));
       setDevices(parseDevicesPayload(await readJson(devicesRes)));
       if (auditRes.ok) setAudit(parseAuditPayload(await readJson(auditRes)));
       if (tokensRes.ok) setTokens(parseTokensPayload(await readJson(tokensRes)));
@@ -295,7 +297,7 @@ export const DevicesPage: React.FC = () => {
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, []);
+  }, [t]);
 
   React.useEffect(() => {
     void refresh();
@@ -306,14 +308,14 @@ export const DevicesPage: React.FC = () => {
     setStatusError(null);
     try {
       const response = await runtimeFetch('/api/devices/status');
-      if (!response.ok) throw new Error(`状态探测 HTTP ${response.status}`);
+      if (!response.ok) throw new Error(t('settings.devices.error.statusProbe', { status: response.status }));
       setStatus(parseStatusPayload(await readJson(response)));
     } catch (err) {
       setStatusError(err instanceof Error ? err.message : String(err));
     } finally {
       setStatusBusy(false);
     }
-  }, []);
+  }, [t]);
 
   React.useEffect(() => {
     void refreshStatus();
@@ -333,7 +335,7 @@ export const DevicesPage: React.FC = () => {
 
   const enroll = async () => {
     if (!draftName.trim()) {
-      setError('请填写设备名称');
+      setError(t('settings.devices.error.nameRequired'));
       return;
     }
     setBusy(true);
@@ -365,7 +367,7 @@ export const DevicesPage: React.FC = () => {
       });
       if (!response.ok) {
         const payload = parseErrorPayload(await readJson(response).catch(() => null));
-        throw new Error(payload || `登记失败 HTTP ${response.status}`);
+        throw new Error(payload || t('settings.devices.error.enrollFailed', { status: response.status }));
       }
       setDraftName('');
       setDraftHost('');
@@ -387,7 +389,7 @@ export const DevicesPage: React.FC = () => {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ approval }),
       });
-      if (!response.ok) throw new Error(`更新审批档失败 HTTP ${response.status}`);
+      if (!response.ok) throw new Error(t('settings.devices.error.approvalFailed', { status: response.status }));
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -397,11 +399,11 @@ export const DevicesPage: React.FC = () => {
   };
 
   const removeDevice = async (id: string) => {
-    if (!window.confirm('确定删除这台登记设备？')) return;
+    if (!window.confirm(t('settings.devices.dialog.deleteConfirm'))) return;
     setBusy(true);
     try {
       const response = await runtimeFetch(`/api/devices/${id}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error(`删除失败 HTTP ${response.status}`);
+      if (!response.ok) throw new Error(t('settings.devices.error.deleteFailed', { status: response.status }));
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -418,7 +420,7 @@ export const DevicesPage: React.FC = () => {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ label: 'device-agent' }),
       });
-      if (!response.ok) throw new Error(`创建 token 失败 HTTP ${response.status}`);
+      if (!response.ok) throw new Error(t('settings.devices.error.createTokenFailed', { status: response.status }));
       setIssuedToken(parseIssuedToken(await readJson(response)));
       await refresh();
     } catch (err) {
@@ -436,12 +438,12 @@ export const DevicesPage: React.FC = () => {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ label: 'one-click-join' }),
       });
-      if (!response.ok) throw new Error(`创建一键注册码失败 HTTP ${response.status}`);
+      if (!response.ok) throw new Error(t('settings.devices.error.createEnrollFailed', { status: response.status }));
       const payload = asObject(await readJson(response));
       const token = payload ? asObject(payload.token) : null;
       const plaintext = token ? asOptionalText(token.token) : null;
       const expiresAt = token ? asText(token.expiresAt) : '';
-      if (!plaintext) throw new Error('注册码响应缺少 token');
+      if (!plaintext) throw new Error(t('settings.devices.error.enrollTokenMissing'));
       setIssuedEnroll({ token: plaintext, expiresAt });
       await refresh();
     } catch (err) {
@@ -455,12 +457,12 @@ export const DevicesPage: React.FC = () => {
     try {
       await navigator.clipboard.writeText(text);
     } catch {
-      setError('复制失败，请手动选中命令');
+      setError(t('settings.devices.toast.copyFailed'));
     }
   };
 
   return (
-    <SettingsPageLayout title="设备" description="登记 Windows 设备，供 agent 通过 MCP 操作 shell / 文件 / 屏幕。">
+    <SettingsPageLayout title={t('settings.page.devices.title')} description={t('settings.page.devices.description')}>
       {error ? (
         <div className="mb-4 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm">{error}</div>
       ) : null}
@@ -468,27 +470,27 @@ export const DevicesPage: React.FC = () => {
       <section className="mb-8 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="text-sm font-semibold">已登记设备</h2>
+            <h2 className="text-sm font-semibold">{t('settings.devices.section.registered')}</h2>
             {status ? (
               <p className="text-xs opacity-70">
-                在线 {status.onlineCount}/{status.total}
-                {status.checkedAt ? ` · 探测于 ${status.checkedAt}` : ''}
+                {t('settings.devices.status.onlineCount', { online: status.onlineCount, total: status.total })}
+                {status.checkedAt ? ` · ${t('settings.devices.status.probedAt', { time: status.checkedAt })}` : ''}
               </p>
             ) : (
-              <p className="text-xs opacity-70">正在探测状态…</p>
+              <p className="text-xs opacity-70">{t('settings.devices.status.probing')}</p>
             )}
           </div>
           <Button variant="outline" size="sm" disabled={statusBusy} onClick={() => void refreshStatus()}>
-            {statusBusy ? '探测中…' : '刷新状态'}
+            {statusBusy ? t('settings.devices.actions.probing') : t('settings.devices.actions.refresh')}
           </Button>
         </div>
         {statusError ? (
           <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs">
-            状态探测失败：{statusError}
+            {t('settings.devices.status.probeFailed', { error: statusError })}
           </div>
         ) : null}
         {devices.length === 0 ? (
-          <p className="text-sm opacity-70">还没有设备。在下方登记第一台 Windows 机器。</p>
+          <p className="text-sm opacity-70">{t('settings.devices.empty')}</p>
         ) : (
           <div className="space-y-2">
             {devices.map((device) => {
@@ -498,7 +500,7 @@ export const DevicesPage: React.FC = () => {
                 <div key={device.id} className="rounded-md border border-border/60 p-3 text-sm">
                   <div className="flex flex-wrap items-center gap-2">
                     <span
-                      aria-label={online ? '在线' : '离线'}
+                      aria-label={online ? t('settings.devices.status.online') : t('settings.devices.status.offline')}
                       className={
                         online
                           ? 'inline-block h-2 w-2 rounded-full bg-emerald-500'
@@ -508,7 +510,7 @@ export const DevicesPage: React.FC = () => {
                     <span className="font-medium">{device.name}</span>
                     <span className="opacity-60">{device.id}</span>
                     <span className="rounded bg-muted px-1.5 py-0.5 text-xs">
-                      {online ? '在线' : '离线'}
+                      {online ? t('settings.devices.status.online') : t('settings.devices.status.offline')}
                     </span>
                     {health?.latencyMs != null ? (
                       <span className="rounded bg-muted px-1.5 py-0.5 text-xs tabular-nums">
@@ -532,7 +534,7 @@ export const DevicesPage: React.FC = () => {
                     {device.capabilities.screen ? <span className="text-xs opacity-70">screen</span> : null}
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <label className="text-xs opacity-70" htmlFor={`approval-${device.id}`}>审批</label>
+                    <label className="text-xs opacity-70" htmlFor={`approval-${device.id}`}>{t('settings.devices.actions.approval')}</label>
                     <select
                       id={`approval-${device.id}`}
                       className="rounded border border-border/60 bg-background px-2 py-1 text-xs"
@@ -544,11 +546,11 @@ export const DevicesPage: React.FC = () => {
                       }}
                     >
                       {APPROVAL_MODES.map((mode) => (
-                        <option key={mode} value={mode}>{APPROVAL_LABELS[mode]}</option>
+                        <option key={mode} value={mode}>{t(APPROVAL_KEYS[mode])}</option>
                       ))}
                     </select>
                     <Button variant="outline" size="sm" disabled={busy} onClick={() => void removeDevice(device.id)}>
-                      删除
+                      {t('settings.devices.actions.delete')}
                     </Button>
                   </div>
                 </div>
@@ -561,78 +563,78 @@ export const DevicesPage: React.FC = () => {
       <section className="mb-8 space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-semibold">一键注册</h2>
-            <p className="text-xs opacity-70">在目标 Windows 上以管理员 PowerShell 执行一条命令。注册码 15 分钟内有效，成功后自动作废。</p>
+            <h2 className="text-sm font-semibold">{t('settings.devices.enroll.title')}</h2>
+            <p className="text-xs opacity-70">{t('settings.devices.enroll.description')}</p>
           </div>
-          <Button size="sm" disabled={busy} onClick={() => void createEnrollToken()}>生成注册码</Button>
+          <Button size="sm" disabled={busy} onClick={() => void createEnrollToken()}>{t('settings.devices.enroll.generate')}</Button>
         </div>
         {issuedEnroll ? (
           <div className="rounded-md border border-border/60 p-3 text-xs space-y-2">
-            <div className="opacity-70">复制到目标机器执行（过期：{issuedEnroll.expiresAt}）：</div>
+            <div className="opacity-70">{t('settings.devices.enroll.copyToTarget', { expiresAt: issuedEnroll.expiresAt })}</div>
             <code className="block break-all select-all rounded bg-muted px-2 py-1.5">
               {joinCommandFor(issuedEnroll.token)}
             </code>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => void copyText(joinCommandFor(issuedEnroll.token))}>
-                复制命令
+                {t('settings.devices.enroll.copyCommand')}
               </Button>
               <Button variant="outline" size="sm" onClick={() => void copyText(issuedEnroll.token)}>
-                只复制注册码
+                {t('settings.devices.enroll.copyCodeOnly')}
               </Button>
             </div>
             <div className="opacity-70">
-              脚本会：生成/复用 SSH 密钥、尽量授权到 administrators_authorized_keys、探测 Tailscale、可选打印 Windows-MCP 启动参数，然后向本工作台登记设备。
+              {t('settings.devices.enroll.scriptHelp')}
             </div>
           </div>
         ) : (
-          <p className="text-sm opacity-70">点「生成注册码」得到一键命令。</p>
+          <p className="text-sm opacity-70">{t('settings.devices.enroll.hint')}</p>
         )}
         {enrollTokens.length > 0 ? (
           <ul className="space-y-1 text-xs opacity-80">
             {enrollTokens.map((token) => (
-              <li key={token.id}>未使用 · {token.label} · 过期 {token.expiresAt}</li>
+              <li key={token.id}>{t('settings.devices.enroll.tokenItem', { label: token.label, expiresAt: token.expiresAt })}</li>
             ))}
           </ul>
         ) : null}
       </section>
 
       <section className="mb-8 space-y-3">
-        <h2 className="text-sm font-semibold">手动登记（高级）</h2>
+        <h2 className="text-sm font-semibold">{t('settings.devices.form.manual')}</h2>
         <div className="grid gap-2 md:grid-cols-2">
-          <input className="rounded border border-border/60 bg-background px-2 py-1.5 text-sm" placeholder="名称，例如 施工机" value={draftName} onChange={(e) => setDraftName(e.target.value)} />
-          <input className="rounded border border-border/60 bg-background px-2 py-1.5 text-sm" placeholder="Tailscale IP（可选）" value={draftHost} onChange={(e) => setDraftHost(e.target.value)} />
-          <input className="rounded border border-border/60 bg-background px-2 py-1.5 text-sm" placeholder="SSH 端口（默认 22）" value={draftSshPort} onChange={(e) => setDraftSshPort(e.target.value)} />
-          <input className="rounded border border-border/60 bg-background px-2 py-1.5 text-sm" placeholder="Windows-MCP 端口（可选，隧道出口）" value={draftMcpPort} onChange={(e) => setDraftMcpPort(e.target.value)} />
-          <input className="rounded border border-border/60 bg-background px-2 py-1.5 text-sm" placeholder="SSH 用户" value={draftUser} onChange={(e) => setDraftUser(e.target.value)} />
-          <input className="rounded border border-border/60 bg-background px-2 py-1.5 text-sm" placeholder="Windows-MCP Bearer（可选）" value={draftMcpBearer} onChange={(e) => setDraftMcpBearer(e.target.value)} />
-          <textarea className="rounded border border-border/60 bg-background px-2 py-1.5 text-sm md:col-span-2" rows={3} placeholder="SSH 私钥（可选，仅存服务器 data dir）" value={draftSshKey} onChange={(e) => setDraftSshKey(e.target.value)} />
+          <input className="rounded border border-border/60 bg-background px-2 py-1.5 text-sm" placeholder={t('settings.devices.form.namePlaceholder')} value={draftName} onChange={(e) => setDraftName(e.target.value)} />
+          <input className="rounded border border-border/60 bg-background px-2 py-1.5 text-sm" placeholder={t('settings.devices.form.hostPlaceholder')} value={draftHost} onChange={(e) => setDraftHost(e.target.value)} />
+          <input className="rounded border border-border/60 bg-background px-2 py-1.5 text-sm" placeholder={t('settings.devices.form.sshPortPlaceholder')} value={draftSshPort} onChange={(e) => setDraftSshPort(e.target.value)} />
+          <input className="rounded border border-border/60 bg-background px-2 py-1.5 text-sm" placeholder={t('settings.devices.form.mcpPortPlaceholder')} value={draftMcpPort} onChange={(e) => setDraftMcpPort(e.target.value)} />
+          <input className="rounded border border-border/60 bg-background px-2 py-1.5 text-sm" placeholder={t('settings.devices.form.sshUserPlaceholder')} value={draftUser} onChange={(e) => setDraftUser(e.target.value)} />
+          <input className="rounded border border-border/60 bg-background px-2 py-1.5 text-sm" placeholder={t('settings.devices.form.mcpBearerPlaceholder')} value={draftMcpBearer} onChange={(e) => setDraftMcpBearer(e.target.value)} />
+          <textarea className="rounded border border-border/60 bg-background px-2 py-1.5 text-sm md:col-span-2" rows={3} placeholder={t('settings.devices.form.sshKeyPlaceholder')} value={draftSshKey} onChange={(e) => setDraftSshKey(e.target.value)} />
         </div>
-        <Button size="sm" disabled={busy} onClick={() => void enroll()}>登记设备</Button>
+        <Button size="sm" disabled={busy} onClick={() => void enroll()}>{t('settings.devices.actions.enroll')}</Button>
       </section>
 
       <section className="mb-8 space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Agent MCP Token</h2>
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => void createAgentToken()}>生成 token</Button>
+          <h2 className="text-sm font-semibold">{t('settings.devices.section.agentMcpToken')}</h2>
+          <Button variant="outline" size="sm" disabled={busy} onClick={() => void createAgentToken()}>{t('settings.devices.actions.createToken')}</Button>
         </div>
         {issuedToken ? (
           <div className="rounded-md border border-border/60 p-3 text-xs">
-            <div className="mb-1 opacity-70">请立即复制，关闭后不再显示：</div>
+            <div className="mb-1 opacity-70">{t('settings.devices.token.copyOnce')}</div>
             <code className="block break-all">{issuedToken}</code>
-            <div className="mt-2 opacity-70">MCP 端点：POST /api/devices/mcp（Authorization: Bearer &lt;token&gt;）</div>
+            <div className="mt-2 opacity-70">{t('settings.devices.token.endpointHint')}</div>
           </div>
         ) : null}
         <ul className="space-y-1 text-xs opacity-80">
           {tokens.map((token) => (
-            <li key={token.id}>{token.label} · 创建于 {token.createdAt}</li>
+            <li key={token.id}>{token.label} · {t('settings.devices.token.createdAt', { time: token.createdAt })}</li>
           ))}
         </ul>
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold">最近审计</h2>
+        <h2 className="text-sm font-semibold">{t('settings.devices.section.audit')}</h2>
         {audit.length === 0 ? (
-          <p className="text-sm opacity-70">暂无记录。</p>
+          <p className="text-sm opacity-70">{t('settings.devices.audit.empty')}</p>
         ) : (
           <ul className="space-y-1 text-xs opacity-80">
             {audit.map((entry, index) => (

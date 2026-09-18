@@ -1,5 +1,6 @@
 import type { SidebarSection } from '@/constants/sidebar';
 import type { IconName } from '@/components/icon/icons';
+import type { I18nKey } from '@/lib/i18n';
 
 export type SettingsPageSlug =
   | 'home'
@@ -49,12 +50,51 @@ export interface SettingsRuntimeContext {
 
 export interface SettingsPageMeta {
   slug: SettingsPageSlug;
+  /** Search/keyword fallback title; UI chrome should prefer `settingsPageTitleKey`. */
   title: string;
   group: SettingsPageGroup;
   kind: 'single' | 'split';
   description?: string;
   keywords?: string[];
   isAvailable?: (ctx: SettingsRuntimeContext) => boolean;
+}
+
+const SETTINGS_TITLE_KEYS = {
+  home: 'settings.page.home.title',
+  general: 'settings.page.general.title',
+  projects: 'settings.page.projects.title',
+  'remote-instances': 'settings.page.remoteInstances.title',
+  providers: 'settings.page.providers.title',
+  usage: 'settings.page.usage.title',
+  agents: 'settings.page.agents.title',
+  behavior: 'settings.page.behavior.title',
+  commands: 'settings.page.commands.title',
+  mcp: 'settings.page.mcp.title',
+  plugins: 'settings.page.plugins.title',
+  'skills.installed': 'settings.page.skills.title',
+  'skills.catalog': 'settings.page.skillsCatalog.title',
+  git: 'settings.page.git.title',
+  appearance: 'settings.page.appearance.title',
+  chat: 'settings.page.chat.title',
+  shortcuts: 'settings.page.shortcuts.title',
+  sessions: 'settings.page.sessions.title',
+  'magic-prompts': 'settings.page.magicPrompts.title',
+  snippets: 'settings.page.snippets.title',
+  notifications: 'settings.page.notifications.title',
+  voice: 'settings.page.voice.title',
+  tunnel: 'settings.page.tunnel.title',
+  about: 'settings.page.about.title',
+  integrations: 'settings.page.integrations.title',
+  'pigeon-brain': 'settings.page.pigeonBrain.title',
+  'memory-browse': 'settings.page.memoryBrowse.title',
+  'knowledge-settings': 'settings.page.knowledgeSettings.title',
+  'knowledge-browse': 'settings.page.knowledgeBrowse.title',
+  devices: 'settings.page.devices.title',
+  extensions: 'settings.page.extensions.title',
+} as const satisfies Record<SettingsPageSlug, I18nKey>;
+
+export function settingsPageTitleKey(slug: SettingsPageSlug): I18nKey {
+  return SETTINGS_TITLE_KEYS[slug];
 }
 
 export const SETTINGS_PAGE_METADATA: readonly SettingsPageMeta[] = [

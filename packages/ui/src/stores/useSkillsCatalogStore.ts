@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { formatMessage, useI18nStore } from '@/lib/i18n';
 import { devtools } from 'zustand/middleware';
 
 import type {
@@ -377,7 +378,7 @@ export const useSkillsCatalogStore = create<SkillsCatalogState>()(
           }
 
           if (payload.requiresReload) {
-            startConfigUpdate('Installing skills…');
+            startConfigUpdate(formatMessage(useI18nStore.getState().dictionary, 'configUpdate.installingSkills'));
             await refreshSkillsAfterOpenCodeRestart({
               message: payload.message,
               delayMs: payload.reloadDelayMs,

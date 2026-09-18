@@ -1186,7 +1186,9 @@ export function ScheduledTaskEditorDialog(props: {
       await onSave(payload);
       onOpenChange(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('sessions.scheduledTasks.editor.toast.saveFailed'));
+      toast.error(t('sessions.scheduledTasks.editor.toast.saveFailed'), {
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setSaving(false);
     }

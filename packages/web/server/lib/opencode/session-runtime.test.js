@@ -214,7 +214,7 @@ describe('session runtime', () => {
       'session-busy-1': expect.objectContaining({
         status: 'idle',
         metadata: expect.objectContaining({
-          message: 'Interrupted by OpenCode restart',
+          message: '因 OpenCode 重启而中断',
           reason: 'opencode-restart',
         }),
       }),
@@ -241,7 +241,7 @@ describe('session runtime', () => {
           sessionID: sessionId,
           error: {
             name: 'MessageAbortedError',
-            message: 'The running turn was interrupted when OpenCode restarted.',
+            message: '当前回合在 OpenCode 重启时被中断。',
           },
         },
       });

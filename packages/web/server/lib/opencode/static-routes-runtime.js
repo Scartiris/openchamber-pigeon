@@ -1,4 +1,9 @@
 import { registerPwaManifestRoute } from './pwa-manifest-routes.js';
+import {
+  formatServerPageCopy,
+  serverPageCopy,
+  serverPageLang,
+} from '../server-html/page-copy.js';
 
 export const createStaticRoutesRuntime = (dependencies) => {
   const {
@@ -82,14 +87,22 @@ export const createStaticRoutesRuntime = (dependencies) => {
   const registerApiOnlyFallbackRoutes = (app) => {
     app.get(/^(?!\/api|\/auth|\/health|\/linear|.*\.(js|css|svg|png|jpg|jpeg|gif|ico|woff|woff2|ttf|eot|map)).*$/, (req, res) => {
       const command = 'openchamber connect-url --help';
+      const pageCopy = serverPageCopy(req);
+      const htmlLang = serverPageLang(req);
+      const pageTitle = formatServerPageCopy(pageCopy, 'server.apiOnly.title');
+      const heading = formatServerPageCopy(pageCopy, 'server.apiOnly.heading');
+      const description = formatServerPageCopy(pageCopy, 'server.apiOnly.description');
+      const copyCommand = formatServerPageCopy(pageCopy, 'server.apiOnly.copyCommand');
+      const logoAria = formatServerPageCopy(pageCopy, 'server.apiOnly.logoAria');
+      const apiOnlyMessage = formatServerPageCopy(pageCopy, 'server.apiOnly.message');
       res.status(200).format({
         html: () => {
           res.send(`<!doctype html>
-<html lang="en">
+<html lang="${htmlLang}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>OpenChamber API-only mode</title>
+  <title>${pageTitle}</title>
   <style>
     :root {
       color-scheme: dark;
@@ -191,7 +204,7 @@ export const createStaticRoutesRuntime = (dependencies) => {
 </head>
 <body>
   <main>
-    <svg class="logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="OpenChamber logo">
+    <svg class="logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${logoAria}">
       <path d="M50 50 L8.432 26 L8.432 74 L50 98 Z" fill="currentColor" fill-opacity=".15" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
       <path d="M8.432 26 L18.824 32 L18.824 44 L8.432 38 Z" fill="currentColor" fill-opacity=".2"/>
       <path d="M18.824 32 L29.216 38 L29.216 50 L18.824 44 Z" fill="currentColor" fill-opacity=".45"/>
@@ -232,11 +245,11 @@ export const createStaticRoutesRuntime = (dependencies) => {
         <path d="M-8 -4 L8 -4 L8 12 L-8 12 Z" fill="currentColor" fill-opacity=".4"/>
       </g>
     </svg>
-    <h1>OpenChamber is running in headless mode</h1>
-    <p>This server is ready. Open it from the OpenChamber desktop or mobile app to use it.</p>
+    <h1>${heading}</h1>
+    <p>${description}</p>
     <div class="command">
       <code id="connect-command">${command}</code>
-      <button type="button" id="copy-command" aria-label="Copy command" title="Copy command">
+      <button type="button" id="copy-command" aria-label="${copyCommand}" title="${copyCommand}">
         <svg class="copy-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
           <path d="M8 7.2C8 6.08 8 5.52 8.218 5.092a2 2 0 0 1 .874-.874C9.52 4 10.08 4 11.2 4h5.6c1.12 0 1.68 0 2.108.218a2 2 0 0 1 .874.874C20 5.52 20 6.08 20 7.2v5.6c0 1.12 0 1.68-.218 2.108a2 2 0 0 1-.874.874C18.48 16 17.92 16 16.8 16h-5.6c-1.12 0-1.68 0-2.108-.218a2 2 0 0 1-.874-.874C8 14.48 8 13.92 8 12.8V7.2Z" stroke="currentColor" stroke-width="1.8"/>
           <path d="M4 8v8.8C4 17.92 4 18.48 4.218 18.908a2 2 0 0 0 .874.874C5.52 20 6.08 20 7.2 20H16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
@@ -269,10 +282,10 @@ export const createStaticRoutesRuntime = (dependencies) => {
 </html>`);
         },
         json: () => {
-          res.json({ ok: true, mode: 'api-only', message: 'OpenChamber is running in API-only mode' });
+          res.json({ ok: true, mode: 'api-only', message: apiOnlyMessage });
         },
         default: () => {
-          res.type('text/plain').send('OpenChamber is running in API-only mode');
+          res.type('text/plain').send(apiOnlyMessage);
         },
       });
     });

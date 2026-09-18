@@ -520,9 +520,9 @@ export const Header: React.FC = () => {
         packageManager: data.packageManager,
         updateCommand: data.updateCommand,
       });
-    } catch (error) {
+    } catch {
       setRemoteUpdateInfo(null);
-      setRemoteUpdateError(error instanceof Error ? error.message : t('header.services.remoteUpdate.error'));
+      setRemoteUpdateError(t('header.services.remoteUpdate.error'));
     } finally {
       setRemoteUpdateChecking(false);
     }
@@ -749,8 +749,8 @@ export const Header: React.FC = () => {
       return activeProjectLabel ?? 'OpenChamber';
     }
     const trimmedTitle = currentSession?.title?.trim();
-    return trimmedTitle && trimmedTitle.length > 0 ? trimmedTitle : 'Untitled Session';
-  }, [activeProjectLabel, currentSession?.title, currentSessionId]);
+    return trimmedTitle && trimmedTitle.length > 0 ? trimmedTitle : t('header.sessions.untitled');
+  }, [activeProjectLabel, currentSession?.title, currentSessionId, t]);
   const headerDirectoryStore = useDirectoryStore(openDirectory || undefined, { bootstrap: false });
   const sync = useSync();
   const updateSessionTitle = useSessionUIStore((state) => state.updateSessionTitle);

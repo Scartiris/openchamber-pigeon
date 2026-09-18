@@ -45,7 +45,7 @@ describe('MCP OAuth browser callback route', () => {
     expect(JSON.parse(init.body)).toEqual({ code: 'auth-code' });
     expect(init.headers['x-opencode-auth']).toBe('test');
 
-    expect(response.text).toContain('Authorization Complete');
+    expect(response.text).toContain('授权完成');
     // Started from the desktop shell: the page hands control back via deep link.
     expect(response.text).toContain('openchamber://focus/mcp-auth');
 
@@ -63,7 +63,7 @@ describe('MCP OAuth browser callback route', () => {
       .expect(400);
 
     expect(upstreamFetch).not.toHaveBeenCalled();
-    expect(response.text).toContain('Authorization Failed');
+    expect(response.text).toContain('授权失败');
   });
 
   it('omits the desktop deep link for flows started outside the desktop shell', async () => {

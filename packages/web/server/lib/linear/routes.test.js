@@ -88,7 +88,7 @@ describe('Linear auth routes', () => {
       .query({ state, code: 'auth-code' })
       .expect(200);
 
-    expect(callback.text).toContain('Authorization Complete');
+    expect(callback.text).toContain('授权完成');
     expect(callback.text).toContain('openchamber://focus/linear-auth');
 
     const status = await request(app).get('/api/linear/auth/status').expect(200);
@@ -132,7 +132,7 @@ describe('Linear auth routes', () => {
       .query({ state: 'forged', code: 'attacker-code' })
       .expect(400);
     expect(tokenFetch).not.toHaveBeenCalled();
-    expect(response.text).toContain('Authorization Failed');
+    expect(response.text).toContain('授权失败');
     expect(response.text).not.toContain('openchamber://');
   });
 
