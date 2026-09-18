@@ -93,6 +93,21 @@ export const getToolIcon = (toolName: string, presentation?: GuestToolRule | nul
     if (tool === 'openchamber_memory') {
         return <Icon name="brain-4" className={iconClass} />;
     }
+    if (tool.startsWith('openviking_')) {
+        if (tool === 'openviking_remember' || tool === 'openviking_search' || tool === 'openviking_find') {
+            return <Icon name="brain-4" className={iconClass} />;
+        }
+        if (tool === 'openviking_read' || tool === 'openviking_write' || tool === 'openviking_edit') {
+            return <Icon name="file-text" className={iconClass} />;
+        }
+        if (tool === 'openviking_list' || tool === 'openviking_tree' || tool === 'openviking_list_watches') {
+            return <Icon name="folder-6" className={iconClass} />;
+        }
+        if (tool === 'openviking_grep' || tool === 'openviking_glob') {
+            return <Icon name="file-search" className={iconClass} />;
+        }
+        return <Icon name="database-2" className={iconClass} />;
+    }
     if (tool === 'question') {
         return <Icon name="survey" className={iconClass} />;
     }

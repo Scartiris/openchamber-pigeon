@@ -3,9 +3,9 @@
 Pilot extension: rail / full-screen entry for the pigeon-brain memory library UI.
 
 The management UI is still **pigeon-brain's own product**, reverse-proxied at
-`/api/pigeon-brain/**`. This guest only mounts that same-origin page from the
-context rail and the Extension pages menu, so the workbench no longer buries it
-under Settings → 记忆库.
+`/api/pigeon-brain/**`. This guest mounts that same-origin page from the
+context rail and the Extension pages menu. Settings no longer lists a
+记忆库 page; this panel is the workbench entry.
 
 ## Install (path)
 
@@ -29,6 +29,6 @@ Commit `panel/main.js`. Install never builds TypeScript.
 
 ## Boundary
 
-- Keep Settings → 记忆库 as a fallback until this pilot is accepted.
+- Settings no longer surfaces 记忆库; the guest panel owns the UI entry.
 - Do not move SSH/device secrets into a guest package.
 - OpenViking stays a first-class settings surface for now (edit/create/delete).

@@ -209,6 +209,130 @@ const TOOL_METADATA: Record<string, ToolMetadata> = {
       inputFields: []
     },
 
+    // OpenViking MCP tools (server namespaced by OpenCode as openviking_*)
+    openviking_search: {
+      displayName: 'OpenViking Search',
+      category: 'system',
+      outputLanguage: 'text',
+      inputFields: [
+        { key: 'query', label: 'Query', type: 'text' },
+        { key: 'mode', label: 'Mode', type: 'text' },
+        { key: 'limit', label: 'Limit', type: 'text' }
+      ]
+    },
+    openviking_find: {
+      displayName: 'OpenViking Find',
+      category: 'system',
+      outputLanguage: 'text',
+      inputFields: [
+        { key: 'query', label: 'Query', type: 'text' },
+        { key: 'limit', label: 'Limit', type: 'text' }
+      ]
+    },
+    openviking_remember: {
+      displayName: 'OpenViking Remember',
+      category: 'system',
+      outputLanguage: 'json',
+      inputFields: []
+    },
+    openviking_read: {
+      displayName: 'OpenViking Read',
+      category: 'system',
+      outputLanguage: 'text',
+      inputFields: [
+        { key: 'uris', label: 'URIs', type: 'text' }
+      ]
+    },
+    openviking_list: {
+      displayName: 'OpenViking List',
+      category: 'system',
+      outputLanguage: 'text',
+      inputFields: [
+        { key: 'uri', label: 'URI', type: 'text' }
+      ]
+    },
+    openviking_tree: {
+      displayName: 'OpenViking Tree',
+      category: 'system',
+      outputLanguage: 'text',
+      inputFields: [
+        { key: 'uri', label: 'URI', type: 'text' }
+      ]
+    },
+    openviking_grep: {
+      displayName: 'OpenViking Grep',
+      category: 'system',
+      outputLanguage: 'text',
+      inputFields: [
+        { key: 'pattern', label: 'Pattern', type: 'text' },
+        { key: 'uri', label: 'URI', type: 'text' }
+      ]
+    },
+    openviking_glob: {
+      displayName: 'OpenViking Glob',
+      category: 'system',
+      outputLanguage: 'text',
+      inputFields: [
+        { key: 'pattern', label: 'Pattern', type: 'text' },
+        { key: 'uri', label: 'URI', type: 'text' }
+      ]
+    },
+    openviking_write: {
+      displayName: 'OpenViking Write',
+      category: 'system',
+      outputLanguage: 'json',
+      inputFields: [
+        { key: 'uri', label: 'URI', type: 'text' },
+        { key: 'content', label: 'Content', type: 'text' },
+        { key: 'mode', label: 'Mode', type: 'text' }
+      ]
+    },
+    openviking_edit: {
+      displayName: 'OpenViking Edit',
+      category: 'system',
+      outputLanguage: 'json',
+      inputFields: [
+        { key: 'uri', label: 'URI', type: 'text' }
+      ]
+    },
+    openviking_add_resource: {
+      displayName: 'OpenViking Add Resource',
+      category: 'system',
+      outputLanguage: 'json',
+      inputFields: [
+        { key: 'path', label: 'Path', type: 'text' },
+        { key: 'to', label: 'Target URI', type: 'text' }
+      ]
+    },
+    openviking_forget: {
+      displayName: 'OpenViking Forget',
+      category: 'system',
+      outputLanguage: 'json',
+      inputFields: [
+        { key: 'uri', label: 'URI', type: 'text' }
+      ]
+    },
+    openviking_list_watches: {
+      displayName: 'OpenViking List Watches',
+      category: 'system',
+      outputLanguage: 'json',
+      inputFields: []
+    },
+    openviking_cancel_watch: {
+      displayName: 'OpenViking Cancel Watch',
+      category: 'system',
+      outputLanguage: 'json',
+      inputFields: [
+        { key: 'taskId', label: 'Task ID', type: 'text' }
+      ]
+    },
+    openviking_health: {
+      displayName: 'OpenViking Health',
+      category: 'system',
+      outputLanguage: 'json',
+      inputFields: []
+    },
+
     plan_enter: {
       displayName: 'Plan Mode',
       category: 'ai',
@@ -259,6 +383,7 @@ export function getToolMetadata(toolName: string): ToolMetadata {
  * i18n keys for the tool names the chat transcript renders. Kept beside
  * `TOOL_METADATA` so the canonical English name and its label stay together.
  */
+// Dynamic MCP/plugin tool names require an open string index; values stay I18nKey.
 const TOOL_DISPLAY_NAME_KEYS: Record<string, I18nKey> = {
   read: 'toolDisplayName.read',
   write: 'toolDisplayName.write',
@@ -285,6 +410,21 @@ const TOOL_DISPLAY_NAME_KEYS: Record<string, I18nKey> = {
   plan_exit: 'toolDisplayName.planExit',
   StructuredOutput: 'toolDisplayName.structuredOutput',
   structuredoutput: 'toolDisplayName.structuredOutput',
+  openviking_search: 'toolDisplayName.openvikingSearch',
+  openviking_find: 'toolDisplayName.openvikingFind',
+  openviking_remember: 'toolDisplayName.openvikingRemember',
+  openviking_read: 'toolDisplayName.openvikingRead',
+  openviking_list: 'toolDisplayName.openvikingList',
+  openviking_tree: 'toolDisplayName.openvikingTree',
+  openviking_grep: 'toolDisplayName.openvikingGrep',
+  openviking_glob: 'toolDisplayName.openvikingGlob',
+  openviking_write: 'toolDisplayName.openvikingWrite',
+  openviking_edit: 'toolDisplayName.openvikingEdit',
+  openviking_add_resource: 'toolDisplayName.openvikingAddResource',
+  openviking_forget: 'toolDisplayName.openvikingForget',
+  openviking_list_watches: 'toolDisplayName.openvikingListWatches',
+  openviking_cancel_watch: 'toolDisplayName.openvikingCancelWatch',
+  openviking_health: 'toolDisplayName.openvikingHealth',
 };
 
 /**

@@ -166,8 +166,8 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "openchamber",
-      "repo": "openchamber"
+      "owner": "Scartiris",
+      "repo": "openchamber-pigeon"
     }
   }
 }

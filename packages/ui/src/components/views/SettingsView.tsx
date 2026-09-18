@@ -220,6 +220,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
   // No starter page on desktop: 'home' (fresh state) resolves to General.
   // settingsPage persists in the UI store, so subsequent opens restore the
   // last visited page. Mobile keeps 'home' — its entry stage is the nav list.
+  // Unknown/removed slugs already resolve to 'home' in resolveSettingsSlug.
   React.useEffect(() => {
     if (!isMobile && settingsSlug === 'home') {
       setSettingsPage('general');

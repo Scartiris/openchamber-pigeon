@@ -101,7 +101,7 @@ host.onReady((context) => {
       if (!status) {
         showNotice(
           '无法读取记忆库状态',
-          'OpenChamber 服务器没有返回可用的 /api/pigeon-brain/status。检查服务是否启动，或到 设置 → 记忆库 查看。',
+          'OpenChamber 服务器没有返回可用的 /api/pigeon-brain/status。检查服务是否启动，以及 PIGEON_BRAIN_URL 是否配置。',
           'error',
         );
         return;

@@ -27,8 +27,9 @@ import { serverMessage } from '../server-html/page-copy.js';
  *
  * ## 惰性
  *
- * `PIGEON_BRAIN_URL` 没配就**整条链路不挂** —— 上游/桌面端行为完全不变，
- * 设置页那一栏会显示"未配置"而不是报错。这与 doc-preview 的做法一致。
+ * `PIGEON_BRAIN_URL` 没配就**整条链路不挂** —— 上游/桌面端行为完全不变。
+ * 设置侧栏不再挂「记忆库」；配置后由 pigeon-brain guest 面板从 rail 进入。
+ * 这与 doc-preview 的做法一致。
  */
 
 /** 反代挂载前缀。改这里要同步改 UI 里 iframe 的 src。 */
