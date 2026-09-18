@@ -1616,6 +1616,8 @@ export const dict = {
   'fleet.section.host': 'Host (diese Workbench)',
   'fleet.section.devices': 'Registrierte Geräte',
   'fleet.devices.empty': 'Noch keine Geräte registriert.',
+  'fleet.devices.expand': '{name} aufklappen',
+  'fleet.devices.collapse': '{name} zuklappen',
   'fleet.devices.openSettings': 'Geräteeinstellungen öffnen',
   'fleet.devices.metricsUnavailable': 'Werte nicht verfügbar',
   'fleet.devices.offline': 'Gerät ist offline',

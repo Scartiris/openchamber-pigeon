@@ -61,6 +61,16 @@ describe('metrics command builder', () => {
       expect(error.code).toBe('unsupported_platform');
     }
   });
+
+  test('windows reports page-file usage, not the commit limit', () => {
+    const payload = buildMetricsCommand('windows').slice('powershell -NoProfile -EncodedCommand '.length);
+    const script = Buffer.from(payload, 'base64').toString('utf16le');
+    // `TotalVirtualMemorySize - TotalVisibleMemorySize` is the commit limit; on a
+    // real box that produced "used 49.6 GB / total 43.6 GB (100%)". Pin the source.
+    expect(script).toContain('Win32_PageFileUsage');
+    expect(script).not.toContain('TotalVirtualMemorySize');
+    expect(script).not.toContain('FreeVirtualMemory');
+  });
 });
 
 describe('metrics parser', () => {

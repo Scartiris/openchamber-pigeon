@@ -1796,6 +1796,8 @@ export const dict: Record<I18nKey, string> = {
   'fleet.section.host': '宿主（本工作台）',
   'fleet.section.devices': '已註冊裝置',
   'fleet.devices.empty': '還沒有註冊裝置。',
+  'fleet.devices.expand': '展開 {name}',
+  'fleet.devices.collapse': '收合 {name}',
   'fleet.devices.openSettings': '開啟裝置設定',
   'fleet.devices.metricsUnavailable': '指標不可用',
   'fleet.devices.offline': '裝置離線',

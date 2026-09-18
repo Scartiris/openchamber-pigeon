@@ -1786,6 +1786,8 @@ export const dict: Record<I18nKey, string> = {
   'fleet.section.host': '宿主（本工作台）',
   'fleet.section.devices': '已注册设备',
   'fleet.devices.empty': '还没有注册设备。',
+  'fleet.devices.expand': '展开 {name}',
+  'fleet.devices.collapse': '收起 {name}',
   'fleet.devices.openSettings': '打开设备设置',
   'fleet.devices.metricsUnavailable': '指标不可用',
   'fleet.devices.offline': '设备离线',

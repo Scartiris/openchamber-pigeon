@@ -1820,6 +1820,8 @@ export const dict = {
   'fleet.section.host': 'Host (this workbench)',
   'fleet.section.devices': 'Registered devices',
   'fleet.devices.empty': 'No devices registered yet.',
+  'fleet.devices.expand': 'Expand {name}',
+  'fleet.devices.collapse': 'Collapse {name}',
   'fleet.devices.openSettings': 'Open device settings',
   'fleet.devices.metricsUnavailable': 'Metrics unavailable',
   'fleet.devices.offline': 'Device is offline',

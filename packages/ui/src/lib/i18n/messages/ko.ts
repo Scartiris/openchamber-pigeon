@@ -1822,6 +1822,8 @@ export const dict: Record<I18nKey, string> = {
   'fleet.section.host': '호스트(이 워크벤치)',
   'fleet.section.devices': '등록된 장치',
   'fleet.devices.empty': '아직 등록된 장치가 없습니다.',
+  'fleet.devices.expand': '{name} 펼치기',
+  'fleet.devices.collapse': '{name} 접기',
   'fleet.devices.openSettings': '장치 설정 열기',
   'fleet.devices.metricsUnavailable': '지표를 사용할 수 없음',
   'fleet.devices.offline': '장치가 오프라인입니다',

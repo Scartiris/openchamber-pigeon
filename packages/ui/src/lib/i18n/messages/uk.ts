@@ -1798,6 +1798,8 @@ export const dict: Record<I18nKey, string> = {
   "fleet.section.host": "Хост (цей workbench)",
   "fleet.section.devices": "Зареєстровані пристрої",
   "fleet.devices.empty": "Ще немає зареєстрованих пристроїв.",
+  "fleet.devices.expand": "Розгорнути {name}",
+  "fleet.devices.collapse": "Згорнути {name}",
   "fleet.devices.openSettings": "Відкрити налаштування пристроїв",
   "fleet.devices.metricsUnavailable": "Метрики недоступні",
   "fleet.devices.offline": "Пристрій офлайн",

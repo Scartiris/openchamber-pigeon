@@ -1816,6 +1816,8 @@ export const dict: Record<I18nKey, string> = {
   'fleet.section.host': 'ホスト（このワークベンチ）',
   'fleet.section.devices': '登録済みデバイス',
   'fleet.devices.empty': '登録済みデバイスはまだありません。',
+  'fleet.devices.expand': '{name} を展開',
+  'fleet.devices.collapse': '{name} を折りたたむ',
   'fleet.devices.openSettings': 'デバイス設定を開く',
   'fleet.devices.metricsUnavailable': '指標を取得できません',
   'fleet.devices.offline': 'デバイスはオフラインです',

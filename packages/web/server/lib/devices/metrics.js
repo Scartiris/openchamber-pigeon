@@ -47,10 +47,21 @@ const WINDOWS_SCRIPT = [
   `Write-Output "cpu${TAB}$cpus"`,
   '$memTotal = 0; $memFree = 0; $swapTotal = 0; $swapFree = 0',
   'try { $memTotal = [int64]$os.TotalVisibleMemorySize; $memFree = [int64]$os.FreePhysicalMemory } catch { }',
+  // Page-file usage, NOT `TotalVirtualMemorySize - TotalVisibleMemorySize`: that
+  // pair describes the commit limit, and the old math produced nonsense on a real
+  // box ("used 49.6 GB / total 43.6 GB (100%)"). Win32_PageFileUsage counters are
+  // MB while the mem row is KB, hence the *1024.
   'try {',
-  '  $swapTotal = [int64]$os.TotalVirtualMemorySize - [int64]$os.TotalVisibleMemorySize',
-  '  $swapFree = [int64]$os.FreeVirtualMemory - [int64]$os.FreePhysicalMemory',
-  '} catch { $swapTotal = 0; $swapFree = 0 }',
+  '  foreach ($pf in @(Get-CimInstance Win32_PageFileUsage)) {',
+  '    $allocatedMb = [int64]$pf.AllocatedBaseSize',
+  '    $usedMb = [int64]$pf.CurrentUsage',
+  '    if ($usedMb -gt $allocatedMb) { $usedMb = $allocatedMb }',
+  '    $swapTotal += $allocatedMb',
+  '    $swapFree += ($allocatedMb - $usedMb)',
+  '  }',
+  '} catch { }',
+  '$swapTotal = $swapTotal * 1024',
+  '$swapFree = $swapFree * 1024',
   `Write-Output "mem${TAB}$memTotal${TAB}$memFree${TAB}$swapTotal${TAB}$swapFree"`,
   // Free space is per fixed volume; CD/DVD and network drives are excluded on purpose.
   'try {',

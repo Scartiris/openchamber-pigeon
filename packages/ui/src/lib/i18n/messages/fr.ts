@@ -1582,6 +1582,8 @@ export const dict = {
   'fleet.section.host': 'Hôte (ce workbench)',
   'fleet.section.devices': 'Appareils enregistrés',
   'fleet.devices.empty': 'Aucun appareil enregistré pour le moment.',
+  'fleet.devices.expand': 'Développer {name}',
+  'fleet.devices.collapse': 'Réduire {name}',
   'fleet.devices.openSettings': 'Ouvrir les réglages des appareils',
   'fleet.devices.metricsUnavailable': 'Mesures indisponibles',
   'fleet.devices.offline': 'Appareil hors ligne',

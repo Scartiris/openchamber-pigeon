@@ -1798,6 +1798,8 @@ export const dict: Record<I18nKey, string> = {
   "fleet.section.host": "Host (este workbench)",
   "fleet.section.devices": "Dispositivos registrados",
   "fleet.devices.empty": "Nenhum dispositivo registrado ainda.",
+  "fleet.devices.expand": "Expandir {name}",
+  "fleet.devices.collapse": "Recolher {name}",
   "fleet.devices.openSettings": "Abrir configurações de dispositivos",
   "fleet.devices.metricsUnavailable": "Métricas indisponíveis",
   "fleet.devices.offline": "O dispositivo está offline",

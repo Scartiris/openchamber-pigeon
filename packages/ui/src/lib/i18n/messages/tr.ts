@@ -1782,6 +1782,8 @@ export const dict = {
   'fleet.section.host': 'Ana makine (bu workbench)',
   'fleet.section.devices': 'Kayıtlı cihazlar',
   'fleet.devices.empty': 'Henüz kayıtlı cihaz yok.',
+  'fleet.devices.expand': '{name} öğesini genişlet',
+  'fleet.devices.collapse': '{name} öğesini daralt',
   'fleet.devices.openSettings': 'Cihaz ayarlarını aç',
   'fleet.devices.metricsUnavailable': 'Ölçümler kullanılamıyor',
   'fleet.devices.offline': 'Cihaz çevrimdışı',

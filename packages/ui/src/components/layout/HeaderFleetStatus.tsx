@@ -13,6 +13,7 @@ import { useI18n, type I18nKey, type I18nParams } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/useUIStore';
 import { useFleetStore } from '@/stores/useFleetStore';
+import { updateDeviceApproval } from '@/lib/fleet/client';
 import {
   EMPTY_VALUE,
   deviceErrorTextKey,
@@ -86,15 +87,59 @@ const NetworkLines: React.FC<{ host: { network: FleetHost['network']; notes?: st
   );
 };
 
-const HostSection: React.FC<{ host: FleetHost; t: (key: I18nKey, params?: I18nParams) => string }> = ({ host, t }) => {
+const APPROVAL_MODES = ['deny', 'smart', 'auto'] as const;
+type ApprovalMode = (typeof APPROVAL_MODES)[number];
+
+const isApprovalMode = (value: string): value is ApprovalMode =>
+  value === 'deny' || value === 'smart' || value === 'auto';
+
+/** Reuses the settings page's labels so both surfaces name the modes identically. */
+const APPROVAL_LABELS = {
+  deny: 'settings.devices.approval.deny',
+  smart: 'settings.devices.approval.smart',
+  auto: 'settings.devices.approval.auto',
+} as const satisfies Record<ApprovalMode, I18nKey>;
+
+const CollapseToggle: React.FC<{
+  expanded: boolean;
+  label: string;
+  onToggle: () => void;
+  t: (key: I18nKey, params?: I18nParams) => string;
+}> = ({ expanded, label, onToggle, t }) => (
+  <button
+    type="button"
+    onClick={onToggle}
+    aria-expanded={expanded}
+    aria-label={expanded ? t('fleet.devices.collapse', { name: label }) : t('fleet.devices.expand', { name: label })}
+    className="app-region-no-drag inline-flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-interactive-hover hover:text-foreground"
+  >
+    <Icon name={expanded ? 'arrow-down-s' : 'arrow-right-s'} className="size-4" />
+  </button>
+);
+
+const HostSection: React.FC<{
+  host: FleetHost;
+  expanded: boolean;
+  onToggle: () => void;
+  t: (key: I18nKey, params?: I18nParams) => string;
+}> = ({ host, expanded, onToggle, t }) => {
   const memory = host.memory;
   const ageText = toAgeSeconds(host.ageMs);
   const networkUnavailable = host.notes.includes('network-unavailable') || !host.network;
+  const worstDiskPercent = host.disks.reduce<number | null>((worst, disk) => (
+    disk.usedPercent !== null && (worst === null || disk.usedPercent > worst) ? disk.usedPercent : worst
+  ), null);
+  // Collapsed still has to be informative: the headline carries the two numbers
+  // people actually watch, or the reason there are none.
+  const headline = memory
+    ? `${t('fleet.metric.memory')} ${formatPercent(memory.usedPercent)} · ${t('fleet.metric.disk')} ${formatPercent(worstDiskPercent)}`
+    : (host.error || t('fleet.header.tooltip.unavailable'));
 
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-border/60 bg-[var(--surface-muted)] p-3">
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
+          <CollapseToggle expanded={expanded} label={host.hostname || t('fleet.section.host')} onToggle={onToggle} t={t} />
           <Icon name="server" className="size-4 shrink-0 text-muted-foreground" />
           <span className="truncate typography-ui-label font-semibold text-foreground">
             {host.hostname || t('fleet.section.host')}
@@ -113,141 +158,43 @@ const HostSection: React.FC<{ host: FleetHost; t: (key: I18nKey, params?: I18nPa
         </div>
       </div>
 
-      {!host.ok ? (
+      <p className={cn('truncate typography-micro', host.ok ? 'text-muted-foreground' : 'text-status-error')} title={headline}>
+        {headline}
+      </p>
+
+      {expanded && !host.ok ? (
         <p className="typography-ui-label text-status-error">
           {host.error || t('fleet.header.tooltip.unavailable')}
         </p>
       ) : null}
 
-      {memory ? (
-        <div className="flex flex-col gap-1.5">
-          <MetricLine
-            label={t('fleet.metric.memory')}
-            value={memory.totalBytes === null
-              ? EMPTY_VALUE
-              : `${formatBytes(memory.usedBytes)} / ${formatBytes(memory.totalBytes)} (${formatPercent(memory.usedPercent)})`}
-            tone={severityTextClass(severityOfPercent(memory.usedPercent))}
-          />
-          <MeterBar percent={memory.usedPercent} severity={severityOfPercent(memory.usedPercent)} />
-        </div>
-      ) : null}
-
-      {memory && (memory.swapTotalBytes ?? 0) > 0 ? (
-        <div className="flex flex-col gap-1.5">
-          <MetricLine
-            label={t('fleet.metric.swap')}
-            value={`${formatBytes(memory.swapUsedBytes)} / ${formatBytes(memory.swapTotalBytes)} (${formatPercent(memory.swapUsedPercent)})`}
-            tone={severityTextClass(severityOfPercent(memory.swapUsedPercent))}
-          />
-          <MeterBar percent={memory.swapUsedPercent} severity={severityOfPercent(memory.swapUsedPercent)} />
-        </div>
-      ) : null}
-
-      {host.disks.map((disk) => (
-        <div key={`${disk.mount}-${disk.filesystem ?? ''}`} className="flex flex-col gap-1.5">
-          <MetricLine
-            label={`${t('fleet.metric.disk')} ${disk.mount}`}
-            value={`${formatBytes(disk.usedBytes)} / ${formatBytes(disk.totalBytes)} (${formatPercent(disk.usedPercent)})`}
-            tone={severityTextClass(severityOfPercent(disk.usedPercent))}
-          />
-          <MeterBar percent={disk.usedPercent} severity={severityOfPercent(disk.usedPercent)} />
-        </div>
-      ))}
-
-      <NetworkLines
-        host={host}
-        unavailableLabel={t('fleet.metric.networkUnavailable')}
-        hint={networkUnavailable ? t('fleet.hostHelper.hint') : undefined}
-      />
-
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-        {host.cpu ? (
-          <MetricLine
-            label={t('fleet.metric.load')}
-            value={host.cpu.load1 === null
-              ? EMPTY_VALUE
-              : `${host.cpu.load1} / ${host.cpu.load5 ?? EMPTY_VALUE} / ${host.cpu.load15 ?? EMPTY_VALUE} · ${formatCores(host.cpu.count)}`}
-          />
-        ) : null}
-        <MetricLine label={t('fleet.metric.uptime')} value={formatUptime(host.uptimeSec)} />
-        {host.containersSummary ? (
-          <MetricLine
-            label={t('fleet.metric.containers')}
-            value={`${host.containersSummary.healthy ?? EMPTY_VALUE}/${host.containersSummary.total ?? EMPTY_VALUE}`}
-          />
-        ) : null}
-        {host.deploy?.sha ? (
-          <MetricLine label="deploy" value={shortSha(host.deploy.sha) ?? EMPTY_VALUE} />
-        ) : null}
-      </div>
-
-      {host.containers && host.containers.length > 0 ? (
-        <div className="flex flex-wrap gap-1">
-          {host.containers.map((container) => (
-            <span
-              key={container.name}
-              title={container.image ?? undefined}
-              className={cn(
-                'inline-flex items-center gap-1 rounded px-1.5 py-0.5 typography-micro',
-                container.health && container.health !== 'healthy'
-                  ? 'bg-status-warning/10 text-status-warning'
-                  : 'bg-status-success/10 text-status-success',
-              )}
-            >
-              <span className={cn('size-1.5 rounded-full', severityDotClass(container.health && container.health !== 'healthy' ? 'warn' : 'ok'))} />
-              {container.name}
-            </span>
-          ))}
-        </div>
-      ) : null}
-    </section>
-  );
-};
-
-const DeviceSection: React.FC<{ row: FleetDeviceRow; t: (key: I18nKey, params?: I18nParams) => string }> = ({ row, t }) => {
-  const metrics = row.metrics;
-  const ageText = toAgeSeconds(row.metricsAgeMs);
-
-  return (
-    <section className="flex flex-col gap-3 rounded-lg border border-border/60 bg-[var(--surface-muted)] p-3">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className={cn('size-2 shrink-0 rounded-full', severityDotClass(row.online ? 'ok' : 'error'))} />
-          <span className="truncate typography-ui-label font-semibold text-foreground">{row.name}</span>
-          <span className="shrink-0 typography-micro text-muted-foreground">{row.platform}</span>
-        </div>
-        <div className="flex shrink-0 items-center gap-2 typography-micro text-muted-foreground">
-          {row.latencyMs !== null ? <span>{t('fleet.metric.rtt', { ms: row.latencyMs })}</span> : null}
-          {ageText !== null ? <span>{t('fleet.dialog.checkedAt', { seconds: ageText })}</span> : null}
-          <span>{row.online ? t('fleet.status.online') : t('fleet.status.offline')}</span>
-        </div>
-      </div>
-
-      {!metrics ? (
-        <div className="flex flex-col gap-1">
-          <p className="typography-ui-label text-muted-foreground">
-            {t(deviceErrorTextKey(row.error?.code))}
-          </p>
-          {row.error?.message ? (
-            <p className="truncate typography-micro text-muted-foreground" title={row.error.message}>
-              {row.error.message}
-            </p>
-          ) : null}
-        </div>
-      ) : (
+      {expanded ? (
         <>
-          {metrics.memory ? (
+          {memory ? (
             <div className="flex flex-col gap-1.5">
               <MetricLine
                 label={t('fleet.metric.memory')}
-                value={`${formatBytes(metrics.memory.usedBytes)} / ${formatBytes(metrics.memory.totalBytes)} (${formatPercent(metrics.memory.usedPercent)})`}
-                tone={severityTextClass(severityOfPercent(metrics.memory.usedPercent))}
+                value={memory.totalBytes === null
+                  ? EMPTY_VALUE
+                  : `${formatBytes(memory.usedBytes)} / ${formatBytes(memory.totalBytes)} (${formatPercent(memory.usedPercent)})`}
+                tone={severityTextClass(severityOfPercent(memory.usedPercent))}
               />
-              <MeterBar percent={metrics.memory.usedPercent} severity={severityOfPercent(metrics.memory.usedPercent)} />
+              <MeterBar percent={memory.usedPercent} severity={severityOfPercent(memory.usedPercent)} />
             </div>
           ) : null}
 
-          {metrics.disks.map((disk) => (
+          {memory && (memory.swapTotalBytes ?? 0) > 0 ? (
+            <div className="flex flex-col gap-1.5">
+              <MetricLine
+                label={t('fleet.metric.swap')}
+                value={`${formatBytes(memory.swapUsedBytes)} / ${formatBytes(memory.swapTotalBytes)} (${formatPercent(memory.swapUsedPercent)})`}
+                tone={severityTextClass(severityOfPercent(memory.swapUsedPercent))}
+              />
+              <MeterBar percent={memory.swapUsedPercent} severity={severityOfPercent(memory.swapUsedPercent)} />
+            </div>
+          ) : null}
+
+          {host.disks.map((disk) => (
             <div key={`${disk.mount}-${disk.filesystem ?? ''}`} className="flex flex-col gap-1.5">
               <MetricLine
                 label={`${t('fleet.metric.disk')} ${disk.mount}`}
@@ -258,14 +205,174 @@ const DeviceSection: React.FC<{ row: FleetDeviceRow; t: (key: I18nKey, params?: 
             </div>
           ))}
 
-          <NetworkLines host={{ network: metrics.network }} unavailableLabel={t('fleet.metric.networkUnavailable')} />
+          <NetworkLines
+            host={host}
+            unavailableLabel={t('fleet.metric.networkUnavailable')}
+            hint={networkUnavailable ? t('fleet.hostHelper.hint') : undefined}
+          />
 
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            <MetricLine label={t('fleet.metric.uptime')} value={formatUptime(metrics.uptimeSec)} />
-            {metrics.cpu ? <MetricLine label={t('fleet.metric.load')} value={formatCores(metrics.cpu.count)} /> : null}
+            {host.cpu ? (
+              <MetricLine
+                label={t('fleet.metric.load')}
+                value={host.cpu.load1 === null
+                  ? EMPTY_VALUE
+                  : `${host.cpu.load1} / ${host.cpu.load5 ?? EMPTY_VALUE} / ${host.cpu.load15 ?? EMPTY_VALUE} · ${formatCores(host.cpu.count)}`}
+              />
+            ) : null}
+            <MetricLine label={t('fleet.metric.uptime')} value={formatUptime(host.uptimeSec)} />
+            {host.containersSummary ? (
+              <MetricLine
+                label={t('fleet.metric.containers')}
+                value={`${host.containersSummary.healthy ?? EMPTY_VALUE}/${host.containersSummary.total ?? EMPTY_VALUE}`}
+              />
+            ) : null}
+            {host.deploy?.sha ? (
+              <MetricLine label="deploy" value={shortSha(host.deploy.sha) ?? EMPTY_VALUE} />
+            ) : null}
+          </div>
+
+          {host.containers && host.containers.length > 0 ? (
+            <div className="flex flex-wrap gap-1">
+              {host.containers.map((container) => (
+                <span
+                  key={container.name}
+                  title={container.image ?? undefined}
+                  className={cn(
+                    'inline-flex items-center gap-1 rounded px-1.5 py-0.5 typography-micro',
+                    container.health && container.health !== 'healthy'
+                      ? 'bg-status-warning/10 text-status-warning'
+                      : 'bg-status-success/10 text-status-success',
+                  )}
+                >
+                  <span className={cn('size-1.5 rounded-full', severityDotClass(container.health && container.health !== 'healthy' ? 'warn' : 'ok'))} />
+                  {container.name}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </>
+      ) : null}
+    </section>
+  );
+};
+
+const DeviceSection: React.FC<{
+  row: FleetDeviceRow;
+  expanded: boolean;
+  approvalBusy: boolean;
+  onToggle: () => void;
+  onApprovalChange: (approval: ApprovalMode) => void;
+  t: (key: I18nKey, params?: I18nParams) => string;
+}> = ({ row, expanded, approvalBusy, onToggle, onApprovalChange, t }) => {
+  const metrics = row.metrics;
+  const ageText = toAgeSeconds(row.metricsAgeMs);
+  const worstDiskPercent = metrics
+    ? metrics.disks.reduce<number | null>((worst, disk) => (
+      disk.usedPercent !== null && (worst === null || disk.usedPercent > worst) ? disk.usedPercent : worst
+    ), null)
+    : null;
+  const headline = metrics
+    ? `${t('fleet.metric.memory')} ${formatPercent(metrics.memory?.usedPercent ?? null)} · ${t('fleet.metric.disk')} ${formatPercent(worstDiskPercent)}`
+    : t(deviceErrorTextKey(row.error?.code));
+
+  return (
+    <section className="flex flex-col gap-3 rounded-lg border border-border/60 bg-[var(--surface-muted)] p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <CollapseToggle expanded={expanded} label={row.name} onToggle={onToggle} t={t} />
+          <span className={cn('size-2 shrink-0 rounded-full', severityDotClass(row.online ? 'ok' : 'error'))} />
+          <span className="truncate typography-ui-label font-semibold text-foreground">{row.name}</span>
+          <span className="shrink-0 typography-micro text-muted-foreground">{row.platform}</span>
+          {row.transport ? (
+            <span className="shrink-0 typography-micro text-muted-foreground">{row.transport}</span>
+          ) : null}
+        </div>
+        <div className="flex shrink-0 items-center gap-2 typography-micro text-muted-foreground">
+          {row.latencyMs !== null ? <span>{t('fleet.metric.rtt', { ms: row.latencyMs })}</span> : null}
+          {ageText !== null ? <span>{t('fleet.dialog.checkedAt', { seconds: ageText })}</span> : null}
+          <span>{row.online ? t('fleet.status.online') : t('fleet.status.offline')}</span>
+        </div>
+      </div>
+
+      <p
+        className={cn('truncate typography-micro', metrics ? 'text-muted-foreground' : 'text-status-warning')}
+        title={headline}
+      >
+        {headline}
+      </p>
+
+      {expanded ? (
+        <>
+          {!metrics ? (
+            <div className="flex flex-col gap-1">
+              <p className="typography-ui-label text-muted-foreground">
+                {t(deviceErrorTextKey(row.error?.code))}
+              </p>
+              {row.error?.message ? (
+                <p className="truncate typography-micro text-muted-foreground" title={row.error.message}>
+                  {row.error.message}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <>
+              {metrics.memory ? (
+                <div className="flex flex-col gap-1.5">
+                  <MetricLine
+                    label={t('fleet.metric.memory')}
+                    value={`${formatBytes(metrics.memory.usedBytes)} / ${formatBytes(metrics.memory.totalBytes)} (${formatPercent(metrics.memory.usedPercent)})`}
+                    tone={severityTextClass(severityOfPercent(metrics.memory.usedPercent))}
+                  />
+                  <MeterBar percent={metrics.memory.usedPercent} severity={severityOfPercent(metrics.memory.usedPercent)} />
+                </div>
+              ) : null}
+
+              {metrics.disks.map((disk) => (
+                <div key={`${disk.mount}-${disk.filesystem ?? ''}`} className="flex flex-col gap-1.5">
+                  <MetricLine
+                    label={`${t('fleet.metric.disk')} ${disk.mount}`}
+                    value={`${formatBytes(disk.usedBytes)} / ${formatBytes(disk.totalBytes)} (${formatPercent(disk.usedPercent)})`}
+                    tone={severityTextClass(severityOfPercent(disk.usedPercent))}
+                  />
+                  <MeterBar percent={disk.usedPercent} severity={severityOfPercent(disk.usedPercent)} />
+                </div>
+              ))}
+
+              <NetworkLines host={{ network: metrics.network }} unavailableLabel={t('fleet.metric.networkUnavailable')} />
+
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                <MetricLine label={t('fleet.metric.uptime')} value={formatUptime(metrics.uptimeSec)} />
+                {metrics.cpu ? <MetricLine label={t('fleet.metric.load')} value={formatCores(metrics.cpu.count)} /> : null}
+              </div>
+            </>
+          )}
+
+          {/* Approval is per device and lives with the device, not in a settings page. */}
+          <div className="flex items-center justify-between gap-2 border-t border-border/60 pt-2">
+            <label
+              className="typography-micro text-muted-foreground"
+              htmlFor={`fleet-approval-${row.id}`}
+            >
+              {t('settings.devices.actions.approval')}
+            </label>
+            <select
+              id={`fleet-approval-${row.id}`}
+              className="h-7 rounded-md border border-border bg-transparent px-2 typography-micro text-foreground disabled:opacity-50"
+              value={row.approval}
+              disabled={approvalBusy}
+              onChange={(event) => {
+                const next = event.target.value;
+                if (isApprovalMode(next)) onApprovalChange(next);
+              }}
+            >
+              {APPROVAL_MODES.map((mode) => (
+                <option key={mode} value={mode}>{t(APPROVAL_LABELS[mode])}</option>
+              ))}
+            </select>
           </div>
         </>
-      )}
+      ) : null}
     </section>
   );
 };
@@ -273,12 +380,33 @@ const DeviceSection: React.FC<{ row: FleetDeviceRow; t: (key: I18nKey, params?: 
 export const HeaderFleetStatus: React.FC<{ className?: string }> = ({ className }) => {
   const { t } = useI18n();
   const [open, setOpen] = React.useState(false);
+  const [hostExpanded, setHostExpanded] = React.useState(true);
+  const [expandedDevices, setExpandedDevices] = React.useState<Record<string, boolean>>({});
+  const [approvalBusyId, setApprovalBusyId] = React.useState<string | null>(null);
+  const [approvalError, setApprovalError] = React.useState<string | null>(null);
   const snapshot = useFleetStore((state) => state.snapshot);
   const status = useFleetStore((state) => state.status);
   const error = useFleetStore((state) => state.error);
   const ensureLoaded = useFleetStore((state) => state.ensureLoaded);
   const setSettingsPage = useUIStore((state) => state.setSettingsPage);
   const setSettingsDialogOpen = useUIStore((state) => state.setSettingsDialogOpen);
+
+  const toggleDevice = React.useCallback((id: string) => {
+    setExpandedDevices((current) => ({ ...current, [id]: current[id] !== true }));
+  }, []);
+
+  const changeApproval = React.useCallback(async (id: string, approval: ApprovalMode) => {
+    setApprovalBusyId(id);
+    setApprovalError(null);
+    try {
+      await updateDeviceApproval(id, approval);
+      await ensureLoaded({ force: true });
+    } catch (failure) {
+      setApprovalError(failure instanceof Error ? failure.message : String(failure));
+    } finally {
+      setApprovalBusyId(null);
+    }
+  }, [ensureLoaded]);
 
   React.useEffect(() => {
     void ensureLoaded();
@@ -409,7 +537,14 @@ export const HeaderFleetStatus: React.FC<{ className?: string }> = ({ className 
           </div>
 
           <div className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pr-1">
-            {snapshot ? <HostSection host={snapshot.host} t={t} /> : null}
+            {snapshot ? (
+              <HostSection
+                host={snapshot.host}
+                expanded={hostExpanded}
+                onToggle={() => setHostExpanded((current) => !current)}
+                t={t}
+              />
+            ) : null}
 
             <div className="flex items-center justify-between gap-2">
               <h3 className="typography-ui-label font-medium text-foreground">
@@ -423,8 +558,22 @@ export const HeaderFleetStatus: React.FC<{ className?: string }> = ({ className 
               </Button>
             </div>
 
+            {approvalError ? (
+              <p className="typography-micro text-status-error">{approvalError}</p>
+            ) : null}
+
             {snapshot && snapshot.devices.items.length > 0 ? (
-              snapshot.devices.items.map((row) => <DeviceSection key={row.id} row={row} t={t} />)
+              snapshot.devices.items.map((row) => (
+                <DeviceSection
+                  key={row.id}
+                  row={row}
+                  expanded={expandedDevices[row.id] === true}
+                  approvalBusy={approvalBusyId === row.id}
+                  onToggle={() => toggleDevice(row.id)}
+                  onApprovalChange={(approval) => { void changeApproval(row.id, approval); }}
+                  t={t}
+                />
+              ))
             ) : (
               <p className="typography-ui-label text-muted-foreground">{t('fleet.devices.empty')}</p>
             )}

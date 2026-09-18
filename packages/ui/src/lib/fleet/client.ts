@@ -307,3 +307,25 @@ export const fetchFleetSnapshot = async ({ force = false } = {}): Promise<FleetS
   }
   return snapshot;
 };
+
+/**
+ * Switch one device's approval mode straight from the fleet panel.
+ * The device routes are shared with the settings page, so this is the same PATCH
+ * that page performs; failures surface as `FleetStatusError` for the panel to show.
+ */
+export const updateDeviceApproval = async (deviceId: string, approval: string): Promise<void> => {
+  let response: Response;
+  try {
+    response = await runtimeFetch(`/api/devices/${encodeURIComponent(deviceId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ approval }),
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new FleetStatusError('load', reason);
+  }
+  if (!response.ok) {
+    throw new FleetStatusError('load', `HTTP ${response.status}`, response.status);
+  }
+};

@@ -74,9 +74,15 @@ if (-not $sshd) {
   $sshd = Get-Service sshd -ErrorAction SilentlyContinue
 }
 if ($sshd) {
-  if ($sshd.Status -ne 'Running') { Start-Service sshd }
-  Set-Service sshd -StartupType Automatic
-  Write-Ok "sshd running (Automatic)"
+  if ($sshd.Status -ne 'Running') {
+    try { Start-Service sshd } catch { Write-Warn2 "Could not start sshd: $($_.Exception.Message)" }
+  }
+  # Both calls need admin on a system service. Set-Service used to throw straight
+  # out of the script ($ErrorActionPreference = 'Stop'), which aborted enrollment
+  # *after* the key was generated but *before* it was authorized: measured on a
+  # real machine as "key created, authorized_keys untouched, no device registered".
+  try { Set-Service sshd -StartupType Automatic } catch { Write-Warn2 "Could not set sshd startup type (needs admin): $($_.Exception.Message)" }
+  Write-Ok "sshd running ($((Get-Service sshd).StartType))"
 } else {
   Write-Warn2 "sshd still missing — shell/file tools will fail until installed"
 }
@@ -236,16 +242,23 @@ if ($tsIp) {
 $connection.tunnel = @{ sshPort = $sshPort; mcpPort = $mcpPort }
 
 $capabilities = @{ shell = $true; files = $true; screen = [bool]$mcpReady }
-$body = @{
+# ConvertTo-Json on the whole body was measured to HANG (never returned, >180s)
+# once the multi-line private key sits inside the hashtable on Windows PowerShell
+# 5.1 — the device then never registers even though every earlier step succeeded.
+# So the key is escaped and spliced in by hand; ConvertTo-Json only sees plain fields.
+$bodyFields = @{
   name = $name
   platform = 'windows'
   capabilities = $capabilities
   connection = $connection
   auth = @{ sshUser = $user }
   approval = $Approval
-  sshPrivateKey = $privateKey
 }
-if ($mcpBearer) { $body.mcpBearer = $mcpBearer }
+if ($mcpBearer) { $bodyFields.mcpBearer = $mcpBearer }
+$keyJson = [regex]::Replace($privateKey.Trim().Replace('\\', '\\\\').Replace('"', '\\"'), "\\r?\\n", '\\n')
+$bodyJson = $bodyFields | ConvertTo-Json -Depth 8
+$bodyJson = $bodyJson.TrimEnd()
+$bodyJson = $bodyJson.Substring(0, $bodyJson.Length - 1) + ',"sshPrivateKey":"' + $keyJson + '"}'
 
 Write-Step "Registering device with OpenChamber…"
 $enrollUrl = "$Server/api/devices/enroll"
@@ -254,7 +267,7 @@ $headers = @{
   authorization = "Bearer $Token"
 }
 try {
-  $response = Invoke-RestMethod -Uri $enrollUrl -Method Post -Headers $headers -Body ($body | ConvertTo-Json -Depth 8)
+  $response = Invoke-RestMethod -Uri $enrollUrl -Method Post -Headers $headers -Body $bodyJson
   $device = $response.device
   Write-Ok "Registered: $($device.name)  id=$($device.id)"
   Write-Host ""
