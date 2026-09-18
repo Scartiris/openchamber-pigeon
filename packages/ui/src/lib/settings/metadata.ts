@@ -27,7 +27,6 @@ export type SettingsPageSlug =
   | 'tunnel'
   | 'about'
   | 'integrations'
-  | 'pigeon-brain'
   | 'memory-settings'
   | 'memory-browse'
   | 'knowledge-settings'
@@ -208,17 +207,6 @@ export const SETTINGS_PAGE_METADATA: readonly SettingsPageMeta[] = [
   { slug: 'tunnel', title: '外部隧道', group: 'projects', kind: 'single', keywords: ['tunnel', 'external', 'cloudflare', 'qr', 'remote', 'mobile', 'share'], isAvailable: (ctx) => !ctx.isVSCode },
   { slug: 'about', title: '关于', group: 'general', kind: 'single', keywords: ['about', 'version', 'updates', 'release', 'changelog'], isAvailable: (ctx) => ctx.isMobile && !ctx.isVSCode },
   { slug: 'integrations', title: '集成', group: 'general', kind: 'single', keywords: ['integration', 'connect', 'oauth', 'github', 'linear'], isAvailable: (ctx) => !ctx.isVSCode },
-  // pigeon-brain 的管理界面。用 iframe 内嵌而不是用 React 重写：
-  // 那是它自己的产品，重写等于把同一份界面维护两遍，两边必然漂移。
-  {
-    slug: 'pigeon-brain',
-    title: '记忆库',
-    group: 'general',
-    kind: 'single',
-    description: '长期记忆与知识库的管理界面。',
-    keywords: ['memory', 'brain', 'wiki', 'knowledge', '记忆', '知识库'],
-    isAvailable: (ctx) => !ctx.isVSCode && !ctx.isMobile,
-  },
   // OpenViking 的四个页面。记忆与知识库在 OpenViking 里是同一套 viking://
   // 文件系统的两个根，所以各拆成「设置 + 浏览」两页而不是一页内含切换：
   // 浏览页是 split 形态（左边树、右边内容），需要整页宽度。
@@ -342,9 +330,6 @@ export function getSettingsNavIcon(slug: SettingsPageSlug): IconName | null {
 
     case 'git':
       return 'git-branch';
-
-    case 'pigeon-brain':
-      return 'book';
 
     // OpenViking 的两个作用域各两项：设置用「齿轮感」的通用图标，
     // 浏览用「树/文件夹」—— 浏览器形态一眼可辨。

@@ -111,7 +111,6 @@ export const settingsDict = {
   'settings.page.tunnel.title': '외부 터널',
   'settings.page.tunnel.description': '원격 터널로 이 인스턴스를 노출합니다.',
   'settings.page.about.title': '정보',
-  'settings.page.pigeonBrain.title': 'Memory',
   'settings.page.memorySettings.title': '메모리 설정',
   'settings.page.memorySettings.description': 'OpenViking 메모리 저장소의 연결 및 준비 상태입니다.',
   'settings.page.memoryBrowse.title': '메모리 탐색',

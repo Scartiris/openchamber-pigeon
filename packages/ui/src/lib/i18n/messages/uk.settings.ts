@@ -113,7 +113,6 @@ export const settingsDict = {
   "settings.page.tunnel.title": "Зовнішній тунель",
   "settings.page.tunnel.description": "Відкрийте цей екземпляр через віддалений тунель.",
   "settings.page.about.title": "Про застосунок",
-  "settings.page.pigeonBrain.title": "Memory",
   "settings.page.memorySettings.title": "Налаштування пам’яті",
   "settings.page.memorySettings.description": "З’єднання та готовність сховища пам’яті OpenViking.",
   "settings.page.memoryBrowse.title": "Огляд пам’яті",
