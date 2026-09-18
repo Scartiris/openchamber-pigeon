@@ -3464,6 +3464,12 @@ export const dict: Record<I18nKey, string> = {
   'documentPreview.actions.reload': '重新加载',
   'documentPreview.state.loading': '正在加载预览…',
   'documentPreview.state.converting': '正在转换文档…',
+  // Document preview editing
+  'documentPreview.actions.edit': '编辑',
+  'documentPreview.actions.view': '预览',
+  'documentPreview.state.unsaved': '有未保存的修改',
+  'documentPreview.state.saved': '已保存',
+  'documentPreview.error.editUnsupported': '该文件类型只能预览',
   'documentPreview.error.notConfigured': '该服务器未配置文档预览服务。',
   'documentPreview.error.unavailable': '文档转换服务不可用，可下载原件。',
   'documentPreview.error.failed': '无法打开该文档。',

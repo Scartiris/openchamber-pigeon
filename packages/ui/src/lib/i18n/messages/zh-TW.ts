@@ -3463,6 +3463,12 @@ export const dict: Record<I18nKey, string> = {
   'documentPreview.actions.reload': '重新載入',
   'documentPreview.state.loading': '正在載入預覽…',
   'documentPreview.state.converting': '正在轉換文件…',
+  // Document preview editing
+  'documentPreview.actions.edit': '編輯',
+  'documentPreview.actions.view': '預覽',
+  'documentPreview.state.unsaved': '有尚未儲存的修改',
+  'documentPreview.state.saved': '已儲存',
+  'documentPreview.error.editUnsupported': '該檔案類型只能預覽',
   'documentPreview.error.notConfigured': '此伺服器未設定文件預覽服務。',
   'documentPreview.error.unavailable': '文件轉換服務無法使用，仍可下載原件。',
   'documentPreview.error.failed': '無法開啟該文件。',

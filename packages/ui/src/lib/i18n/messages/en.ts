@@ -3463,6 +3463,12 @@ export const dict = {
   'documentPreview.actions.reload': 'Reload',
   'documentPreview.state.loading': 'Loading preview…',
   'documentPreview.state.converting': 'Converting document…',
+  // Document preview editing
+  'documentPreview.actions.edit': 'Edit',
+  'documentPreview.actions.view': 'View',
+  'documentPreview.state.unsaved': 'Unsaved changes',
+  'documentPreview.state.saved': 'Saved',
+  'documentPreview.error.editUnsupported': 'This file type can only be previewed',
   'documentPreview.error.notConfigured': 'Document preview is not configured on this server.',
   'documentPreview.error.unavailable': 'The document conversion service is unavailable. You can still download the original.',
   'documentPreview.error.failed': 'Could not open this document.',

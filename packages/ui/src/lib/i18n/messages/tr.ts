@@ -3461,6 +3461,12 @@ export const dict = {
   'documentPreview.actions.reload': 'Yeniden yükle',
   'documentPreview.state.loading': 'Önizleme yükleniyor…',
   'documentPreview.state.converting': 'Belge dönüştürülüyor…',
+  // Document preview editing
+  'documentPreview.actions.edit': 'Düzenle',
+  'documentPreview.actions.view': 'Görüntüle',
+  'documentPreview.state.unsaved': 'Kaydedilmemiş değişiklikler',
+  'documentPreview.state.saved': 'Kaydedildi',
+  'documentPreview.error.editUnsupported': 'Bu dosya türü yalnızca önizlenebilir.',
   'documentPreview.error.notConfigured': 'Bu sunucuda belge önizlemesi yapılandırılmamış.',
   'documentPreview.error.unavailable': 'Belge dönüştürme hizmeti kullanılamıyor. Orijinali yine de indirebilirsiniz.',
   'documentPreview.error.failed': 'Bu belge açılamadı.',

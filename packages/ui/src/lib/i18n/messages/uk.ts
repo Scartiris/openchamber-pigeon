@@ -3464,6 +3464,12 @@ export const dict: Record<I18nKey, string> = {
   "documentPreview.actions.reload": "Перезавантажити",
   "documentPreview.state.loading": "Завантаження перегляду…",
   "documentPreview.state.converting": "Перетворення документа…",
+  // Document preview editing
+  "documentPreview.actions.edit": "Редагувати",
+  "documentPreview.actions.view": "Переглянути",
+  "documentPreview.state.unsaved": "Незбережені зміни",
+  "documentPreview.state.saved": "Збережено",
+  "documentPreview.error.editUnsupported": "Цей тип файлу можна лише переглянути.",
   "documentPreview.error.notConfigured": "Перегляд документів не налаштовано на цьому сервері.",
   "documentPreview.error.unavailable": "Сервіс перетворення документів недоступний. Оригінал усе ще можна завантажити.",
   "documentPreview.error.failed": "Не вдалося відкрити цей документ.",

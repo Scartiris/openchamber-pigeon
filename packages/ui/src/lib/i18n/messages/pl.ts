@@ -3480,6 +3480,12 @@ export const dict: Record<I18nKey, string> = {
   'documentPreview.actions.reload': 'Odśwież',
   'documentPreview.state.loading': 'Ładowanie podglądu…',
   'documentPreview.state.converting': 'Konwertowanie dokumentu…',
+  // Document preview editing
+  'documentPreview.actions.edit': 'Edytuj',
+  'documentPreview.actions.view': 'Wyświetl',
+  'documentPreview.state.unsaved': 'Niezapisane zmiany',
+  'documentPreview.state.saved': 'Zapisano',
+  'documentPreview.error.editUnsupported': 'Ten typ pliku można tylko wyświetlić w podglądzie.',
   'documentPreview.error.notConfigured': 'Podgląd dokumentów nie jest skonfigurowany na tym serwerze.',
   'documentPreview.error.unavailable': 'Usługa konwersji dokumentów jest niedostępna. Oryginał nadal możesz pobrać.',
   'documentPreview.error.failed': 'Nie udało się otworzyć tego dokumentu.',

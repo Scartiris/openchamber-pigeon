@@ -3461,6 +3461,12 @@ export const dict = {
   'documentPreview.actions.reload': 'Recharger',
   'documentPreview.state.loading': 'Chargement de l’aperçu…',
   'documentPreview.state.converting': 'Conversion du document…',
+  // Document preview editing
+  'documentPreview.actions.edit': 'Modifier',
+  'documentPreview.actions.view': 'Afficher',
+  'documentPreview.state.unsaved': 'Modifications non enregistrées',
+  'documentPreview.state.saved': 'Enregistré',
+  'documentPreview.error.editUnsupported': 'Ce type de fichier peut uniquement être prévisualisé.',
   'documentPreview.error.notConfigured': 'L’aperçu des documents n’est pas configuré sur ce serveur.',
   'documentPreview.error.unavailable': 'Le service de conversion de documents est indisponible. Vous pouvez toujours télécharger l’original.',
   'documentPreview.error.failed': 'Impossible d’ouvrir ce document.',

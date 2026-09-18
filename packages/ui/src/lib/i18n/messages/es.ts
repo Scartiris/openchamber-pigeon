@@ -3464,6 +3464,12 @@ export const dict: Record<I18nKey, string> = {
   "documentPreview.actions.reload": "Recargar",
   "documentPreview.state.loading": "Cargando vista previa…",
   "documentPreview.state.converting": "Convirtiendo el documento…",
+  // Document preview editing
+  "documentPreview.actions.edit": "Editar",
+  "documentPreview.actions.view": "Ver",
+  "documentPreview.state.unsaved": "Cambios sin guardar",
+  "documentPreview.state.saved": "Guardado",
+  "documentPreview.error.editUnsupported": "Este tipo de archivo solo se puede previsualizar.",
   "documentPreview.error.notConfigured": "La vista previa de documentos no está configurada en este servidor.",
   "documentPreview.error.unavailable": "El servicio de conversión de documentos no está disponible. Puedes seguir descargando el original.",
   "documentPreview.error.failed": "No se pudo abrir este documento.",

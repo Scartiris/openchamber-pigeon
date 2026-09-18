@@ -1,16 +1,16 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
-import { mkdtemp, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, realpath, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { buildConversionKey } from './converter.js';
 import { registerDocPreviewRoutes } from './routes.js';
 import { createDocPreviewRuntime } from './runtime.js';
+import { signJwt, signRawToken, verifyJwt, verifyRawToken } from './token.js';
 
 const crypto = { createHash, createHmac, randomBytes, timingSafeEqual };
 
-const PDF_BYTES = Buffer.from('%PDF-1.4\nconverted\n%%EOF\n');
+const SECRET = 'unit-test-secret';
 
 const createRouteRegistry = () => {
   const routes = new Map();
@@ -18,6 +18,9 @@ const createRouteRegistry = () => {
     app: {
       get(routePath, handler) {
         routes.set(`GET ${routePath}`, handler);
+      },
+      post(routePath, handler) {
+        routes.set(`POST ${routePath}`, handler);
       },
     },
     getRoute(method, routePath) {
@@ -62,53 +65,49 @@ const createMockResponse = () => {
   };
 };
 
-const createRequest = ({ query = {} } = {}) => ({ query });
-
-/**
- * Stands in for the LibreOffice sidecar: `/health`, `/cache/<key>` and
- * `/convert/<key>`. `conversions` records every upload so a test can assert
- * *whether* the document was sent — a cache hit must not re-upload it.
- */
-const createConverterFetch = ({
-  healthy = true,
-  cached = null,
-  converted = PDF_BYTES,
-  convertStatus = 200,
-  conversions = [],
-} = {}) => vi.fn(async (url, init = {}) => {
-  const href = String(url);
-  if (href.endsWith('/health')) {
-    return { ok: healthy, status: healthy ? 200 : 503, json: async () => ({ status: 'ok' }) };
-  }
-  if (href.includes('/cache/')) {
-    return cached
-      ? { ok: true, status: 200, arrayBuffer: async () => cached }
-      : { ok: false, status: 404, arrayBuffer: async () => new ArrayBuffer(0) };
-  }
-  if (href.includes('/convert/')) {
-    conversions.push({ url: href, body: init.body });
-    if (convertStatus !== 200) {
-      return { ok: false, status: convertStatus, arrayBuffer: async () => new ArrayBuffer(0) };
-    }
-    return { ok: true, status: 200, arrayBuffer: async () => converted };
-  }
-  throw new Error(`unexpected converter request: ${href}`);
+const createRequest = ({ query = {}, host = 'oc.example.com', protocol = 'https', body, headers = {} } = {}) => ({
+  query,
+  protocol,
+  body,
+  headers,
+  get: (name) => {
+    const key = String(name).toLowerCase();
+    if (key === 'host') return host;
+    const header = headers[key] ?? headers[String(name)];
+    return header;
+  },
 });
 
+const decodeJwtPayload = (token) => {
+  const [, body] = token.split('.');
+  return JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+};
+
 let workspace;
+let dataDir;
 let fetchImpl;
-let conversions;
+let saveFetchImpl;
 
 const setup = async ({ env = {}, resolver, fsOverrides = {} } = {}) => {
   const registry = createRouteRegistry();
   const runtime = createDocPreviewRuntime({
-    env: { OPENCHAMBER_DOC_PREVIEW_URL: 'http://office-convert:8000', ...env },
+    crypto,
+    fsPromises: { readFile, writeFile, mkdir },
+    path,
+    openchamberDataDir: dataDir,
+    env: {
+      OPENCHAMBER_DOC_PREVIEW_URL: 'http://documentserver',
+      OPENCHAMBER_DOC_PREVIEW_PUBLIC_URL: 'https://office.example.com',
+      OPENCHAMBER_DOC_PREVIEW_JWT_SECRET: SECRET,
+      OPENCHAMBER_DOC_PREVIEW_RAW_SECRET: SECRET,
+      ...env,
+    },
     fetchImpl: (...args) => fetchImpl(...args),
   });
 
   registerDocPreviewRoutes(registry.app, {
     crypto,
-    fsPromises: { readFile, stat, realpath, ...fsOverrides },
+    fsPromises: { readFile, stat, realpath, readdir, rename, rm, mkdir, writeFile, ...fsOverrides },
     path,
     docPreviewRuntime: runtime,
     resolveReadPathFromContext: resolver || (async ({ targetPath }) => ({
@@ -116,6 +115,7 @@ const setup = async ({ env = {}, resolver, fsOverrides = {} } = {}) => {
       base: workspace,
       resolved: path.resolve(workspace, targetPath),
     })),
+    fetchImpl: (...args) => saveFetchImpl(...args),
   });
 
   return registry;
@@ -127,81 +127,117 @@ const invoke = async (handler, req) => {
   return res;
 };
 
-const writeDocument = async (name, contents = 'document body') => {
-  const target = path.join(workspace, name);
-  await writeFile(target, contents);
-  return target;
-};
-
-const call = (registry, routePath, query) => invoke(
-  registry.getRoute('GET', routePath),
-  createRequest({ query }),
-);
-
 beforeEach(async () => {
   workspace = await mkdtemp(path.join(tmpdir(), 'doc-preview-ws-'));
-  conversions = [];
-  fetchImpl = createConverterFetch({ conversions });
+  dataDir = await mkdtemp(path.join(tmpdir(), 'doc-preview-data-'));
+  fetchImpl = vi.fn(async () => ({
+    ok: true,
+    text: async () => 'true',
+  }));
+  // The save callback downloads the saved document from the document server.
+  saveFetchImpl = vi.fn(async () => ({
+    ok: true,
+    arrayBuffer: async () => new TextEncoder().encode('edited-bytes').buffer,
+  }));
 });
 
 afterEach(async () => {
   await rm(workspace, { recursive: true, force: true });
+  await rm(dataDir, { recursive: true, force: true });
 });
 
-describe('conversion keys', () => {
-  it('changes when any part of the file identity changes', () => {
-    const base = { crypto, canonicalPath: '/repo/a.docx', mtimeMs: 1_000, size: 10 };
-    const key = buildConversionKey(base);
+describe('doc preview tokens', () => {
+  it('round-trips a signed token', () => {
+    const token = signRawToken({
+      crypto,
+      secret: SECRET,
+      payload: { p: '/repo/a.docx', m: 1, s: 2, e: Date.now() + 60_000 },
+    });
+    const verified = verifyRawToken({ crypto, secret: SECRET, token });
+    expect(verified.ok).toBe(true);
+    expect(verified.payload.p).toBe('/repo/a.docx');
+  });
 
-    expect(key).toMatch(/^[a-f0-9]{40}$/);
-    expect(buildConversionKey(base)).toBe(key);
-    expect(buildConversionKey({ ...base, mtimeMs: 1_001 })).not.toBe(key);
-    expect(buildConversionKey({ ...base, size: 11 })).not.toBe(key);
-    expect(buildConversionKey({ ...base, canonicalPath: '/repo/b.docx' })).not.toBe(key);
+  it('rejects a tampered or foreign-signed token', () => {
+    const token = signRawToken({
+      crypto,
+      secret: SECRET,
+      payload: { p: '/repo/a.docx', m: 1, s: 2, e: Date.now() + 60_000 },
+    });
+    expect(verifyRawToken({ crypto, secret: SECRET, token: `${token}x` }).ok).toBe(false);
+    expect(verifyRawToken({ crypto, secret: 'other', token }).reason).toBe('signature');
+    expect(verifyRawToken({ crypto, secret: SECRET, token: 'garbage' }).reason).toBe('malformed');
+  });
+
+  it('rejects an expired token', () => {
+    const token = signRawToken({
+      crypto,
+      secret: SECRET,
+      payload: { p: '/repo/a.docx', m: 1, s: 2, e: Date.now() - 1 },
+    });
+    expect(verifyRawToken({ crypto, secret: SECRET, token }).reason).toBe('expired');
+  });
+
+  it('refuses a token minted for the other direction', () => {
+    const readToken = signRawToken({
+      crypto,
+      secret: SECRET,
+      payload: { k: 'read', p: '/repo/a.docx', m: 1, s: 2, e: Date.now() + 60_000 },
+    });
+    expect(verifyRawToken({ crypto, secret: SECRET, token: readToken, requireKind: 'write' }).reason).toBe('scope');
+    expect(verifyRawToken({ crypto, secret: SECRET, token: readToken, requireKind: 'read' }).ok).toBe(true);
+  });
+
+  it('verifies a JWT signed with the shared secret and rejects any other', () => {
+    const token = signJwt({ crypto, secret: SECRET, payload: { status: 2, key: 'abc' } });
+    expect(verifyJwt({ crypto, secret: SECRET, token })?.status).toBe(2);
+    expect(verifyJwt({ crypto, secret: 'other', token })).toBeNull();
+    expect(verifyJwt({ crypto, secret: SECRET, token: 'garbage' })).toBeNull();
+    const expired = signJwt({ crypto, secret: SECRET, payload: { status: 2, exp: 1 } });
+    expect(verifyJwt({ crypto, secret: SECRET, token: expired })).toBeNull();
   });
 });
 
 describe('doc preview runtime', () => {
-  it('is inert without a conversion service', async () => {
-    const registry = await setup({ env: { OPENCHAMBER_DOC_PREVIEW_URL: '' } });
-    const res = await call(registry, '/api/doc-preview/health');
+  it('is inert without configuration', async () => {
+    const registry = await setup({ env: { OPENCHAMBER_DOC_PREVIEW_JWT_SECRET: '' } });
+    const res = await invoke(registry.getRoute('GET', '/api/doc-preview/health'), createRequest());
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({ available: false, configured: false, reason: 'not-configured' });
   });
 
-  it('stays disabled when the feature is switched off explicitly', async () => {
-    const registry = await setup({
-      env: { OPENCHAMBER_DOC_PREVIEW_DISABLED: 'true' },
-    });
-    const res = await call(registry, '/api/doc-preview/health');
-    expect(res.body).toEqual({ available: false, configured: false, reason: 'disabled' });
-  });
-
-  it('reports the conversion service as unavailable when the probe fails', async () => {
+  it('reports the document server as unavailable when the probe fails', async () => {
     fetchImpl = vi.fn(async () => {
       throw new Error('ECONNREFUSED');
     });
     const registry = await setup();
-    const res = await call(registry, '/api/doc-preview/health');
+    const res = await invoke(registry.getRoute('GET', '/api/doc-preview/health'), createRequest());
     expect(res.body.available).toBe(false);
-    expect(res.body.reason).toBe('converter-unavailable');
+    expect(res.body.reason).toBe('document-server-unavailable');
   });
 
-  it('clamps the conversion budget to a sane window', () => {
-    const short = createDocPreviewRuntime({ env: { OPENCHAMBER_DOC_PREVIEW_URL: 'http://x', OPENCHAMBER_DOC_PREVIEW_TIMEOUT_MS: '10' } });
-    const long = createDocPreviewRuntime({ env: { OPENCHAMBER_DOC_PREVIEW_URL: 'http://x', OPENCHAMBER_DOC_PREVIEW_TIMEOUT_MS: '99999999' } });
-    const unset = createDocPreviewRuntime({ env: { OPENCHAMBER_DOC_PREVIEW_URL: 'http://x' } });
-
-    expect(short.getConversionTimeoutMs()).toBe(5_000);
-    expect(long.getConversionTimeoutMs()).toBe(600_000);
-    expect(unset.getConversionTimeoutMs()).toBe(120_000);
+  it('persists a generated capability secret in the data dir', async () => {
+    const runtime = createDocPreviewRuntime({
+      crypto,
+      fsPromises: { readFile, writeFile, mkdir },
+      path,
+      openchamberDataDir: dataDir,
+      env: {},
+      fetchImpl,
+    });
+    const first = await runtime.readRawSecret();
+    expect(first).toHaveLength(64);
+    const second = await runtime.readRawSecret();
+    expect(second).toBe(first);
+    const onDisk = (await readFile(path.join(dataDir, 'doc-preview-secret'), 'utf8')).trim();
+    expect(onDisk).toBe(first);
   });
 });
 
 describe('GET /api/doc-preview/config', () => {
   it('requires a path', async () => {
     const registry = await setup();
-    const res = await call(registry, '/api/doc-preview/config');
+    const res = await invoke(registry.getRoute('GET', '/api/doc-preview/config'), createRequest());
     expect(res.statusCode).toBe(400);
   });
 
@@ -209,226 +245,476 @@ describe('GET /api/doc-preview/config', () => {
     const registry = await setup({
       resolver: async () => ({ ok: false, error: 'Path is outside of active workspace' }),
     });
-    const res = await call(registry, '/api/doc-preview/config', { path: 'a.docx' });
+    const res = await invoke(
+      registry.getRoute('GET', '/api/doc-preview/config'),
+      createRequest({ query: { path: '/etc/passwd.docx' } }),
+    );
     expect(res.statusCode).toBe(400);
     expect(res.body.error).toBe('Path is outside of active workspace');
   });
 
   it('answers 404 for a missing file', async () => {
     const registry = await setup();
-    const res = await call(registry, '/api/doc-preview/config', { path: 'missing.docx' });
+    const res = await invoke(
+      registry.getRoute('GET', '/api/doc-preview/config'),
+      createRequest({ query: { path: 'missing.docx' } }),
+    );
     expect(res.statusCode).toBe(404);
   });
 
-  it('answers 415 for a format nothing can preview', async () => {
-    await writeDocument('notes.txt');
+  it('answers 415 for a file type that has no preview', async () => {
+    await writeFile(path.join(workspace, 'notes.txt'), 'hello');
     const registry = await setup();
-    const res = await call(registry, '/api/doc-preview/config', { path: 'notes.txt' });
+    const res = await invoke(
+      registry.getRoute('GET', '/api/doc-preview/config'),
+      createRequest({ query: { path: 'notes.txt' } }),
+    );
     expect(res.statusCode).toBe(415);
   });
 
-  it('answers 413 over the preview size limit', async () => {
-    await writeDocument('huge.docx');
-    const registry = await setup({
-      // A spread of a real Stats loses `isFile` (it lives on the prototype), so
-      // the fake has to carry it explicitly.
-      fsOverrides: {
-        stat: async (target) => ({
-          ...(await stat(target)),
-          size: 100 * 1024 * 1024 + 1,
-          isFile: () => true,
-        }),
+  it('refuses a path whose realpath leaves the workspace', async () => {
+    // The lexical check runs before symlinks are resolved, so a link inside the
+    // workspace that points outside it has to be caught by the canonical
+    // containment re-check.
+    const outsideDir = await mkdtemp(path.join(tmpdir(), 'doc-preview-outside-'));
+    const outsideFile = path.join(outsideDir, 'escape.docx');
+    const insidePath = path.join(workspace, 'escape.docx');
+    await writeFile(outsideFile, 'docx');
+    await writeFile(insidePath, 'docx');
+
+    try {
+      const registry = await setup({
+        fsOverrides: {
+          realpath: async (value) => (
+            path.resolve(value) === path.resolve(insidePath) ? outsideFile : realpath(value)
+          ),
+        },
+      });
+
+      const res = await invoke(
+        registry.getRoute('GET', '/api/doc-preview/config'),
+        createRequest({ query: { path: 'escape.docx' } }),
+      );
+      expect(res.statusCode).toBe(400);
+      expect(res.body.error).toContain('outside');
+    } finally {
+      await rm(outsideDir, { recursive: true, force: true });
+    }
+  });
+
+  it('describes PDFs for the native viewer without touching the document server', async () => {
+    await writeFile(path.join(workspace, 'report.pdf'), '%PDF-1.4');
+    const registry = await setup();
+    const res = await invoke(
+      registry.getRoute('GET', '/api/doc-preview/config'),
+      createRequest({ query: { path: 'report.pdf' } }),
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({ available: true, kind: 'pdf' });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('answers 503 when the document server is down', async () => {
+    await writeFile(path.join(workspace, 'report.docx'), 'docx');
+    fetchImpl = vi.fn(async () => {
+      throw new Error('down');
+    });
+    const registry = await setup();
+    const res = await invoke(
+      registry.getRoute('GET', '/api/doc-preview/config'),
+      createRequest({ query: { path: 'report.docx' } }),
+    );
+    expect(res.statusCode).toBe(503);
+    expect(res.body.reason).toBe('document-server-unavailable');
+  });
+
+  it('returns a signed OnlyOffice configuration for a workspace document', async () => {
+    await writeFile(path.join(workspace, '报告.docx'), 'docx-bytes');
+    const registry = await setup();
+    const res = await invoke(
+      registry.getRoute('GET', '/api/doc-preview/config'),
+      createRequest({ query: { path: '报告.docx', theme: 'dark' } }),
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.kind).toBe('onlyoffice');
+    expect(res.body.documentType).toBe('word');
+    expect(res.body.documentServerUrl).toBe('https://office.example.com');
+    expect(res.body.editorConfig.document.title).toBe('报告.docx');
+    expect(res.body.editorConfig.editorConfig.mode).toBe('view');
+    expect(res.body.editorConfig.editorConfig.customization.uiTheme).toBe('theme-dark');
+    expect(res.body.editorConfig.document.permissions.edit).toBe(false);
+
+    const payload = decodeJwtPayload(res.body.editorConfig.token);
+    expect(payload.document.key).toBe(res.body.documentKey);
+    expect(payload.document.url).toContain('https://oc.example.com/doc-preview/raw?token=');
+
+    const token = decodeURIComponent(new URL(payload.document.url).searchParams.get('token'));
+    const verified = verifyRawToken({ crypto, secret: SECRET, token });
+    expect(verified.ok).toBe(true);
+    expect(verified.payload.p).toBe(path.join(workspace, '报告.docx'));
+  });
+
+  it('prefers the configured internal document base URL', async () => {
+    await writeFile(path.join(workspace, 'report.docx'), 'docx');
+    const registry = await setup({ env: { OPENCHAMBER_DOC_PREVIEW_DOCUMENT_BASE_URL: 'http://openchamber:3000' } });
+    const res = await invoke(
+      registry.getRoute('GET', '/api/doc-preview/config'),
+      createRequest({ query: { path: 'report.docx' } }),
+    );
+    const payload = decodeJwtPayload(res.body.editorConfig.token);
+    expect(payload.document.url.startsWith('http://openchamber:3000/doc-preview/raw')).toBe(true);
+  });
+
+  it('offers editing with a save callback for an editor-safe format', async () => {
+    await writeFile(path.join(workspace, 'report.docx'), 'docx');
+    const registry = await setup({ env: { OPENCHAMBER_DOC_PREVIEW_DOCUMENT_BASE_URL: 'http://openchamber:3000' } });
+    const res = await invoke(
+      registry.getRoute('GET', '/api/doc-preview/config'),
+      createRequest({ query: { path: 'report.docx', edit: '1' } }),
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.mode).toBe('edit');
+    expect(res.body.editable).toBe(true);
+    expect(res.body.editorConfig.document.permissions.edit).toBe(true);
+    expect(res.body.editorConfig.editorConfig.mode).toBe('edit');
+    expect(res.body.editorConfig.editorConfig.customization.autosave).toBe(true);
+    expect(res.body.editorConfig.editorConfig.callbackUrl)
+      .toContain('http://openchamber:3000/doc-preview/callback?token=');
+
+    const callbackToken = decodeURIComponent(
+      new URL(res.body.editorConfig.editorConfig.callbackUrl).searchParams.get('token'),
+    );
+    const verified = verifyRawToken({ crypto, secret: SECRET, token: callbackToken, requireKind: 'write' });
+    expect(verified.ok).toBe(true);
+    expect(verified.payload.p).toBe(path.join(workspace, 'report.docx'));
+    // The callback is bound to the document key this session was opened with.
+    expect(verified.payload.d).toBe(res.body.documentKey);
+  });
+
+  it('keeps a format the editor cannot round-trip read-only, and says so', async () => {
+    await writeFile(path.join(workspace, 'legacy.doc'), 'doc');
+    const registry = await setup();
+    const res = await invoke(
+      registry.getRoute('GET', '/api/doc-preview/config'),
+      createRequest({ query: { path: 'legacy.doc', edit: '1' } }),
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.editable).toBe(false);
+    expect(res.body.mode).toBe('view');
+    expect(res.body.editorConfig.document.permissions.edit).toBe(false);
+    expect(res.body.editorConfig.editorConfig.callbackUrl).toBeUndefined();
+  });
+
+  it('defaults to the read-only view when editing is not requested', async () => {
+    await writeFile(path.join(workspace, 'report.docx'), 'docx');
+    const registry = await setup();
+    const res = await invoke(
+      registry.getRoute('GET', '/api/doc-preview/config'),
+      createRequest({ query: { path: 'report.docx' } }),
+    );
+
+    expect(res.body.mode).toBe('view');
+    expect(res.body.editable).toBe(true);
+    expect(res.body.editorConfig.document.permissions.edit).toBe(false);
+    expect(res.body.editorConfig.editorConfig.callbackUrl).toBeUndefined();
+  });
+});
+
+describe('GET /doc-preview/raw', () => {
+  const mintToken = async ({ filePath, secret = SECRET, exp = Date.now() + 60_000, mtimeMs, size, kind = 'read' }) => {
+    const stats = await stat(filePath).catch(() => null);
+    return signRawToken({
+      crypto,
+      secret,
+      payload: {
+        k: kind,
+        p: filePath,
+        m: mtimeMs ?? Math.trunc(stats?.mtimeMs ?? 0),
+        s: size ?? Math.trunc(stats?.size ?? 0),
+        e: exp,
       },
     });
-    const res = await call(registry, '/api/doc-preview/config', { path: 'huge.docx' });
-    expect(res.statusCode).toBe(413);
-  });
+  };
 
-  it('keeps PDFs on the native viewer without touching the converter', async () => {
-    await writeDocument('report.pdf', '%PDF-1.4\noriginal\n');
+  it('rejects missing, tampered and expired tokens', async () => {
     const registry = await setup();
-    const res = await call(registry, '/api/doc-preview/config', { path: 'report.pdf' });
+    const handler = registry.getRoute('GET', '/doc-preview/raw');
+    const filePath = path.join(workspace, 'report.docx');
+    await writeFile(filePath, 'docx');
 
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toMatchObject({ available: true, kind: 'pdf', converted: false });
-    expect(fetchImpl).not.toHaveBeenCalled();
+    expect((await invoke(handler, createRequest())).statusCode).toBe(403);
+    expect((await invoke(handler, createRequest({ query: { token: 'nope' } }))).statusCode).toBe(403);
+    expect((await invoke(handler, createRequest({ query: { token: `${await mintToken({ filePath })}x` } }))).statusCode).toBe(403);
+    expect((await invoke(handler, createRequest({
+      query: { token: await mintToken({ filePath, exp: Date.now() - 1 }) },
+    }))).statusCode).toBe(403);
   });
 
-  it('is not-configured for office files when no conversion service is set', async () => {
-    await writeDocument('report.docx');
-    const registry = await setup({ env: { OPENCHAMBER_DOC_PREVIEW_URL: '' } });
-    const res = await call(registry, '/api/doc-preview/config', { path: 'report.docx' });
-
+  it('answers not-configured and touches nothing when the sidecar is absent', async () => {
+    const registry = await setup({ env: { OPENCHAMBER_DOC_PREVIEW_JWT_SECRET: '' } });
+    const res = await invoke(
+      registry.getRoute('GET', '/doc-preview/raw'),
+      createRequest({ query: { token: 'garbage' } }),
+    );
     expect(res.statusCode).toBe(501);
-    expect(res.body).toEqual({ available: false, reason: 'not-configured' });
+    // The capability secret must not be created for an unauthenticated request
+    // against a deployment that does not use the feature at all.
+    await expect(stat(path.join(dataDir, 'doc-preview-secret'))).rejects.toThrow();
   });
 
-  it('answers 503 when the conversion service is down', async () => {
-    await writeDocument('report.docx');
-    fetchImpl = createConverterFetch({ healthy: false });
+  it('serves the signed file with preview headers', async () => {
     const registry = await setup();
-    const res = await call(registry, '/api/doc-preview/config', { path: 'report.docx' });
-
-    expect(res.statusCode).toBe(503);
-    expect(res.body).toEqual({ available: false, reason: 'converter-unavailable' });
-  });
-
-  it('describes an office file as a PDF that still has to be converted', async () => {
-    await writeDocument('report.docx');
-    const registry = await setup();
-    const res = await call(registry, '/api/doc-preview/config', { path: 'report.docx' });
-
+    const filePath = path.join(workspace, 'report.docx');
+    await writeFile(filePath, 'docx-bytes');
+    const res = await invoke(
+      registry.getRoute('GET', '/doc-preview/raw'),
+      createRequest({ query: { token: await mintToken({ filePath }) } }),
+    );
     expect(res.statusCode).toBe(200);
-    expect(res.body).toMatchObject({ available: true, kind: 'pdf', converted: true, fileName: 'report.docx' });
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('GET /api/doc-preview/convert', () => {
-  it('returns a cached conversion without uploading the document again', async () => {
-    await writeDocument('report.docx');
-    fetchImpl = createConverterFetch({ cached: PDF_BYTES, conversions });
-    const registry = await setup();
-    const res = await call(registry, '/api/doc-preview/convert', { path: 'report.docx' });
-
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({ available: true, converted: true, cached: true, bytes: PDF_BYTES.length });
-    expect(conversions).toHaveLength(0);
-  });
-
-  it('converts and uploads the document on a cache miss', async () => {
-    const target = await writeDocument('report.docx', 'first version');
-    const registry = await setup();
-    const res = await call(registry, '/api/doc-preview/convert', { path: 'report.docx' });
-
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({ available: true, converted: true, cached: false, bytes: PDF_BYTES.length });
-    expect(conversions).toHaveLength(1);
-    expect(conversions[0].url).toContain('name=report.docx');
-    expect(Buffer.from(conversions[0].body).toString()).toBe('first version');
-
-    // The cache key the service is asked to store under has to be the identity
-    // of the bytes that were just uploaded.
-    const stats = await stat(await realpath(target));
-    const expectedKey = buildConversionKey({
-      crypto,
-      canonicalPath: await realpath(target),
-      mtimeMs: stats.mtimeMs,
-      size: stats.size,
-    });
-    expect(conversions[0].url).toContain(`/convert/${expectedKey}?`);
-  });
-
-  it('keys the conversion by file version, so a save converts again', async () => {
-    await writeDocument('report.docx', 'first version');
-    const registry = await setup();
-    await call(registry, '/api/doc-preview/convert', { path: 'report.docx' });
-
-    await writeDocument('report.docx', 'a much longer second version');
-    await call(registry, '/api/doc-preview/convert', { path: 'report.docx' });
-
-    expect(conversions).toHaveLength(2);
-    const firstKey = conversions[0].url.split('/convert/')[1].split('?')[0];
-    const secondKey = conversions[1].url.split('/convert/')[1].split('?')[0];
-    expect(secondKey).not.toBe(firstKey);
-  });
-
-  it('does nothing for a document that is already a PDF', async () => {
-    await writeDocument('report.pdf', '%PDF-1.4\noriginal\n');
-    const registry = await setup();
-    const res = await call(registry, '/api/doc-preview/convert', { path: 'report.pdf' });
-
-    expect(res.body).toMatchObject({ available: true, converted: false, cached: true });
-    expect(conversions).toHaveLength(0);
-  });
-
-  it('reports a conversion the service could not do', async () => {
-    await writeDocument('report.docx');
-    fetchImpl = createConverterFetch({ convertStatus: 422, conversions });
-    const registry = await setup();
-    const res = await call(registry, '/api/doc-preview/convert', { path: 'report.docx' });
-
-    expect(res.statusCode).toBe(502);
-    expect(res.body).toEqual({ available: false, reason: 'conversion-failed' });
-  });
-
-  it('reports a document the service refused as too large', async () => {
-    await writeDocument('report.docx');
-    fetchImpl = createConverterFetch({ convertStatus: 413, conversions });
-    const registry = await setup();
-    const res = await call(registry, '/api/doc-preview/convert', { path: 'report.docx' });
-
-    expect(res.statusCode).toBe(413);
-    expect(res.body).toEqual({ available: false, reason: 'too-large' });
-  });
-
-  it('reports a conversion that ran out of time', async () => {
-    await writeDocument('report.docx');
-    fetchImpl = vi.fn(async (url) => {
-      if (String(url).endsWith('/health')) {
-        return { ok: true, status: 200, json: async () => ({ status: 'ok' }) };
-      }
-      const timeout = new Error('The operation was aborted due to timeout');
-      timeout.name = 'TimeoutError';
-      throw timeout;
-    });
-    const registry = await setup();
-    const res = await call(registry, '/api/doc-preview/convert', { path: 'report.docx' });
-
-    expect(res.statusCode).toBe(504);
-    expect(res.body).toEqual({ available: false, reason: 'conversion-timeout' });
-  });
-});
-
-describe('GET /api/doc-preview/pdf', () => {
-  it('serves the converted PDF under the document name', async () => {
-    await writeDocument('report.docx');
-    fetchImpl = createConverterFetch({ cached: PDF_BYTES, conversions });
-    const registry = await setup();
-    const res = await call(registry, '/api/doc-preview/pdf', { path: 'report.docx' });
-
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual(PDF_BYTES);
-    expect(res.getHeader('content-disposition')).toContain('report.pdf');
+    expect(res.body.toString('utf8')).toBe('docx-bytes');
     expect(res.getHeader('cache-control')).toBe('no-store');
     expect(res.getHeader('x-content-type-options')).toBe('nosniff');
+    expect(res.getHeader('content-disposition')).toContain('report.docx');
   });
 
-  it('serves an original PDF as-is', async () => {
-    await writeDocument('report.pdf', '%PDF-1.4\noriginal\n');
+  it('refuses a token minted for a different version of the file', async () => {
     const registry = await setup();
-    const res = await call(registry, '/api/doc-preview/pdf', { path: 'report.pdf' });
+    const filePath = path.join(workspace, 'report.docx');
+    await writeFile(filePath, 'docx-bytes');
+
+    const staleSize = await invoke(
+      registry.getRoute('GET', '/doc-preview/raw'),
+      createRequest({ query: { token: await mintToken({ filePath, size: 3 }) } }),
+    );
+    expect(staleSize.statusCode).toBe(409);
+
+    const staleMtime = await invoke(
+      registry.getRoute('GET', '/doc-preview/raw'),
+      createRequest({ query: { token: await mintToken({ filePath, mtimeMs: 1 }) } }),
+    );
+    expect(staleMtime.statusCode).toBe(409);
+  });
+
+  // Control characters are legal in POSIX filenames but not on Windows, and the
+  // header-injection risk this guards against only exists where such a file can
+  // be created in the first place.
+  it.skipIf(process.platform === 'win32')('sanitises control characters out of the inline filename', async () => {
+    const registry = await setup();
+    const filePath = path.join(workspace, `odd\u0007.docx`);
+    await writeFile(filePath, 'docx');
+    const res = await invoke(
+      registry.getRoute('GET', '/doc-preview/raw'),
+      createRequest({ query: { token: await mintToken({ filePath }) } }),
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.getHeader('content-disposition')).not.toMatch(/[\u0000-\u001f\u007f]/);
+  });
+
+  it('refuses a path that no longer realpaths to itself', async () => {
+    const linkPath = path.join(workspace, 'link.docx');
+    const realFile = path.join(workspace, 'real.docx');
+    await writeFile(linkPath, 'docx');
+    await writeFile(realFile, 'docx');
+
+    const registry = await setup({
+      fsOverrides: {
+        realpath: async (value) => (
+          path.resolve(value) === path.resolve(linkPath) ? realFile : realpath(value)
+        ),
+      },
+    });
+
+    const res = await invoke(
+      registry.getRoute('GET', '/doc-preview/raw'),
+      createRequest({ query: { token: await mintToken({ filePath: linkPath }) } }),
+    );
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('answers 404 when the signed file disappeared', async () => {
+    const registry = await setup();
+    const res = await invoke(
+      registry.getRoute('GET', '/doc-preview/raw'),
+      createRequest({ query: { token: await mintToken({ filePath: path.join(workspace, 'gone.docx') }) } }),
+    );
+    expect(res.statusCode).toBe(404);
+  });
+});
+
+describe('POST /doc-preview/callback', () => {
+  const mintWriteToken = ({ filePath, documentKey = 'key-1', exp = Date.now() + 60_000, kind = 'write', secret = SECRET }) => signRawToken({
+    crypto,
+    secret,
+    payload: { k: kind, p: filePath, d: documentKey, e: exp },
+  });
+
+  const callbackBody = ({ status = 2, key = 'key-1', url = 'http://localhost:8080/cache/files/data/out.docx/output.docx', withJwt = true }) => {
+    const body = { status, key, url, users: ['openchamber'] };
+    if (withJwt) {
+      body.token = signJwt({ crypto, secret: SECRET, payload: { ...body } });
+    }
+    return body;
+  };
+
+  const post = (registry, req) => invoke(registry.getRoute('POST', '/doc-preview/callback'), req);
+
+  it('writes the saved document back to the workspace file', async () => {
+    const registry = await setup();
+    const filePath = path.join(workspace, 'report.docx');
+    await writeFile(filePath, 'original-bytes');
+
+    const res = await post(registry, createRequest({
+      query: { token: mintWriteToken({ filePath }) },
+      body: callbackBody({}),
+    }));
 
     expect(res.statusCode).toBe(200);
-    expect(Buffer.from(res.body).toString()).toContain('original');
-    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(res.body).toEqual({ error: 0 });
+    expect(await readFile(filePath, 'utf8')).toBe('edited-bytes');
+    // The version being replaced is kept outside the workspace.
+    const versionsRoot = path.join(dataDir, 'doc-preview-versions');
+    const [digestDir] = await readdir(versionsRoot);
+    const saved = await readdir(path.join(versionsRoot, digestDir));
+    expect(saved).toHaveLength(1);
   });
 
-  it('converts on its own when the client did not pre-warm the cache', async () => {
-    await writeDocument('report.docx');
+  it('downloads from the address this server reaches, not the one in the callback', async () => {
     const registry = await setup();
-    const res = await call(registry, '/api/doc-preview/pdf', { path: 'report.docx' });
+    const filePath = path.join(workspace, 'report.docx');
+    await writeFile(filePath, 'original-bytes');
+
+    await post(registry, createRequest({
+      query: { token: mintWriteToken({ filePath }) },
+      body: callbackBody({ url: 'http://localhost:8080/cache/files/data/out.docx/output.docx?md5=abc' }),
+    }));
+
+    expect(saveFetchImpl).toHaveBeenCalledTimes(1);
+    expect(saveFetchImpl.mock.calls[0][0]).toBe(
+      'http://documentserver/cache/files/data/out.docx/output.docx?md5=abc',
+    );
+  });
+
+  it('ignores the statuses that carry no document', async () => {
+    const registry = await setup();
+    const filePath = path.join(workspace, 'report.docx');
+    await writeFile(filePath, 'original-bytes');
+
+    for (const status of [1, 3, 4, 7]) {
+      const res = await post(registry, createRequest({
+        query: { token: mintWriteToken({ filePath }) },
+        body: callbackBody({ status }),
+      }));
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toEqual({ error: 0 });
+    }
+
+    expect(await readFile(filePath, 'utf8')).toBe('original-bytes');
+    expect(saveFetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('requires both the capability token and the document server signature', async () => {
+    const registry = await setup();
+    const filePath = path.join(workspace, 'report.docx');
+    await writeFile(filePath, 'original-bytes');
+
+    const noToken = await post(registry, createRequest({ body: callbackBody({}) }));
+    expect(noToken.statusCode).toBe(403);
+
+    const readToken = await post(registry, createRequest({
+      query: { token: mintWriteToken({ filePath, kind: 'read' }) },
+      body: callbackBody({}),
+    }));
+    expect(readToken.statusCode).toBe(403);
+
+    const foreignSecret = await post(registry, createRequest({
+      query: { token: mintWriteToken({ filePath, secret: 'other-secret' }) },
+      body: callbackBody({}),
+    }));
+    expect(foreignSecret.statusCode).toBe(403);
+
+    const noJwt = await post(registry, createRequest({
+      query: { token: mintWriteToken({ filePath }) },
+      body: callbackBody({ withJwt: false }),
+    }));
+    expect(noJwt.statusCode).toBe(403);
+
+    expect(await readFile(filePath, 'utf8')).toBe('original-bytes');
+    expect(saveFetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('accepts the document server token from the authorization header too', async () => {
+    const registry = await setup();
+    const filePath = path.join(workspace, 'report.docx');
+    await writeFile(filePath, 'original-bytes');
+    const body = callbackBody({ withJwt: false });
+
+    const res = await post(registry, createRequest({
+      query: { token: mintWriteToken({ filePath }) },
+      body,
+      headers: { authorization: `Bearer ${signJwt({ crypto, secret: SECRET, payload: { ...body } })}` },
+    }));
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual(PDF_BYTES);
-    expect(conversions).toHaveLength(1);
+    expect(await readFile(filePath, 'utf8')).toBe('edited-bytes');
   });
 
-  it('answers with the failure instead of a broken frame', async () => {
-    await writeDocument('report.docx');
-    fetchImpl = createConverterFetch({ convertStatus: 422, conversions });
+  it('refuses a save for a different version of the file', async () => {
     const registry = await setup();
-    const res = await call(registry, '/api/doc-preview/pdf', { path: 'report.docx' });
+    const filePath = path.join(workspace, 'report.docx');
+    await writeFile(filePath, 'original-bytes');
 
-    expect(res.statusCode).toBe(502);
-    expect(res.body).toEqual({ available: false, reason: 'conversion-failed' });
+    const res = await post(registry, createRequest({
+      query: { token: mintWriteToken({ filePath, documentKey: 'key-1' }) },
+      body: callbackBody({ key: 'key-2' }),
+    }));
+
+    expect(res.statusCode).toBe(409);
+    expect(await readFile(filePath, 'utf8')).toBe('original-bytes');
   });
 
-  it('needs a configured conversion service for office files', async () => {
-    await writeDocument('report.docx');
-    const registry = await setup({ env: { OPENCHAMBER_DOC_PREVIEW_URL: '' } });
-    const res = await call(registry, '/api/doc-preview/pdf', { path: 'report.docx' });
+  it('refuses a callback URL that is not a document server cache path', async () => {
+    const registry = await setup();
+    const filePath = path.join(workspace, 'report.docx');
+    await writeFile(filePath, 'original-bytes');
 
-    expect(res.statusCode).toBe(501);
+    const res = await post(registry, createRequest({
+      query: { token: mintWriteToken({ filePath }) },
+      body: callbackBody({ url: 'http://169.254.169.254/latest/meta-data/' }),
+    }));
+
+    expect(res.statusCode).toBe(400);
+    expect(saveFetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('serialises concurrent saves of the same document', async () => {
+    const registry = await setup();
+    const filePath = path.join(workspace, 'report.docx');
+    await writeFile(filePath, 'original-bytes');
+
+    let call = 0;
+    saveFetchImpl = vi.fn(async () => {
+      call += 1;
+      const payload = `edited-${call}`;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      return { ok: true, arrayBuffer: async () => new TextEncoder().encode(payload).buffer };
+    });
+
+    const token = mintWriteToken({ filePath });
+    const [first, second] = await Promise.all([
+      post(registry, createRequest({ query: { token }, body: callbackBody({}) })),
+      post(registry, createRequest({ query: { token }, body: callbackBody({}) })),
+    ]);
+
+    expect(first.statusCode).toBe(200);
+    expect(second.statusCode).toBe(200);
+    // Whichever order they landed in, the file holds one complete payload.
+    const content = await readFile(filePath, 'utf8');
+    expect(['edited-1', 'edited-2']).toContain(content);
+    // Nothing is left behind next to the user's file.
+    const siblings = await readdir(workspace);
+    expect(siblings.filter((entry) => entry.includes('.tmp'))).toHaveLength(0);
   });
 });

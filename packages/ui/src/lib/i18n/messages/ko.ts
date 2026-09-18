@@ -3463,6 +3463,12 @@ export const dict: Record<I18nKey, string> = {
   'documentPreview.actions.reload': '새로고침',
   'documentPreview.state.loading': '미리보기 불러오는 중…',
   'documentPreview.state.converting': '문서 변환 중…',
+  // Document preview editing
+  'documentPreview.actions.edit': '편집',
+  'documentPreview.actions.view': '보기',
+  'documentPreview.state.unsaved': '저장되지 않은 변경 사항',
+  'documentPreview.state.saved': '저장됨',
+  'documentPreview.error.editUnsupported': '이 파일 형식은 미리보기만 가능합니다.',
   'documentPreview.error.notConfigured': '이 서버에는 문서 미리보기가 설정되어 있지 않습니다.',
   'documentPreview.error.unavailable': '문서 변환 서비스를 사용할 수 없습니다. 원본은 계속 다운로드할 수 있습니다.',
   'documentPreview.error.failed': '이 문서를 열 수 없습니다.',
