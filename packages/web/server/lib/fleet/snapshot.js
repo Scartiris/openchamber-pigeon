@@ -149,6 +149,9 @@ export const createFleetSnapshotRuntime = ({
   const collectMetrics = async ({ row, atMs }) => {
     const cached = metricsCache.get(row.id);
     if (cached && atMs - cached.at < deviceMetricsTtlMs) {
+      // Serve the cached *enriched* view, rates included. Recomputing rates for a
+      // cached sample would use the same observation time twice, collapsing the
+      // window to 0 and reporting null rates on every refresh inside the TTL.
       return cached.value;
     }
     if (!row?.ssh?.ok) {
@@ -163,7 +166,7 @@ export const createFleetSnapshotRuntime = ({
         audit: false,
       });
       const value = result?.ok
-        ? { ok: true, metrics: result.data, observedAtMs: atMs }
+        ? { ok: true, metrics: applyRates(row.id, result.data, atMs), observedAtMs: atMs }
         : {
           ok: false,
           error: {
@@ -206,11 +209,11 @@ export const createFleetSnapshotRuntime = ({
       };
     }
 
-    // Age and rate windows are measured on the workbench clock: a device whose
-    // own clock is wrong would otherwise produce absurd rates or a bogus "stale".
+    // Age is measured on the workbench clock: a device whose own clock is wrong
+    // would otherwise produce a bogus "stale". Rates were computed when the
+    // sample was taken (see collectMetrics) and are carried through unchanged.
     const observedAtMs = asFiniteNumber(collected.observedAtMs, atMs) ?? atMs;
     const metricsAgeMs = Math.max(0, atMs - observedAtMs);
-    const withRates = applyRates(row.id, collected.metrics, observedAtMs);
 
     return {
       id: row.id,
@@ -221,7 +224,7 @@ export const createFleetSnapshotRuntime = ({
       latencyMs: row.latencyMs ?? null,
       transport: row.transport ?? null,
       checkedAt: row.checkedAt ?? null,
-      metrics: withRates,
+      metrics: collected.metrics,
       metricsAgeMs,
       metricsStale: metricsAgeMs > deviceMetricsStaleAfterMs,
       error: null,

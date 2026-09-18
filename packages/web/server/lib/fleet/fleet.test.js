@@ -240,6 +240,32 @@ describe('fleet snapshot', () => {
     expect(second.devices.items[0].metrics.network.windowSec).toBe(30);
   });
 
+  test('a refresh inside the metrics TTL keeps the rates instead of collapsing the window', async () => {
+    let clock = 1_700_000_000_000;
+    const { runtime, calls } = makeSnapshot({
+      host: { ok: true, source: 'helper', stale: false, memory: { usedPercent: 10 }, disks: [{ mount: '/', usedPercent: 10 }], network: null },
+      devices: [deviceRow({ id: 'dev_1' })],
+      metrics: {
+        dev_1: () => ({ ok: true, data: metricsPayload({ collectedAtMs: clock, rxBytes: 1000 + (calls.toolCalls.length - 1) * 3000, txBytes: 2000 }) }),
+      },
+      now: () => clock,
+    });
+
+    await runtime.read({ force: true });
+    clock += 30_000;
+    const second = await runtime.read({ force: true });
+    expect(second.devices.items[0].metrics.network.interfaces[0].rxBytesPerSec).toBe(100);
+
+    // Opening the panel right after a poll must not blank the network column.
+    clock += 5_000;
+    const third = await runtime.read({ force: true });
+    expect(third.devices.items[0].metrics.network.interfaces[0].rxBytesPerSec).toBe(100);
+    expect(third.devices.items[0].metrics.network.windowSec).toBe(30);
+    expect(third.devices.items[0].metricsAgeMs).toBe(5_000);
+    // ...and it must not cost another SSH round-trip.
+    expect(calls.toolCalls).toHaveLength(2);
+  });
+
   test('offline devices never get measured and still appear', async () => {
     const { runtime, calls } = makeSnapshot({
       host: { ok: true, source: 'helper', stale: false, memory: { usedPercent: 10 }, disks: [{ mount: '/', usedPercent: 10 }], network: null },
