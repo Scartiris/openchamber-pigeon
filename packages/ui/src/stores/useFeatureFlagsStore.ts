@@ -1,11 +1,64 @@
 import { create } from 'zustand';
 
 type FeatureFlagsStore = {
+  /**
+   * Effective plan-mode gate. Every plan surface — the plan tab, the plan rail
+   * surface, the synthetic plan messages — reads this one flag, so it is the
+   * host capability OR the user's switch, whichever turned it on.
+   */
   planModeEnabled: boolean;
+  /**
+   * Host capability reported by `/health`
+   * (`OPENCODE_EXPERIMENTAL_PLAN_MODE`). This is what the runtime shells set at
+   * boot; it is not the user's preference.
+   */
+  hostPlanModeEnabled: boolean;
+  /** True while the current session's effective agent is the plan agent. */
+  planModeSwitchOn: boolean;
   setPlanModeEnabled: (enabled: boolean) => void;
+  setPlanModeSwitchOn: (on: boolean) => void;
+  /**
+   * Session key -> the agent this session used before plan mode, so turning the
+   * switch off returns to it. In-memory on purpose: the session's own agent
+   * selection is the persisted truth, and `resolvePlanRestoreAgent` has a
+   * fallback chain for a freshly loaded page.
+   */
+  planRestoreAgentBySession: Record<string, string>;
+  rememberPlanRestoreAgent: (sessionKey: string, agentName: string | null) => void;
 };
+
+const resolvePlanModeGate = (hostPlanModeEnabled: boolean, planModeSwitchOn: boolean): boolean =>
+  hostPlanModeEnabled || planModeSwitchOn;
 
 export const useFeatureFlagsStore = create<FeatureFlagsStore>((set) => ({
   planModeEnabled: false,
-  setPlanModeEnabled: (enabled) => set({ planModeEnabled: enabled }),
+  hostPlanModeEnabled: false,
+  planModeSwitchOn: false,
+  setPlanModeEnabled: (enabled) => set((state) => {
+    if (state.hostPlanModeEnabled === enabled) return state;
+    return {
+      hostPlanModeEnabled: enabled,
+      planModeEnabled: resolvePlanModeGate(enabled, state.planModeSwitchOn),
+    };
+  }),
+  setPlanModeSwitchOn: (on) => set((state) => {
+    if (state.planModeSwitchOn === on) return state;
+    return {
+      planModeSwitchOn: on,
+      planModeEnabled: resolvePlanModeGate(state.hostPlanModeEnabled, on),
+    };
+  }),
+  planRestoreAgentBySession: {},
+  rememberPlanRestoreAgent: (sessionKey, agentName) => set((state) => {
+    if ((state.planRestoreAgentBySession[sessionKey] ?? null) === agentName) return state;
+
+    const nextRestoreAgents = { ...state.planRestoreAgentBySession };
+    if (agentName) {
+      nextRestoreAgents[sessionKey] = agentName;
+    } else {
+      delete nextRestoreAgents[sessionKey];
+    }
+
+    return { planRestoreAgentBySession: nextRestoreAgents };
+  }),
 }));

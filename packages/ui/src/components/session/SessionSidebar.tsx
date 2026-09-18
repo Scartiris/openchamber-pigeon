@@ -144,7 +144,6 @@ const SessionSidebarComponent: React.FC<SessionSidebarProps> = ({
     void refreshArtifactsHub();
   }, [isVisible]);
 
-  const debouncedSessionSearchQuery = useDebouncedValue(sessionSearchQuery, 120);
   const normalizedSessionSearchQuery = React.useMemo(
     () => sessionSearchQuery.trim().toLowerCase(),
     [sessionSearchQuery],

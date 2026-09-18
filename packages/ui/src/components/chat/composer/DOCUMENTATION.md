@@ -98,6 +98,32 @@ picked `.txt` file. Ask-toast actions read live composer/attachment state so
 typing or other attaches between paste and choice stay consistent. Short text,
 images, and URL wraps keep their existing paths.
 
+## Plan mode switch
+
+`ui/PlanModeSwitchButton.tsx` is the plan-mode switch in the desktop footer,
+next to the other toggles. It owns no state: `usePlanModeSwitch` reads its
+position from the session's effective agent (the session's saved choice, then
+the live selection) and a click writes through `setAgent`, so the switch, the
+model controls and the cycle shortcut cannot disagree — picking the plan agent
+anywhere turns the switch on, picking any other agent turns it off. Turning it
+off returns to the agent that session used before plan mode, via
+`lib/planMode.ts`'s fallback chain (remembered → recently used → configured
+default → `build` → any other primary agent).
+
+The switch is also the only writer of the shared plan-mode gate
+(`useFeatureFlagsStore.planModeSwitchOn`), which is why the plan tab, the plan
+rail surface and the synthetic plan messages follow it. Only the composer that
+owns the app's current session writes it: an embedded chat column addresses a
+different session, and `setAgent` persists against the app's current one, so the
+switch renders nothing there. Mobile keeps `MobileAgentButton` as its single
+agent control, and BTW keeps agent selection unavailable; on both, the gate
+still follows whatever agent the session runs.
+
+Its wiring is covered by a mounted test (`PlanModeSwitchButton.test.tsx`) that
+builds its own happy-dom window — the same arrangement `MobilePillComposer.test.tsx`
+uses, because the package itself configures no DOM environment. The rules it
+applies are unit-tested separately in `lib/planMode.test.ts`.
+
 ## The prompt language
 
 `language/` is the single source of truth for composer syntax. Everything that
