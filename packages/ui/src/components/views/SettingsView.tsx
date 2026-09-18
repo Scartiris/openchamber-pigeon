@@ -41,7 +41,6 @@ import { SnippetsSidebar } from '@/components/sections/snippets/SnippetsSidebar'
 import { SnippetsPage } from '@/components/sections/snippets/SnippetsPage';
 import { GitPage } from '@/components/sections/git-identities/GitPage';
 import { IntegrationsPage } from '@/components/sections/integrations/IntegrationsPage';
-import { PigeonBrainPage } from '@/components/sections/pigeon-brain/PigeonBrainPage';
 import { DevicesPage } from '@/components/sections/devices/DevicesPage';
 import { MemoryPage } from '@/components/sections/openviking/MemoryPage';
 import { KnowledgePage } from '@/components/sections/openviking/KnowledgePage';
@@ -114,8 +113,6 @@ const pageOrder: SettingsPageSlug[] = [
   'integrations',
   'extensions',
   'usage',
-  // 记忆库：深链能用但侧栏点不到，是因为它不在这个数组里（rank 999 排到最后）
-  'pigeon-brain',
   'devices',
   // OpenViking：只留浏览页。连接状态并进浏览页空态/顶栏，避免设置里再挂一排「记忆设置」。
   'memory-browse',
@@ -398,8 +395,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
         return t('settings.page.tunnel.title');
       case 'about':
         return t('settings.page.about.title');
-      case 'pigeon-brain':
-        return t('settings.page.pigeonBrain.title');
       case 'memory-browse':
         return t('settings.page.memoryBrowse.title');
       case 'knowledge-settings':
@@ -695,8 +690,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
         return <SnippetsPage />;
       case 'git':
         return <GitPage />;
-      case 'pigeon-brain':
-        return <PigeonBrainPage />;
       case 'devices':
         return <DevicesPage />;
       case 'memory-browse':

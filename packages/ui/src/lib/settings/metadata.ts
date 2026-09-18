@@ -28,7 +28,6 @@ export type SettingsPageSlug =
   | 'tunnel'
   | 'about'
   | 'integrations'
-  | 'pigeon-brain'
   | 'memory-browse'
   | 'knowledge-settings'
   | 'knowledge-browse'
@@ -85,7 +84,6 @@ const SETTINGS_TITLE_KEYS = {
   tunnel: 'settings.page.tunnel.title',
   about: 'settings.page.about.title',
   integrations: 'settings.page.integrations.title',
-  'pigeon-brain': 'settings.page.pigeonBrain.title',
   'memory-browse': 'settings.page.memoryBrowse.title',
   'knowledge-settings': 'settings.page.knowledgeSettings.title',
   'knowledge-browse': 'settings.page.knowledgeBrowse.title',
@@ -249,17 +247,6 @@ export const SETTINGS_PAGE_METADATA: readonly SettingsPageMeta[] = [
   { slug: 'tunnel', title: '外部隧道', group: 'projects', kind: 'single', keywords: ['tunnel', 'external', 'cloudflare', 'qr', 'remote', 'mobile', 'share'], isAvailable: (ctx) => !ctx.isVSCode },
   { slug: 'about', title: '关于', group: 'general', kind: 'single', keywords: ['about', 'version', 'updates', 'release', 'changelog'], isAvailable: (ctx) => ctx.isMobile && !ctx.isVSCode },
   { slug: 'integrations', title: '集成', group: 'general', kind: 'single', keywords: ['integration', 'connect', 'oauth', 'github', 'linear', 'extension'], isAvailable: (ctx) => !ctx.isVSCode },
-  // pigeon-brain 的管理界面。用 iframe 内嵌而不是用 React 重写：
-  // 那是它自己的产品，重写等于把同一份界面维护两遍，两边必然漂移。
-  {
-    slug: 'pigeon-brain',
-    title: '记忆库',
-    group: 'general',
-    kind: 'single',
-    description: '长期记忆与知识库的管理界面。',
-    keywords: ['memory', 'brain', 'wiki', 'knowledge', '记忆', '知识库'],
-    isAvailable: (ctx) => !ctx.isVSCode && !ctx.isMobile,
-  },
   // OpenViking：记忆侧只留浏览（设置与浏览重复，已删 memory-settings）。
   // 知识库暂仍保留「设置 + 浏览」两页；浏览页是 split，需要整页宽度。
   {
@@ -391,8 +378,6 @@ export function getSettingsNavIcon(slug: SettingsPageSlug): IconName | null {
     case 'git':
       return 'git-branch';
 
-    case 'pigeon-brain':
-      return 'book';
     case 'devices':
       return 'computer';
 
