@@ -403,7 +403,10 @@ export const createFeatureRoutesRuntime = (dependencies) => {
       crypto,
       fsPromises,
       path,
-      docPreviewRuntime: createDocPreviewRuntime(),
+      // 编辑线（OnlyOffice）的 runtime 需要注入依赖；main 的旧签名两个参数都有默认值，
+      // 所以这里原来是空调用。合并后必须显式传，否则启动即崩：
+      //   TypeError: Cannot destructure property 'crypto' from null or undefined value
+      docPreviewRuntime: createDocPreviewRuntime({ crypto, fsPromises, path, openchamberDataDir }),
       resolveReadPathFromContext: createReadPathResolver({
         path,
         os,
