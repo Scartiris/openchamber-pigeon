@@ -3,7 +3,7 @@ feature: artifact-center
 status: delivered
 updated: 2026-02-16
 branch: 产物中心
-commits: uncommitted worktree on 产物中心
+commits: 0ca4bfd19..f5821e9ef
 ---
 
 # Artifact Center and Version Management
