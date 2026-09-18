@@ -71,7 +71,13 @@ COPY --from=builder /app/packages/web/package.json ./packages/web/package.json
 COPY --from=builder /app/packages/sdk/package.json ./packages/sdk/package.json
 COPY --from=builder /app/packages/sdk/dist ./packages/sdk/dist
 COPY --from=builder /app/packages/web/bin ./packages/web/bin
-COPY --from=builder /app/packages/web/server ./packages/web/server
+# v1.24.0 起，build:web 会跑 scripts/build-builtin-extensions.mjs，它在构建期用
+# fs.mkdtemp() 建暂存目录（POSIX 规定 mkdtemp 的产物是 0700）再 rename 成最终产物
+# packages/web/server/built-in-extensions/。而 COPY 不带 --chown 时文件属 root，
+# 运行时却以 uid 1000 启动 → 连目录都进不去，服务器启动即崩：
+#   EACCES: permission denied, open .../built-in-extensions/registry.json
+# 因此把这棵树的属主交给运行用户（0700 对属主仍可读，不放宽权限）。
+COPY --from=builder --chown=openchamber:openchamber /app/packages/web/server ./packages/web/server
 COPY --from=builder /app/packages/web/dist ./packages/web/dist
 
 EXPOSE 3000
