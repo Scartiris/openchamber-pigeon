@@ -1039,13 +1039,17 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                 : null;
 
             // If we already have a valid agent selected (often from server-injected mode switch),
-            // don't override it with a fallback.
+            // don't override it with a fallback. Validity is judged against every
+            // known agent, not against the picker's list: that list omits the plan
+            // agent (the plan-mode switch owns it), and a session running on plan
+            // must not be mistaken for "no valid agent selected".
+            const allAgents = useConfigStore.getState().agents;
             const preferred =
                 (currentSessionId
                     ? (useSelectionStore.getState().getSessionAgentSelection(currentSessionId) || stickySessionAgentRef.current)
                     : null) ||
                 currentAgentName;
-            if (preferred && agents.some((agent) => agent.name === preferred)) {
+            if (preferred && allAgents.some((agent) => agent.name === preferred)) {
                 if (currentAgentName !== preferred) {
                     setAgent(preferred);
                 }

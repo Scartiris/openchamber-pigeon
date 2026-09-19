@@ -138,6 +138,18 @@ describe('PlanModeSwitchButton', () => {
     expect(useConfigStore.getState().currentAgentName).toBe('plan');
   });
 
+  test('the plan agent is not offered in the picker list, and the switch still selects it', async () => {
+    const { container } = await mountSwitch('s1');
+
+    // Every picker, `@`-mention list and cycle shortcut reads this list.
+    const offered = useConfigStore.getState().getVisibleAgents().map((agent) => agent.name);
+    expect(offered).not.toContain('plan');
+    expect(offered).toContain('工作');
+
+    await clickSwitch(container);
+    expect(useConfigStore.getState().currentAgentName).toBe('plan');
+  });
+
   test('turning it on selects the plan agent, persists it and opens the plan gate', async () => {
     const { container } = await mountSwitch('s1');
     await clickSwitch(container);

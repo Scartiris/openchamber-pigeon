@@ -4,7 +4,9 @@ import type { Agent } from '@opencode-ai/sdk/v2';
 import {
   DRAFT_SESSION_KEY,
   PLAN_AGENT_NAME,
+  filterAgentChoices,
   getSelectablePrimaryAgents,
+  isAgentChoice,
   isPlanAgentAvailable,
   isPlanAgentName,
   resolvePlanRestoreAgent,
@@ -64,13 +66,32 @@ describe('isPlanAgentAvailable', () => {
     expect(isPlanAgentAvailable([buildAgent])).toBe(false);
     expect(isPlanAgentAvailable([])).toBe(false);
   });
-
   test('a hidden plan agent does not count', () => {
     expect(isPlanAgentAvailable([testAgent({ name: 'plan', hidden: true })])).toBe(false);
   });
 
   test('a plan subagent does not count', () => {
     expect(isPlanAgentAvailable([testAgent({ name: 'plan', mode: 'subagent' })])).toBe(false);
+  });
+});
+
+describe('filterAgentChoices', () => {
+  test('drops the plan agent from the list the pickers show', () => {
+    const agents = [buildAgent, planAgent, workAgent, testAgent({ name: 'title', hidden: true })];
+
+    expect(filterAgentChoices(agents).map((agent) => agent.name)).toEqual(['build', '工作']);
+  });
+
+  test('keeps a hidden plan agent out of the choice list as well', () => {
+    expect(filterAgentChoices([testAgent({ name: 'plan', hidden: true })])).toEqual([]);
+  });
+
+  test('answers the same for the plan agent whether it is listed or not', () => {
+    expect(isAgentChoice('plan')).toBe(false);
+    expect(isAgentChoice('build')).toBe(true);
+    // Not being offered is not the same as being unavailable: the switch still
+    // selects `plan` by name.
+    expect(isPlanAgentAvailable([buildAgent, planAgent])).toBe(true);
   });
 });
 

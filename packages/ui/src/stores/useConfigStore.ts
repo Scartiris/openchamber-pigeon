@@ -7,8 +7,8 @@ import { opencodeClient } from "@/lib/opencode/client";
 import { scopeMatches, subscribeToConfigChanges } from "@/lib/configSync";
 import type { ModelMetadata } from "@/types";
 import { createDeferredSafeJSONStorage } from "./utils/safeStorage";
-import { filterVisibleAgents } from "./useAgentsStore";
 import { isPrimaryMode } from "@/components/chat/mobileControlsUtils";
+import { filterAgentChoices } from "@/lib/planMode";
 import { useSessionUIStore } from "@/sync/session-ui-store";
 import { useSelectionStore } from "@/sync/selection-store";
 import { loadDesktopSettings, updateDesktopSettings } from "@/lib/persistence";
@@ -1217,7 +1217,9 @@ interface ConfigStore {
     getCurrentModel: () => ProviderModel | undefined;
     getCurrentAgent: () => Agent | undefined;
     getModelMetadata: (providerId: string, modelId: string) => ModelMetadata | undefined;
-    // Returns only visible agents (excludes hidden internal agents like title, compaction, summary)
+    // The agents offered as a choice: visible ones (hidden internals like title,
+    // compaction and summary are out) minus the ones another control owns — the
+    // plan agent belongs to the composer's plan-mode switch (`lib/planMode.ts`).
     getVisibleAgents: () => Agent[];
 }
 
@@ -3603,7 +3605,9 @@ export const useConfigStore = create<ConfigStore>()(
                 },
                 getVisibleAgents: () => {
                     const { agents } = get();
-                    return filterVisibleAgents(agents);
+                    // `filterAgentChoices` also drops the plan agent: `plan` is the
+                    // plan-mode switch's to give, so it is not offered as a pick.
+                    return filterAgentChoices(agents);
                 },
             }),
             {

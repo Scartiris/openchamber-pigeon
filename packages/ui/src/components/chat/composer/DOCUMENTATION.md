@@ -120,6 +120,17 @@ reconciler both read that record back, and with no record they fall back to the
 agent's defaults. Changing the model or the effort remains the picker's job —
 in plan mode too.
 
+**The plan agent is not offered as a choice**, so the switch stays the one way to
+reach it: `getVisibleAgents()` returns `filterAgentChoices(agents)`
+(`lib/planMode.ts`), which drops `plan` on top of the usual hidden-agent filter.
+That one list feeds the agent pickers, the `@`-mention list, the `/`-token
+registry and the cycle shortcut, so hiding it there hides it everywhere. Two
+things deliberately read past it: ModelControls judges whether the session
+already has a valid agent against every known agent (otherwise a plan session
+would look unset and be reset to `build`), and `/btw` keeps picking `plan` from
+the raw list as its non-mutating default. Neither is a way for the user to
+choose an agent.
+
 The switch is also the only writer of the shared plan-mode gate
 (`useFeatureFlagsStore.planModeSwitchOn`), which is why the plan tab, the plan
 rail surface and the synthetic plan messages follow it. Only the composer that

@@ -41,6 +41,20 @@ export const getSelectablePrimaryAgents = (agents: readonly Agent[]): Agent[] =>
 export const isPlanAgentAvailable = (agents: readonly Agent[]): boolean =>
   getSelectablePrimaryAgents(agents).some((agent) => isPlanAgentName(agent.name));
 
+/**
+ * Whether an agent is offered to the user as an explicit choice.
+ *
+ * The plan agent is not: the composer's plan-mode switch owns it, so it is kept
+ * out of the agent pickers, the `@`-mention list and the cycle shortcut. It stays
+ * selectable — the switch and BTW set it by name — which is why this filters
+ * *lists*, never state.
+ */
+export const isAgentChoice = (agentName: string): boolean => !isPlanAgentName(agentName);
+
+/** The list the pickers show: visible agents minus the ones another control owns. */
+export const filterAgentChoices = (agents: readonly Agent[]): Agent[] =>
+  filterVisibleAgents([...agents]).filter((agent) => isAgentChoice(agent.name));
+
 export interface PlanRestoreCandidateOptions {
   agents: readonly Agent[];
   /** What this session used before plan mode, recorded while the switch is off. */

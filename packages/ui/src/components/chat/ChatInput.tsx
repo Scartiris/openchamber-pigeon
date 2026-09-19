@@ -539,6 +539,9 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
     const setAgent = useConfigStore((state) => state.setAgent);
     const getVisibleAgents = useConfigStore((state) => state.getVisibleAgents);
     const agents = getVisibleAgents();
+    // BTW picks its own agent and prefers the plan agent, which the pickers hide;
+    // it reads every known agent instead.
+    const allAgents = useConfigStore((state) => state.agents);
     const btwSavedVariant = useSelectionStore(React.useCallback(
         (state) => btwComposerSessionId && btwAgentSelection && btwModelSelection
             ? state.getAgentModelVariantForSession(
@@ -551,7 +554,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
         [btwAgentSelection, btwComposerSessionId, btwModelSelection],
     ));
     const effectiveBtwSelection = resolveBtwSelection({
-        agents,
+        agents: allAgents,
         savedAgent: btwAgentSelection,
         savedModel: btwModelSelection,
         savedVariant: btwSavedVariant,

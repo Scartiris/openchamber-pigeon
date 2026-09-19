@@ -6,7 +6,8 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useAgentsStore, filterVisibleAgents } from '@/stores/useAgentsStore';
+import { useAgentsStore } from '@/stores/useAgentsStore';
+import { filterAgentChoices } from '@/lib/planMode';
 import { selectConfigAgentsForDirectory, useConfigStore } from '@/stores/useConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDeviceInfo } from '@/lib/device';
@@ -46,7 +47,9 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
         return Array.isArray(agentsStoreAgents) ? agentsStoreAgents : [];
     }, [configAgents, agentsStoreAgents, directory]);
     const agents = React.useMemo(() => {
-        const visible = filterVisibleAgents(rawAgents);
+        // Choosable agents: the plan agent is the plan-mode switch's to give, so it
+        // is not in this list either.
+        const visible = filterAgentChoices(rawAgents);
         return filter ? visible.filter(filter) : visible;
     }, [rawAgents, filter]);
     const isMobile = useUIStore(state => state.isMobile);
