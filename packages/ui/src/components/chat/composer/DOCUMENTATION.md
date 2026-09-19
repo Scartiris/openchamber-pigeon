@@ -186,6 +186,14 @@ model that actually replied so the toast can name it instead of claiming the
 session model did the work. Nothing else is retried: an oversized draft is
 oversized on every model, so it comes back as its own failure reason.
 
+The request **states no output budget**. A rewrite looks short enough that a
+small one seems safe, and it is not: the session's model may be a reasoning
+model, and a model that cannot switch thinking off spends whatever budget it is
+given before writing a word. Asking for 2,048 tokens made the live DeepSeek
+model answer nothing at all (`output-exhausted`), where the Small Model
+transport's own thinking-aware default answers normally — so the budget stays
+that module's decision (`small-model/DOCUMENTATION.md`).
+
 Two orderings are load-bearing, and both exist because the request outlives the
 click. **One rewrite at a time** — the button disables itself and the hook
 refuses re-entry, so two answers cannot race into the same composer. **The draft

@@ -44,9 +44,6 @@ export const PROMPT_ENHANCE_SYSTEM_PROMPT = [
  */
 export const PROMPT_ENHANCE_MAX_INPUT_CHARS = 20_000;
 
-/** Prompt rewrites are short; this only bounds a model that decides to ramble. */
-export const PROMPT_ENHANCE_MAX_OUTPUT_TOKENS = 2_048;
-
 export type PromptEnhanceModel = {
   providerID: string;
   modelID: string;
@@ -142,11 +139,18 @@ export function resolvePromptEnhanceModel(sessionId: string | null): PromptEnhan
  * The body `/api/small-model/generate` accepts for one rewrite. `onOverflow` is
  * pinned to the strict mode: a clipped draft would be rewritten as if the
  * missing half never existed.
+ *
+ * The output budget is deliberately left to the server. A rewrite looks short,
+ * so a small budget seems safe — but the session's model can be a reasoning
+ * model, and one that cannot switch thinking off spends whatever it is given
+ * before writing a word: asking for 2,048 tokens made the live DeepSeek model
+ * return nothing at all (`output-exhausted`), while the module's own
+ * thinking-aware default answers normally. That budget is the transport's
+ * decision, not the caller's.
  */
 export type PromptEnhanceRequestBody = {
   prompt: string;
   system: string;
-  maxOutputTokens: number;
   onOverflow: 'error';
   model?: string;
   sessionID?: string;
@@ -162,7 +166,6 @@ export function buildPromptEnhanceBody(input: {
   const body: PromptEnhanceRequestBody = {
     prompt: input.text,
     system: PROMPT_ENHANCE_SYSTEM_PROMPT,
-    maxOutputTokens: PROMPT_ENHANCE_MAX_OUTPUT_TOKENS,
     onOverflow: 'error',
   };
   if (input.model) body.model = `${input.model.providerID}/${input.model.modelID}`;

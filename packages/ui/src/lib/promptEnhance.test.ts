@@ -136,6 +136,12 @@ describe('buildPromptEnhanceBody', () => {
     expect(body.directory).toBe('/repo');
   });
 
+  test('leaves the output budget to the server: a short-looking request is not a small one for a thinking model', () => {
+    const body = buildPromptEnhanceBody({ text: 'hi', model: null });
+
+    expect('maxOutputTokens' in body).toBe(false);
+  });
+
   test('leaves the model unnamed when the caller has none, so the route resolves one', () => {
     const body = buildPromptEnhanceBody({ text: 'hi', model: null });
     expect(body.model).toBeUndefined();
