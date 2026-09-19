@@ -98,52 +98,58 @@ picked `.txt` file. Ask-toast actions read live composer/attachment state so
 typing or other attaches between paste and choice stay consistent. Short text,
 images, and URL wraps keep their existing paths.
 
-## Plan mode switch
+## Composer mode switch
 
-`ui/PlanModeSwitchButton.tsx` is the plan-mode switch in the desktop footer,
-next to the other toggles. It owns no state: `usePlanModeSwitch` reads its
-position from the session's effective agent (the session's saved choice, then
-the live selection) and a click writes through `setAgent`, so the switch, the
-model controls and the cycle shortcut cannot disagree — picking the plan agent
-anywhere turns the switch on, picking any other agent turns it off. Turning it
-off returns to the agent that session used before plan mode, via
-`lib/planMode.ts`'s fallback chain (remembered → recently used → configured
-default → `build` → any other primary agent).
+`ui/ComposerModeSwitch.tsx` is the three-position switch in the desktop footer,
+next to the other toggles: **施工 / 计划 / 聊天** (build / plan / chat). It owns no
+state: `useComposerMode` reads the position back from the session's effective
+agent (the session's saved choice, then the live selection) and a click writes
+through `setAgent`, so the switch, the model controls and the cycle shortcut
+cannot disagree. The left position restores the agent that session was working
+with, via `lib/composerModes.ts`'s fallback chain (remembered → recently used →
+configured default → `build` → any other ordinary agent); the middle and right
+positions select their own agent by name.
+
+**The plan and chat agents are not offered as a choice**, so the switch is the one
+way to reach them: `getVisibleAgents()` returns `filterAgentChoices(agents)`
+(`lib/composerModes.ts`), which drops both on top of the usual hidden-agent
+filter. That one list feeds the agent pickers, the `@`-mention list, the
+`/`-token registry and the cycle shortcut, so hiding them there hides them
+everywhere. Two things deliberately read past it: ModelControls judges whether the
+session already has a valid agent against every known agent (otherwise a session
+in one of the modes would look unset and be reset to `build`), and `/btw` keeps
+picking `plan` from the raw list as its non-mutating default. Neither is a way for
+the user to choose an agent.
+
+**The chat agent is a deployment artifact, not application code.** It is the
+OpenCode agent defined in `ops/workmode/chat.md` in the ops repository and
+installed at `data/opencode/config/agents/chat.md`, which the container mounts as
+`~/.config/opencode/agents/`. It is a primary agent with `edit`, `bash`, `task`
+and `todowrite` denied, so chat mode delivers nothing and writes nothing; a
+position whose agent is missing stays visible but inert rather than disappearing.
 
 **The switch changes the agent and nothing else.** It passes
 `setAgent(agent, { keepModelSelection: true })`, so the model and the thinking
-effort in use survive the toggle in both directions instead of being replaced by
-the plan agent's own pinned model and effort. The keep path also records the
-live model and effort for the agent being switched to, which is what makes the
-choice stick: the per-agent restore inside `setAgent` and ModelControls' effort
-reconciler both read that record back, and with no record they fall back to the
-agent's defaults. Changing the model or the effort remains the picker's job —
-in plan mode too.
-
-**The plan agent is not offered as a choice**, so the switch stays the one way to
-reach it: `getVisibleAgents()` returns `filterAgentChoices(agents)`
-(`lib/planMode.ts`), which drops `plan` on top of the usual hidden-agent filter.
-That one list feeds the agent pickers, the `@`-mention list, the `/`-token
-registry and the cycle shortcut, so hiding it there hides it everywhere. Two
-things deliberately read past it: ModelControls judges whether the session
-already has a valid agent against every known agent (otherwise a plan session
-would look unset and be reset to `build`), and `/btw` keeps picking `plan` from
-the raw list as its non-mutating default. Neither is a way for the user to
-choose an agent.
+effort in use survive the change instead of being replaced by the new agent's own
+pinned model and effort. The keep path also records the live model and effort for
+the agent being switched to, which is what makes the choice stick: the per-agent
+restore inside `setAgent` and ModelControls' effort reconciler both read that
+record back, and with no record they fall back to the agent's defaults. Changing
+the model or the effort remains the picker's job — in every mode.
 
 The switch is also the only writer of the shared plan-mode gate
 (`useFeatureFlagsStore.planModeSwitchOn`), which is why the plan tab, the plan
-rail surface and the synthetic plan messages follow it. Only the composer that
-owns the app's current session writes it: an embedded chat column addresses a
-different session, and `setAgent` persists against the app's current one, so the
-switch renders nothing there. Mobile keeps `MobileAgentButton` as its single
-agent control, and BTW keeps agent selection unavailable; on both, the gate
-still follows whatever agent the session runs.
+rail surface and the synthetic plan messages follow the plan position. Only the
+composer that owns the app's current session writes it: an embedded chat column
+addresses a different session, and `setAgent` persists against the app's current
+one, so the switch renders nothing there. Mobile keeps `MobileAgentButton` as its
+agent control, and BTW keeps agent selection unavailable; on both, the gate still
+follows whatever agent the session runs.
 
-Its wiring is covered by a mounted test (`PlanModeSwitchButton.test.tsx`) that
+Its wiring is covered by a mounted test (`ComposerModeSwitch.test.tsx`) that
 builds its own happy-dom window — the same arrangement `MobilePillComposer.test.tsx`
 uses, because the package itself configures no DOM environment. The rules it
-applies are unit-tested separately in `lib/planMode.test.ts`.
+applies are unit-tested separately in `lib/composerModes.test.ts`.
 
 ## The prompt language
 

@@ -4,8 +4,9 @@
  * Desktop lays it out as attachments and toggles on the left, model controls
  * and send on the right. Mobile keeps everything on one line and swaps the
  * model controls for the compact buttons above the text, because the footer
- * has to stay reachable with one thumb. The plan-mode switch is one of the
- * desktop toggles on that left side; mobile keeps its own agent button.
+ * has to stay reachable with one thumb. The composer mode switch (施工 / 计划 /
+ * 聊天) is one of the desktop toggles on that left side; mobile keeps its own
+ * agent button.
  *
  * The dictation component is rendered here on desktop only: on mobile it lives
  * at the composer wrapper level so a recording started from the collapsed pill
@@ -23,9 +24,9 @@ import { cn } from '@/lib/utils';
 import { ModelControls } from '../../ModelControls';
 import { ComposerActionButtons } from './ComposerActionButtons';
 import { ComposerAttachmentControls } from './ComposerAttachmentControls';
+import { ComposerModeSwitch } from './ComposerModeSwitch';
 import { FocusModeButton } from './FocusModeButton';
 import { PermissionAutoAcceptButton } from './PermissionAutoAcceptButton';
-import { PlanModeSwitchButton } from './PlanModeSwitchButton';
 import type { BtwSelection } from '@/stores/useBtwStore';
 
 const MemoModelControls = React.memo(ModelControls);
@@ -241,7 +242,7 @@ export function ComposerFooter(props: ComposerFooterProps) {
                             handlePermissionAutoAcceptToggle={onTogglePermissionAutoAccept}
                             withTooltip
                         />
-                        {!isBtw ? <PlanModeSwitchButton sessionId={currentSessionId} withTooltip /> : null}
+                        {!isBtw ? <ComposerModeSwitch sessionId={currentSessionId} /> : null}
                         {!isBtw ? <SessionGoalButton
                             sessionId={currentSessionId}
                             directory={directory}

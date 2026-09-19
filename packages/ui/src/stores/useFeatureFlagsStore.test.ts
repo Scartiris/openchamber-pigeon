@@ -7,7 +7,7 @@ const resetStore = () => {
     planModeEnabled: false,
     hostPlanModeEnabled: false,
     planModeSwitchOn: false,
-    planRestoreAgentBySession: {},
+    composerRestoreAgentBySession: {},
   });
 };
 
@@ -65,37 +65,37 @@ describe('useFeatureFlagsStore plan mode gate', () => {
   });
 });
 
-describe('useFeatureFlagsStore plan restore memory', () => {
+describe('useFeatureFlagsStore composer restore memory', () => {
   beforeEach(resetStore);
 
   test('remembers the agent per session', () => {
-    const { rememberPlanRestoreAgent } = useFeatureFlagsStore.getState();
+    const { rememberComposerRestoreAgent } = useFeatureFlagsStore.getState();
 
-    rememberPlanRestoreAgent('session-a', '工作');
-    rememberPlanRestoreAgent('session-b', 'build');
+    rememberComposerRestoreAgent('session-a', '工作');
+    rememberComposerRestoreAgent('session-b', 'build');
 
-    expect(useFeatureFlagsStore.getState().planRestoreAgentBySession).toEqual({
+    expect(useFeatureFlagsStore.getState().composerRestoreAgentBySession).toEqual({
       'session-a': '工作',
       'session-b': 'build',
     });
   });
 
   test('overwrites and clears an entry', () => {
-    const { rememberPlanRestoreAgent } = useFeatureFlagsStore.getState();
+    const { rememberComposerRestoreAgent } = useFeatureFlagsStore.getState();
 
-    rememberPlanRestoreAgent('session-a', 'build');
-    rememberPlanRestoreAgent('session-a', '工作');
-    expect(useFeatureFlagsStore.getState().planRestoreAgentBySession['session-a']).toBe('工作');
+    rememberComposerRestoreAgent('session-a', 'build');
+    rememberComposerRestoreAgent('session-a', '工作');
+    expect(useFeatureFlagsStore.getState().composerRestoreAgentBySession['session-a']).toBe('工作');
 
-    rememberPlanRestoreAgent('session-a', null);
-    expect(useFeatureFlagsStore.getState().planRestoreAgentBySession).toEqual({});
+    rememberComposerRestoreAgent('session-a', null);
+    expect(useFeatureFlagsStore.getState().composerRestoreAgentBySession).toEqual({});
   });
 
   test('a repeated write keeps the state object identical', () => {
-    useFeatureFlagsStore.getState().rememberPlanRestoreAgent('session-a', 'build');
+    useFeatureFlagsStore.getState().rememberComposerRestoreAgent('session-a', 'build');
     const first = useFeatureFlagsStore.getState();
 
-    first.rememberPlanRestoreAgent('session-a', 'build');
+    first.rememberComposerRestoreAgent('session-a', 'build');
 
     expect(useFeatureFlagsStore.getState()).toBe(first);
   });

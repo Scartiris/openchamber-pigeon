@@ -7,7 +7,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAgentsStore } from '@/stores/useAgentsStore';
-import { filterAgentChoices } from '@/lib/planMode';
+import { filterAgentChoices } from '@/lib/composerModes';
 import { selectConfigAgentsForDirectory, useConfigStore } from '@/stores/useConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDeviceInfo } from '@/lib/device';
@@ -47,8 +47,8 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
         return Array.isArray(agentsStoreAgents) ? agentsStoreAgents : [];
     }, [configAgents, agentsStoreAgents, directory]);
     const agents = React.useMemo(() => {
-        // Choosable agents: the plan agent is the plan-mode switch's to give, so it
-        // is not in this list either.
+        // Choosable agents: the plan and chat agents are the composer's mode
+        // switch's to give, so they are not in this list either.
         const visible = filterAgentChoices(rawAgents);
         return filter ? visible.filter(filter) : visible;
     }, [rawAgents, filter]);

@@ -4,7 +4,7 @@ type FeatureFlagsStore = {
   /**
    * Effective plan-mode gate. Every plan surface — the plan tab, the plan rail
    * surface, the synthetic plan messages — reads this one flag, so it is the
-   * host capability OR the user's switch, whichever turned it on.
+   * host capability OR the composer's plan position, whichever turned it on.
    */
   planModeEnabled: boolean;
   /**
@@ -13,18 +13,18 @@ type FeatureFlagsStore = {
    * boot; it is not the user's preference.
    */
   hostPlanModeEnabled: boolean;
-  /** True while the current session's effective agent is the plan agent. */
+  /** True while the current session sits in the composer's plan position. */
   planModeSwitchOn: boolean;
   setPlanModeEnabled: (enabled: boolean) => void;
   setPlanModeSwitchOn: (on: boolean) => void;
   /**
-   * Session key -> the agent this session used before plan mode, so turning the
-   * switch off returns to it. In-memory on purpose: the session's own agent
-   * selection is the persisted truth, and `resolvePlanRestoreAgent` has a
-   * fallback chain for a freshly loaded page.
+   * Session key -> the agent this session was working with, so the composer's
+   * `build` position returns to it. In-memory on purpose: the session's own agent
+   * selection is the persisted truth, and `resolveBuildModeAgent` has a fallback
+   * chain for a freshly loaded page.
    */
-  planRestoreAgentBySession: Record<string, string>;
-  rememberPlanRestoreAgent: (sessionKey: string, agentName: string | null) => void;
+  composerRestoreAgentBySession: Record<string, string>;
+  rememberComposerRestoreAgent: (sessionKey: string, agentName: string | null) => void;
 };
 
 const resolvePlanModeGate = (hostPlanModeEnabled: boolean, planModeSwitchOn: boolean): boolean =>
@@ -48,17 +48,17 @@ export const useFeatureFlagsStore = create<FeatureFlagsStore>((set) => ({
       planModeEnabled: resolvePlanModeGate(state.hostPlanModeEnabled, on),
     };
   }),
-  planRestoreAgentBySession: {},
-  rememberPlanRestoreAgent: (sessionKey, agentName) => set((state) => {
-    if ((state.planRestoreAgentBySession[sessionKey] ?? null) === agentName) return state;
+  composerRestoreAgentBySession: {},
+  rememberComposerRestoreAgent: (sessionKey, agentName) => set((state) => {
+    if ((state.composerRestoreAgentBySession[sessionKey] ?? null) === agentName) return state;
 
-    const nextRestoreAgents = { ...state.planRestoreAgentBySession };
+    const nextRestoreAgents = { ...state.composerRestoreAgentBySession };
     if (agentName) {
       nextRestoreAgents[sessionKey] = agentName;
     } else {
       delete nextRestoreAgents[sessionKey];
     }
 
-    return { planRestoreAgentBySession: nextRestoreAgents };
+    return { composerRestoreAgentBySession: nextRestoreAgents };
   }),
 }));

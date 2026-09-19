@@ -8,7 +8,7 @@ import { scopeMatches, subscribeToConfigChanges } from "@/lib/configSync";
 import type { ModelMetadata } from "@/types";
 import { createDeferredSafeJSONStorage } from "./utils/safeStorage";
 import { isPrimaryMode } from "@/components/chat/mobileControlsUtils";
-import { filterAgentChoices } from "@/lib/planMode";
+import { filterAgentChoices } from "@/lib/composerModes";
 import { useSessionUIStore } from "@/sync/session-ui-store";
 import { useSelectionStore } from "@/sync/selection-store";
 import { loadDesktopSettings, updateDesktopSettings } from "@/lib/persistence";
@@ -1219,7 +1219,8 @@ interface ConfigStore {
     getModelMetadata: (providerId: string, modelId: string) => ModelMetadata | undefined;
     // The agents offered as a choice: visible ones (hidden internals like title,
     // compaction and summary are out) minus the ones another control owns — the
-    // plan agent belongs to the composer's plan-mode switch (`lib/planMode.ts`).
+    // plan and chat agents belong to the composer's mode switch
+    // (`lib/composerModes.ts`).
     getVisibleAgents: () => Agent[];
 }
 
