@@ -27,6 +27,7 @@ import { ComposerAttachmentControls } from './ComposerAttachmentControls';
 import { ComposerModeSwitch } from './ComposerModeSwitch';
 import { FocusModeButton } from './FocusModeButton';
 import { PermissionAutoAcceptButton } from './PermissionAutoAcceptButton';
+import { PromptEnhanceButton } from './PromptEnhanceButton';
 import type { BtwSelection } from '@/stores/useBtwStore';
 
 const MemoModelControls = React.memo(ModelControls);
@@ -55,6 +56,10 @@ export interface ComposerFooterProps {
     permissionAutoAcceptEnabled: boolean;
     isPermissionAutoAcceptInteractive: boolean;
     dictationActive: boolean;
+    /** The composer holds a draft the session's model can rewrite. */
+    canEnhancePrompt: boolean;
+    isEnhancingPrompt: boolean;
+    onEnhancePrompt: () => void;
 
     onOpenSettings?: () => void;
     onPickLocalFiles: () => void;
@@ -102,6 +107,9 @@ export function ComposerFooter(props: ComposerFooterProps) {
         permissionAutoAcceptEnabled,
         isPermissionAutoAcceptInteractive,
         dictationActive,
+        canEnhancePrompt,
+        isEnhancingPrompt,
+        onEnhancePrompt,
         onOpenSettings,
         onPickLocalFiles,
         onOpenIssuePicker,
@@ -174,6 +182,13 @@ export function ComposerFooter(props: ComposerFooterProps) {
                         </div>
                         <div className="flex items-center min-w-0 gap-x-1 justify-end">
                             <div className="flex items-center gap-x-1 flex-shrink-0">
+                                {!isBtw ? <PromptEnhanceButton
+                                    footerIconButtonClass={footerIconButtonClass}
+                                    iconSizeClass={iconSizeClass}
+                                    canEnhance={canEnhancePrompt}
+                                    isEnhancing={isEnhancingPrompt}
+                                    onEnhance={onEnhancePrompt}
+                                /> : null}
                                 {!isBtw ? <button
                                     type="button"
                                     className={footerIconButtonClass}
@@ -255,6 +270,14 @@ export function ComposerFooter(props: ComposerFooterProps) {
                     </div>
                     <div className={cn('flex items-center flex-1 justify-end', footerGapClass, 'md:gap-x-3')}>
                         {isBtw ? <ModelControls className="flex-1 min-w-0 justify-end" sessionId={modelSessionId ?? null} selection={btwSelection} /> : <MemoModelControls className={cn('flex-1 min-w-0 justify-end')} />}
+                        {!isBtw ? <PromptEnhanceButton
+                            footerIconButtonClass={footerIconButtonClass}
+                            iconSizeClass={iconSizeClass}
+                            canEnhance={canEnhancePrompt}
+                            isEnhancing={isEnhancingPrompt}
+                            onEnhance={onEnhancePrompt}
+                            withTooltip
+                        /> : null}
                         {!isBtw ? <MemoComposerDictation
                             radius={chatInputRadius}
                             isMobile={isMobile}

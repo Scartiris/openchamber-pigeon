@@ -158,6 +158,47 @@ builds its own happy-dom window — the same arrangement `MobilePillComposer.tes
 uses, because the package itself configures no DOM environment. The rules it
 applies are unit-tested separately in `lib/composerModes.test.ts`.
 
+## Prompt enhancement
+
+`ui/PromptEnhanceButton.tsx` is the one-click rewrite of the composer's draft,
+beside the microphone on both footer layouts (and hidden in BTW, like the rest of
+the composer's own actions). It is a plain button: the press goes out and the two
+facts the composer knows — is there a draft, is a rewrite already running — come
+back in. It stays visible while the composer is empty and reads disabled instead,
+the same rule the mode switch follows for a missing agent.
+
+`lib/promptEnhance.ts` owns the request and `hooks/usePromptEnhance.ts` owns the
+action. **The rewrite runs on the session's own model** — the model controls'
+current selection, or the app-wide one for a new-session draft, read at click
+time rather than cached — so the prompt is improved by the model that will
+receive it and nothing new has to be configured. It travels through the existing
+`/api/small-model/generate` route with `model` named explicitly, which is what
+makes it that model rather than the Small Model the route would otherwise
+resolve; that route and its `onOverflow` contract belong to
+`packages/web/server/lib/small-model/DOCUMENTATION.md`.
+
+**A session model can be unreachable from the server process** — a plugin's own
+endpoint, a login the running OpenCode holds rather than `auth.json`, or a
+reasoning model that spends its whole output budget thinking. The one retry
+without `model` hands the call to the Small Model chain, which is the same
+safety net the app's other background actions use, and the answer reports the
+model that actually replied so the toast can name it instead of claiming the
+session model did the work. Nothing else is retried: an oversized draft is
+oversized on every model, so it comes back as its own failure reason.
+
+Two orderings are load-bearing, and both exist because the request outlives the
+click. **One rewrite at a time** — the button disables itself and the hook
+refuses re-entry, so two answers cannot race into the same composer. **The draft
+is replaced only while it is still the text that was sent** — the rewrite takes
+seconds and typing during them is the user's newest intent, so an answer that
+arrived after the draft moved is dropped and a toast says so. The replacement
+itself goes through the composer's controlled value (`setMessage`), which is the
+path a restored draft already takes: it lands in draft persistence, the mention
+bookkeeping and CodeMirror's own history, so Ctrl+Z still restores the original
+and the success toast offers the same undo while the rewrite is still what the
+composer holds. Answers are cleaned of a reasoning block, one wrapping code
+fence and one pair of wrapping quotes before they are applied.
+
 ## The prompt language
 
 `language/` is the single source of truth for composer syntax. Everything that
@@ -418,6 +459,10 @@ tests** and are verified by hand. That includes ArrowUp and ArrowDown recall,
 caret placement after recall, restored drafts, and any edited-entry overlay.
 Do not report a change to them as validated on the strength of type-check and
 unit tests.
+
+Two features mount their own happy-dom window for a test
+(`ComposerModeSwitch.test.tsx`, `PromptEnhanceButton.test.tsx`) rather than the
+package gaining a DOM environment.
 
 Run tests per file (`bun test <path>`): `mock.module` is process-global, so
 suites that install module mocks are order-dependent.

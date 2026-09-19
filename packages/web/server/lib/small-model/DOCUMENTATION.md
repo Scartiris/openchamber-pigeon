@@ -141,7 +141,15 @@ other runtime API.
    `/api/openchamber/models-metadata`).
 - `routes.js` — `GET /api/small-model` (resolution preview) and
   `POST /api/small-model/generate` (`{ prompt, system?, maxOutputTokens?,
-  model?, directory? }` → `{ text, providerID, modelID, source }`).
+  model?, directory?, sessionID?, preferredProviderID?, preferredModelID?,
+  restrictToPreferredProvider?, onOverflow? }` → `{ text, providerID, modelID,
+  source }`). An explicit `model` outranks every resolution step, which is how a
+  caller runs a one-shot action on a model of its own choosing: the composer's
+  prompt enhancement asks for the session's model this way, and the `source` it
+  gets back (`request`) is how that caller knows the model was honoured rather
+  than resolved. `onOverflow` accepts only the exact value `error`; anything
+  else is truncation, so a caller whose output would be quietly wrong on a
+  clipped input asks for the failure and everyone else keeps the default.
 
 ## Which providers the pickers may offer
 

@@ -21,7 +21,7 @@ export function registerSmallModelRoutes(app, { getSmallModelService }) {
   app.post('/api/small-model/generate', async (req, res) => {
     try {
       const { generateSmallModelText } = await getSmallModelService();
-      const { prompt, system, maxOutputTokens, model, directory, sessionID, preferredProviderID, preferredModelID, restrictToPreferredProvider } = req.body || {};
+      const { prompt, system, maxOutputTokens, model, directory, sessionID, preferredProviderID, preferredModelID, restrictToPreferredProvider, onOverflow } = req.body || {};
       const result = await generateSmallModelText({
         prompt,
         system,
@@ -32,6 +32,11 @@ export function registerSmallModelRoutes(app, { getSmallModelService }) {
         preferredProviderID,
         preferredModelID,
         restrictToPreferredProvider: restrictToPreferredProvider === true,
+        // Only an explicit `error` changes the default. A caller whose output
+        // would be quietly wrong on a clipped input (the composer's prompt
+        // enhancement) must be able to refuse truncation instead of receiving a
+        // confident rewrite of half the draft.
+        onOverflow: onOverflow === 'error' ? 'error' : 'truncate',
       });
       res.json(result);
     } catch (error) {

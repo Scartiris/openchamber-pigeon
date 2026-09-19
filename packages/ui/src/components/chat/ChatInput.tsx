@@ -94,6 +94,7 @@ import { selectSkillsForDirectory, useSkillsStore } from '@/stores/useSkillsStor
 import { selectCommandsForDirectory, useCommandsStore } from '@/stores/useCommandsStore';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
+import { usePromptEnhance } from '@/hooks/usePromptEnhance';
 import { usePermissionStore } from '@/stores/permissionStore';
 import { togglePermissionAutoAccept } from './permissionAutoAccept';
 import { useKeybind } from '@/hooks/useKeybind';
@@ -3367,6 +3368,26 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
         }
     }, [isMobile, mobileComposerExpanded, mobileShell]);
 
+    // Prompt enhancement reads the editor rather than `message`: a rewrite
+    // started from a stale render would send text the user has already edited.
+    // The rewrite replaces the whole draft, so any picker open for the old text
+    // is re-resolved against the new one instead of being left pointing at it.
+    const writeEnhancedDraft = React.useCallback((text: string) => {
+        setMessage(text);
+        updateAutocompleteState(text, text.length, 'manual');
+        requestAnimationFrame(() => composerRef.current?.focus());
+    }, [updateAutocompleteState]);
+    const readComposerDraft = React.useCallback(
+        () => composerRef.current?.getValue() ?? messageRef.current,
+        [],
+    );
+    const promptEnhance = usePromptEnhance({
+        sessionId: currentSessionId,
+        directory: currentSessionDirectoryForSync ?? currentDirectory,
+        readDraft: readComposerDraft,
+        writeDraft: writeEnhancedDraft,
+    });
+
     // Linked references render as chips beside the attached files, inside the
     // composer box and inside the mobile pill.
     const hasLinkedReferences = !isVSCode && Boolean(linkedIssue || linkedPr || linkedLinearIssue || linkedGuestIssue);
@@ -3835,6 +3856,9 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                         permissionAutoAcceptEnabled={permissionAutoAcceptEnabled}
                         isPermissionAutoAcceptInteractive={isPermissionAutoAcceptInteractive}
                         dictationActive={mobileShell.dictationActive}
+                        canEnhancePrompt={Boolean(currentSessionId || newSessionDraftOpen) && message.trim().length > 0}
+                        isEnhancingPrompt={promptEnhance.isEnhancing}
+                        onEnhancePrompt={promptEnhance.enhance}
                         onOpenSettings={onOpenSettings}
                         onPickLocalFiles={handlePickLocalFiles}
                         onOpenIssuePicker={openIssuePicker}
