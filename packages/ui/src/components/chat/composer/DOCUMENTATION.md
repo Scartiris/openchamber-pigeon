@@ -100,15 +100,19 @@ images, and URL wraps keep their existing paths.
 
 ## Composer mode switch
 
-`ui/ComposerModeSwitch.tsx` is the three-position switch in the desktop footer,
-next to the other toggles: **施工 / 计划 / 聊天** (build / plan / chat). It owns no
-state: `useComposerMode` reads the position back from the session's effective
-agent (the session's saved choice, then the live selection) and a click writes
-through `setAgent`, so the switch, the model controls and the cycle shortcut
-cannot disagree. The left position restores the agent that session was working
-with, via `lib/composerModes.ts`'s fallback chain (remembered → recently used →
-configured default → `build` → any other ordinary agent); the middle and right
-positions select their own agent by name.
+`ui/ComposerModeSwitch.tsx` is the mode control in the desktop footer, next to the
+other toggles: the current mode's name on the left (**施工 / 计划 / 聊天** — build /
+plan / chat) and a small three-stop slider on the right
+(`ui/segmented-slider.tsx`, a shared primitive: a track, a thumb that translates by
+`index * 100%` of its own width, and one real button per stop). The label is what
+names the mode; the slider only has to show *where* the choice sits, which is why
+the track stays small enough for the footer. It owns no state: `useComposerMode`
+reads the position back from the session's effective agent (the session's saved
+choice, then the live selection) and choosing a stop writes through `setAgent`, so
+the switch, the model controls and the cycle shortcut cannot disagree. The left stop
+restores the agent that session was working with, via `lib/composerModes.ts`'s
+fallback chain (remembered → recently used → configured default → `build` → any
+other ordinary agent); the middle and right stops select their own agent by name.
 
 **The plan and chat agents are not offered as a choice**, so the switch is the one
 way to reach them: `getVisibleAgents()` returns `filterAgentChoices(agents)`
@@ -125,8 +129,8 @@ the user to choose an agent.
 OpenCode agent defined in `ops/workmode/chat.md` in the ops repository and
 installed at `data/opencode/config/agents/chat.md`, which the container mounts as
 `~/.config/opencode/agents/`. It is a primary agent with `edit`, `bash`, `task`
-and `todowrite` denied, so chat mode delivers nothing and writes nothing; a
-position whose agent is missing stays visible but inert rather than disappearing.
+and `todowrite` denied, so chat mode delivers nothing and writes nothing; a stop
+whose agent is missing stays visible but inert rather than disappearing.
 
 **The switch changes the agent and nothing else.** It passes
 `setAgent(agent, { keepModelSelection: true })`, so the model and the thinking

@@ -76,6 +76,10 @@ const mountSwitch = async (sessionId: string | null) => {
 const modeButtons = (container: HTMLElement) =>
   Array.from(container.querySelectorAll<HTMLButtonElement>('[data-composer-mode-switch] button'));
 
+/** The label naming the current mode, to the left of the slider. */
+const modeLabel = (container: HTMLElement) =>
+  container.querySelector<HTMLElement>('[data-composer-mode-switch] > span')?.textContent ?? '';
+
 /** The positions are ordered build / plan / chat, left to right. */
 const clickMode = async (container: HTMLElement, index: number) => {
   const buttons = modeButtons(container);
@@ -121,11 +125,25 @@ describe('ComposerModeSwitch', () => {
     globalThis.fetch = originalFetch;
   });
 
-  test('shows three positions and starts on the working one', async () => {
+  test('shows the current mode as a label with a three-stop slider beside it', async () => {
     const { container } = await mountSwitch('s1');
 
-    expect(modeButtons(container).map((button) => button.textContent)).toEqual(['施工', '计划', '聊天']);
+    expect(modeLabel(container)).toBe('施工');
+    expect(modeButtons(container)).toHaveLength(3);
     expect(pressedMode(container)).toBe(0);
+  });
+
+  test('the label follows the selected stop', async () => {
+    const { container } = await mountSwitch('s1');
+
+    await clickMode(container, 1);
+    expect(modeLabel(container)).toBe('计划');
+
+    await clickMode(container, 2);
+    expect(modeLabel(container)).toBe('聊天');
+
+    await clickMode(container, 0);
+    expect(modeLabel(container)).toBe('施工');
   });
 
   test('the middle position selects the plan agent and opens the plan gate', async () => {
