@@ -9,6 +9,13 @@
  * next to it in the caller, so the control itself only has to show *where* the
  * choice sits.
  *
+ * Each stop can carry a small icon. That is what makes an *uncovered* position
+ * legible: the thumb only ever marks where the choice is, so without a glyph the
+ * other positions are blank track and the control says nothing about them. The
+ * icon of the covered position is drawn on the thumb in the selection foreground;
+ * the uncovered ones stay muted, so "where am I" and "what else is there" are one
+ * glance apart.
+ *
  * Geometry is measured, not assumed. The thumb is drawn *behind* one stop at a
  * time, so it takes that stop's width and offset — which is why the caller gives
  * `stopClassName` (how wide one stop is) instead of a thumb size. A thumb sized
@@ -25,11 +32,15 @@
 
 import React from 'react';
 
+import { Icon } from '@/components/icon/Icon';
+import type { IconName } from '@/components/icon/icons';
 import { cn } from '@/lib/utils';
 
 export type SegmentedSliderOption<Value extends string> = {
   value: Value;
   label: string;
+  /** Small glyph drawn inside the stop. Without it the stop is blank track. */
+  icon?: IconName;
   disabled?: boolean;
 };
 
@@ -45,10 +56,12 @@ type SegmentedSliderProps<Value extends string> = {
   stopClassName: string;
   /** Extra classes for the thumb, e.g. an inset ring. Size comes from the stop. */
   thumbClassName?: string;
+  /** Size of a stop's icon. Defaults to a glyph that fits a ~14px stop. */
+  iconClassName?: string;
 };
 
 export function SegmentedSlider<Value extends string>(props: SegmentedSliderProps<Value>) {
-  const { options, value, onChange, ariaLabel, className, stopClassName, thumbClassName } = props;
+  const { options, value, onChange, ariaLabel, className, stopClassName, thumbClassName, iconClassName } = props;
   const activeIndex = Math.max(0, options.findIndex((option) => option.value === value));
 
   return (
@@ -64,12 +77,19 @@ export function SegmentedSlider<Value extends string>(props: SegmentedSliderProp
       <span
         aria-hidden
         className={cn(
-          'pointer-events-none absolute left-0.5 top-0.5 rounded-full bg-interactive-selection',
+          'pointer-events-none absolute left-0.5 top-1/2 rounded-full bg-interactive-selection',
           'transition-transform duration-200 ease-out motion-reduce:transition-none',
           stopClassName,
           thumbClassName,
         )}
-        style={{ transform: `translateX(${activeIndex * 100}%)` }}
+        // `-translate-y-1/2` centres the thumb on the track's own axis instead of
+        // pinning it to the padding edge. The stops are flex-centred on the same
+        // line, so the two agree whatever height the caller gives a stop — a
+        // pinned `top` only matched while the stop happened to fit the content
+        // box, and was 1px off the moment it did not (which put the stop's icon
+        // visibly off-centre in the thumb). The X percentage is of the thumb's
+        // own width, so the horizontal step is unaffected.
+        style={{ transform: `translate(${activeIndex * 100}%, -50%)` }}
       />
       {options.map((option) => {
         const selected = option.value === value;
@@ -84,12 +104,23 @@ export function SegmentedSlider<Value extends string>(props: SegmentedSliderProp
               if (!option.disabled) onChange(option.value);
             }}
             className={cn(
-              'relative z-10 rounded-full outline-none',
+              'relative z-10 inline-flex items-center justify-center rounded-full outline-none',
               'focus-visible:ring-2 focus-visible:ring-[var(--interactive-focus-ring)]',
               option.disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer',
               stopClassName,
             )}
           >
+            {option.icon ? (
+              <Icon
+                name={option.icon}
+                className={cn(
+                  iconClassName ?? 'h-2.5 w-2.5',
+                  // The covered stop's glyph sits on the thumb, so it takes the
+                  // selection foreground; the others stay muted on the track.
+                  selected ? 'text-interactive-selection-foreground' : 'text-muted-foreground',
+                )}
+              />
+            ) : null}
             <span className="sr-only">{option.label}</span>
           </button>
         );

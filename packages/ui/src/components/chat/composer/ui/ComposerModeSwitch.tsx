@@ -16,6 +16,7 @@
 
 import React from 'react';
 
+import type { IconName } from '@/components/icon/icons';
 import { SegmentedSlider } from '@/components/ui/segmented-slider';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useComposerMode } from '@/hooks/useComposerMode';
@@ -37,6 +38,30 @@ const DESCRIPTION_KEY = {
   plan: 'chat.composerMode.planDescription',
   chat: 'chat.composerMode.chatDescription',
 } satisfies Record<ComposerMode, I18nKey>;
+
+/**
+ * What each position does, in one glyph — the slider has no room for words, so
+ * these are the only thing marking the positions the thumb is *not* on.
+ * The names follow the ones this codebase already uses for these ideas: `hammer`
+ * for build (`lib/projectActions.ts`), `file-text` for a plan document
+ * (`ContextPanel`), `chat-4` for a plain conversation.
+ *
+ * Each name is its own `IconName` constant rather than a literal inside the map
+ * because the sprite generator scans that shape (and `: Record<…IconName…>`) for
+ * icon literals — a bare `satisfies Record<…, IconName>` record is invisible to
+ * it, so an icon referenced *only* here would silently vanish from a regenerated
+ * sprite and render as a blank `<use>`. The `satisfies` on the map itself keeps
+ * the compiler checking that every mode has an entry.
+ */
+const BUILD_MODE_ICON: IconName = 'hammer';
+const PLAN_MODE_ICON: IconName = 'file-text';
+const CHAT_MODE_ICON: IconName = 'chat-4';
+
+const MODE_ICON = {
+  build: BUILD_MODE_ICON,
+  plan: PLAN_MODE_ICON,
+  chat: CHAT_MODE_ICON,
+} satisfies Record<ComposerMode, IconName>;
 
 type ComposerModeSwitchProps = {
   sessionId: string | null;
@@ -79,6 +104,7 @@ export const ComposerModeSwitch = React.memo(function ComposerModeSwitch(props: 
         onChange={selectMode}
         options={MODES.map((candidate) => ({
           value: candidate,
+          icon: MODE_ICON[candidate],
           label: availability[candidate]
             ? `${t(LABEL_KEY[candidate])} — ${t(DESCRIPTION_KEY[candidate])}`
             : t('chat.composerMode.unavailable', { mode: t(LABEL_KEY[candidate]) }),
@@ -90,6 +116,8 @@ export const ComposerModeSwitch = React.memo(function ComposerModeSwitch(props: 
         // the controls next to it.
         stopClassName="h-[18px] w-[14px]"
         className="h-[22px]"
+        // 10px leaves ~4px of track showing around the glyph at 14px wide.
+        iconClassName="h-2.5 w-2.5"
       />
     </div>
   );

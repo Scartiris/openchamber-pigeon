@@ -149,6 +149,41 @@ describe('ComposerModeSwitch', () => {
     expect(thumb?.className).toContain('h-[18px]');
   });
 
+  test('the thumb is centred on the track axis, not pinned to the padding edge', async () => {
+    const { container } = await mountSwitch('s1');
+    const thumb = container.querySelector<HTMLElement>('[data-composer-mode-switch] span[aria-hidden]');
+
+    // A stop is 18px tall inside a 22px track with 2px padding, so it overflows
+    // the 16px content box and flex-centring lifts it above the padding edge. A
+    // thumb pinned with `top-0.5` therefore sat 1px low, putting the covered
+    // stop's icon visibly off-centre inside it.
+    expect(thumb?.className).toContain('top-1/2');
+    expect(thumb?.style.transform).toContain('-50%');
+  });
+
+  test('every position carries an icon, and only the covered one is lit', async () => {
+    const { container } = await mountSwitch('s1');
+    const buttons = modeButtons(container);
+
+    // Without a glyph an uncovered position is blank track: the thumb marks
+    // where the choice is, and nothing says what the other positions do.
+    const glyphs = buttons.map((button) => button.querySelector('use')?.getAttribute('href'));
+    expect(glyphs).toEqual(['#oc-hammer', '#oc-file-text', '#oc-chat-4']);
+
+    // The covered stop's icon is drawn on the thumb, so it takes the selection
+    // foreground; the uncovered ones stay muted.
+    const iconClasses = buttons.map((button) => button.querySelector('svg')?.getAttribute('class') ?? '');
+    expect(iconClasses[0]).toContain('text-interactive-selection-foreground');
+    expect(iconClasses[1]).toContain('text-muted-foreground');
+    expect(iconClasses[2]).toContain('text-muted-foreground');
+
+    // Moving the thumb moves the lit glyph with it.
+    await clickMode(container, 2);
+    const afterMove = modeButtons(container).map((button) => button.querySelector('svg')?.getAttribute('class') ?? '');
+    expect(afterMove[0]).toContain('text-muted-foreground');
+    expect(afterMove[2]).toContain('text-interactive-selection-foreground');
+  });
+
   test('the label follows the selected stop', async () => {
     const { container } = await mountSwitch('s1');
 
