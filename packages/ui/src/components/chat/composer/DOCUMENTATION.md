@@ -106,7 +106,10 @@ plan / chat) and a small three-stop slider on the right
 (`ui/segmented-slider.tsx`, a shared primitive: a track, a thumb that translates by
 `index * 100%` of its own width, and one real button per stop). The label is what
 names the mode; the slider only has to show *where* the choice sits, which is why
-the track stays small enough for the footer. It owns no state: `useComposerMode`
+the track stays small enough for the footer. **The caller sizes one stop
+(`stopClassName`) and the thumb copies it** — a thumb that declares its own size
+overflows the track the moment the two disagree, and an overflowed thumb lands on
+top of the control next to it. It owns no state: `useComposerMode`
 reads the position back from the session's effective agent (the session's saved
 choice, then the live selection) and choosing a stop writes through `setAgent`, so
 the switch, the model controls and the cycle shortcut cannot disagree. The left stop

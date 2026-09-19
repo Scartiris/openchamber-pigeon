@@ -84,10 +84,12 @@ export const ComposerModeSwitch = React.memo(function ComposerModeSwitch(props: 
             : t('chat.composerMode.unavailable', { mode: t(LABEL_KEY[candidate]) }),
           disabled: !availability[candidate],
         }))}
-        // 3 stops × 20px = a 60px track: one thumb wide enough to read as a
-        // position, small enough to sit in the footer next to the label.
-        thumbClassName="h-4 w-5"
-        trackClassName="h-5"
+        // One stop is 14×18px, so the track is 3 stops + its 2px padding = 58px:
+        // small enough for the footer, and every stop keeps a real hit area.
+        // The thumb takes its size from the stop, so it can never overflow onto
+        // the controls next to it.
+        stopClassName="h-[18px] w-[14px]"
+        className="h-[22px]"
       />
     </div>
   );

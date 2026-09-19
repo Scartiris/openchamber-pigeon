@@ -133,6 +133,22 @@ describe('ComposerModeSwitch', () => {
     expect(pressedMode(container)).toBe(0);
   });
 
+  test('every stop is a real hit area, and the thumb takes its size from one', async () => {
+    const { container } = await mountSwitch('s1');
+    const buttons = modeButtons(container);
+    const thumb = container.querySelector<HTMLElement>('[data-composer-mode-switch] span[aria-hidden]');
+
+    // A stop with no width is the bug this guards: the thumb then overflows the
+    // track and lands on top of whatever sits next to the control.
+    for (const button of buttons) {
+      expect(button.className).toContain('w-[14px]');
+      expect(button.className).toContain('h-[18px]');
+    }
+    // The thumb copies the stop's geometry instead of declaring its own.
+    expect(thumb?.className).toContain('w-[14px]');
+    expect(thumb?.className).toContain('h-[18px]');
+  });
+
   test('the label follows the selected stop', async () => {
     const { container } = await mountSwitch('s1');
 

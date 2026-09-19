@@ -7,14 +7,20 @@
  *
  * The track is small on purpose: the label that names the current option lives
  * next to it in the caller, so the control itself only has to show *where* the
- * choice sits. Every stop is a real button, so the whole control is keyboard and
- * screen-reader reachable; the selected stop carries `aria-pressed`, and stops
- * that cannot be chosen stay visible with `aria-disabled` (hiding them would
- * read as "this mode is gone").
+ * choice sits.
+ *
+ * Geometry is measured, not assumed. The thumb is drawn *behind* one stop at a
+ * time, so it takes that stop's width and offset — which is why the caller gives
+ * `stopClassName` (how wide one stop is) instead of a thumb size. A thumb sized
+ * independently of the stops overflows the track as soon as the two disagree, and
+ * an overflowed thumb sits on top of the neighbouring control. Every stop is a real
+ * button with a real hit area, so the whole control is clickable, keyboard
+ * reachable and screen-reader reachable; the selected stop carries `aria-pressed`,
+ * and stops that cannot be chosen stay visible with `aria-disabled` (hiding them
+ * would read as "this mode is gone").
  *
  * Geometry uses translate only (see the animation contract): the thumb moves by
- * `index * 100%` of its own width, so track and thumb sizes are the caller's to
- * choose through `thumbClassName`/`trackClassName`.
+ * `index * 100%` of its own width.
  */
 
 import React from 'react';
@@ -33,13 +39,16 @@ type SegmentedSliderProps<Value extends string> = {
   onChange: (value: Value) => void;
   /** Accessible name for the group. */
   ariaLabel: string;
+  /** Size of the track, i.e. of the strip around the stops. */
   className?: string;
-  trackClassName?: string;
+  /** Size of ONE stop. The thumb copies it, so the two can never disagree. */
+  stopClassName: string;
+  /** Extra classes for the thumb, e.g. an inset ring. Size comes from the stop. */
   thumbClassName?: string;
 };
 
 export function SegmentedSlider<Value extends string>(props: SegmentedSliderProps<Value>) {
-  const { options, value, onChange, ariaLabel, className, trackClassName, thumbClassName } = props;
+  const { options, value, onChange, ariaLabel, className, stopClassName, thumbClassName } = props;
   const activeIndex = Math.max(0, options.findIndex((option) => option.value === value));
 
   return (
@@ -48,16 +57,16 @@ export function SegmentedSlider<Value extends string>(props: SegmentedSliderProp
       aria-label={ariaLabel}
       className={cn(
         'relative inline-flex shrink-0 items-center rounded-full border border-border/60 p-0.5',
-        trackClassName,
         className,
       )}
     >
-      {/* Sits behind the buttons and is not interactive: the buttons are. */}
+      {/* Behind the stops and not interactive: the stops are. */}
       <span
         aria-hidden
         className={cn(
           'pointer-events-none absolute left-0.5 top-0.5 rounded-full bg-interactive-selection',
           'transition-transform duration-200 ease-out motion-reduce:transition-none',
+          stopClassName,
           thumbClassName,
         )}
         style={{ transform: `translateX(${activeIndex * 100}%)` }}
@@ -75,9 +84,10 @@ export function SegmentedSlider<Value extends string>(props: SegmentedSliderProp
               if (!option.disabled) onChange(option.value);
             }}
             className={cn(
-              'relative z-10 rounded-full text-center outline-none transition-colors duration-150',
+              'relative z-10 rounded-full outline-none',
               'focus-visible:ring-2 focus-visible:ring-[var(--interactive-focus-ring)]',
               option.disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer',
+              stopClassName,
             )}
           >
             <span className="sr-only">{option.label}</span>
