@@ -90,9 +90,10 @@ export const usePlanModeSwitch = (sessionId: string | null): PlanModeSwitchState
     });
     if (decision.kind === 'unavailable') return;
 
-    // `setAgent` also persists this session's choice and applies the model that
-    // belongs to the new agent, which is why the switch does not do either.
-    setAgent(decision.agent);
+    // `setAgent` still persists this session's choice; `keepModelSelection` is
+    // what makes the switch an agent change and nothing else — without it the
+    // plan agent's own model and effort would replace the ones in use.
+    setAgent(decision.agent, { keepModelSelection: true });
     addRecentAgent(decision.agent);
   }, [addRecentAgent, agents, enabled, recentAgents, sessionKey, setAgent, settingsDefaultAgent]);
 

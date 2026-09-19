@@ -110,6 +110,16 @@ off returns to the agent that session used before plan mode, via
 `lib/planMode.ts`'s fallback chain (remembered → recently used → configured
 default → `build` → any other primary agent).
 
+**The switch changes the agent and nothing else.** It passes
+`setAgent(agent, { keepModelSelection: true })`, so the model and the thinking
+effort in use survive the toggle in both directions instead of being replaced by
+the plan agent's own pinned model and effort. The keep path also records the
+live model and effort for the agent being switched to, which is what makes the
+choice stick: the per-agent restore inside `setAgent` and ModelControls' effort
+reconciler both read that record back, and with no record they fall back to the
+agent's defaults. Changing the model or the effort remains the picker's job —
+in plan mode too.
+
 The switch is also the only writer of the shared plan-mode gate
 (`useFeatureFlagsStore.planModeSwitchOn`), which is why the plan tab, the plan
 rail surface and the synthetic plan messages follow it. Only the composer that

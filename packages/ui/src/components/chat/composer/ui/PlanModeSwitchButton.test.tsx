@@ -90,9 +90,20 @@ describe('PlanModeSwitchButton', () => {
       agents: [testAgent('build'), testAgent('plan'), testAgent('工作')],
       currentAgentName: '工作',
       settingsDefaultAgent: undefined,
+      currentProviderId: '',
+      currentModelId: '',
+      currentVariant: undefined,
+      currentVariantSelection: { override: undefined, inherited: undefined },
+      settingsDefaultModel: undefined,
+      settingsDefaultVariant: undefined,
+      selectionSource: 'auto',
     });
     useSessionUIStore.setState({ currentSessionId: 's1' });
-    useSelectionStore.setState({ sessionAgentSelections: new Map() });
+    useSelectionStore.setState({
+      sessionAgentSelections: new Map(),
+      sessionAgentModelSelections: new Map(),
+      agentModelVariantSelections: new Map(),
+    });
     useUIStore.setState({ recentAgents: [] });
     useFeatureFlagsStore.setState({
       planModeEnabled: false,
@@ -135,6 +146,68 @@ describe('PlanModeSwitchButton', () => {
     expect(useSelectionStore.getState().sessionAgentSelections.get('s1')).toBe('plan');
     expect(useFeatureFlagsStore.getState().planModeEnabled).toBe(true);
     expect(switchElement(container)?.getAttribute('aria-checked')).toBe('true');
+  });
+
+  /**
+   * A session that already has a model recorded for the plan agent. That record
+   * is what used to move the model: the per-agent restore read it back and
+   * applied it over the model actually in use.
+   */
+  const useSessionWherePlanAlreadyHasAModel = () => {
+    useConfigStore.setState({
+      agents: [testAgent('工作'), testAgent('plan')],
+      currentAgentName: '工作',
+      currentProviderId: 'p',
+      currentModelId: 'new',
+      currentVariant: 'high',
+      currentVariantSelection: { override: 'high', inherited: 'low' },
+      settingsDefaultModel: undefined,
+      settingsDefaultVariant: 'low',
+      selectionSource: 'manual',
+    });
+    useSelectionStore.setState({
+      sessionAgentModelSelections: new Map([['s1', new Map([['plan', { providerId: 'p', modelId: 'other' }]])]]),
+    });
+  };
+
+  test('turning it on keeps the model and the effort in use', async () => {
+    useSessionWherePlanAlreadyHasAModel();
+    const { container } = await mountSwitch('s1');
+    await clickSwitch(container);
+
+    const state = useConfigStore.getState();
+    expect(state.currentAgentName).toBe('plan');
+    expect([state.currentProviderId, state.currentModelId]).toEqual(['p', 'new']);
+    expect(state.currentVariant).toBe('high');
+    expect(state.currentVariantSelection).toEqual({ override: 'high', inherited: 'low' });
+
+    // Recorded for the plan agent too: the per-agent restore and the effort
+    // reconciler read this back, and a stale record moves the model again.
+    const selection = useSelectionStore.getState();
+    expect(selection.getAgentModelForSession('s1', 'plan')).toEqual({ providerId: 'p', modelId: 'new' });
+    expect(selection.getAgentModelVariantForSession('s1', 'plan', 'p', 'new')).toBe('high');
+  });
+
+  test('turning it off keeps the model and the effort too', async () => {
+    useSessionWherePlanAlreadyHasAModel();
+    const { container, root } = await mountSwitch('s1');
+    await clickSwitch(container);
+    expect(useConfigStore.getState().currentAgentName).toBe('plan');
+
+    await act(async () => {
+      root.render(
+        <I18nProvider>
+          <PlanModeSwitchButton sessionId="s1" withTooltip />
+        </I18nProvider>,
+      );
+    });
+    await clickSwitch(container);
+
+    const state = useConfigStore.getState();
+    expect(state.currentAgentName).toBe('工作');
+    expect([state.currentProviderId, state.currentModelId]).toEqual(['p', 'new']);
+    expect(state.currentVariant).toBe('high');
+    expect(useSelectionStore.getState().getAgentModelForSession('s1', '工作')).toEqual({ providerId: 'p', modelId: 'new' });
   });
 
   test('turning it off returns to the agent this session used before', async () => {

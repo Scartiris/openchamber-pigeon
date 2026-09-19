@@ -971,6 +971,18 @@ type CurrentVariantSelection = {
     inherited: string | undefined;
 };
 
+/**
+ * Options for `setAgent`.
+ *
+ * `keepModelSelection` changes only who answers: the live model and effort stay
+ * put, and are recorded for the agent being switched to. Callers use it for
+ * switches inside one conversation — the composer's plan-mode switch — where a
+ * different model or effort would be a surprise, not a choice.
+ */
+export type SetAgentOptions = {
+    keepModelSelection?: boolean;
+};
+
 const resolveVariantFromSelection = (selection: CurrentVariantSelection): string | undefined => (
     selection.override === null ? undefined : selection.override ?? selection.inherited
 );
@@ -1182,7 +1194,7 @@ interface ConfigStore {
     setCurrentVariantOverride: (override: string | null | undefined, inherited: string | undefined) => void;
     cycleCurrentVariant: () => string | undefined;
     getCurrentModelVariants: () => string[];
-    setAgent: (agentName: string | undefined) => void;
+    setAgent: (agentName: string | undefined, options?: SetAgentOptions) => void;
     applyDefaultModelAgentSelection: (options?: { projectDefaultAgent?: string; projectDefaultModel?: string; projectDefaultVariant?: string }) => void;
     applyOpenCodeConfigDefaults: (directory?: string | null, source?: string, config?: Config) => void;
     setSelectedProvider: (providerId: string) => void;
@@ -2571,7 +2583,7 @@ export const useConfigStore = create<ConfigStore>()(
                     set({ modelsMetadata: new Map<string, ModelMetadata>() });
                 },
 
-                setAgent: (agentName: string | undefined) => {
+                setAgent: (agentName: string | undefined, options?: SetAgentOptions) => {
                     const {
                         agents,
                         providers,
@@ -2627,6 +2639,35 @@ export const useConfigStore = create<ConfigStore>()(
                                 useSessionUIStore.getState().initializeNewOpenChamberSession(currentSessionId, agents);
                             }
                         }
+                    }
+
+                    if (agentName && options?.keepModelSelection) {
+                        const { currentSessionId } = useSessionUIStore.getState();
+
+                        // "Same conversation, different agent": the model and the effort
+                        // are the user's, not the agent's, so they stay exactly as they
+                        // are. They are also recorded for the agent being switched to,
+                        // because both readers of that record — the per-agent restore
+                        // below and ModelControls' effort reconciler — would otherwise
+                        // fall back to this agent's own default and move the model or
+                        // effort out from under the user, which is what made the
+                        // plan-mode switch feel like a model switch.
+                        if (currentSessionId && currentProviderId && currentModelId) {
+                            const selection = useSelectionStore.getState();
+                            selection.saveSessionModelSelection(currentSessionId, currentProviderId, currentModelId);
+                            selection.saveAgentModelForSession(currentSessionId, agentName, currentProviderId, currentModelId);
+                            // `undefined` (no explicit effort) stays "no record" so the
+                            // inherited effort keeps being inherited.
+                            selection.saveAgentModelVariantForSession(
+                                currentSessionId,
+                                agentName,
+                                currentProviderId,
+                                currentModelId,
+                                get().currentVariantSelection.override,
+                            );
+                        }
+
+                        return;
                     }
 
                     if (agentName) {
