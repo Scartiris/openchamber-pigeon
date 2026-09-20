@@ -115,6 +115,30 @@ export const selectProjectsForEntry = <P extends ProjectPath>(
  */
 export const entryShowsManagedChats = (entry: WorkspaceEntry): boolean => entry === 'code';
 
+/**
+ * The sessions an entry may list, classified by the directory each one lives in.
+ *
+ * This is *not* the same basis the sidebar uses — the sidebar partitions projects and
+ * lets ownership carry the sessions — and the difference is deliberate, because
+ * resolving an owner would be wrong here in the case the archive page exists for.
+ * It lists sessions whose directory is not registered at all (an unregistered 专项
+ * keeps its history), and on this deployment `/home/openchamber` is itself a
+ * registered project, so the deepest owner of `…/workspaces/work/模板` is the *home*
+ * project: owner-first would file that 工作 session under 代码. The raw path is the
+ * one piece of evidence that cannot be swallowed by a parent registration.
+ *
+ * The known cost of choosing it: a git worktree of a 工作 project checked out outside
+ * the partition stays listed by the sidebar (it inherits its parent project) while a
+ * flat session list files it under 代码. The deployment has no worktrees today, and
+ * the fix if that changes is to resolve the worktree's parent project here — not to
+ * switch these surfaces to the sidebar's basis.
+ */
+export const selectSessionsForEntry = <S>(
+  sessions: readonly S[],
+  entry: WorkspaceEntry,
+  directoryOf: (session: S) => string | null | undefined,
+): S[] => sessions.filter((session) => resolveWorkspaceEntry(directoryOf(session)) === entry);
+
 const recencyOf = (project: EntryDraftProject): number => project.lastOpenedAt ?? project.addedAt ?? 0;
 
 /**

@@ -18,7 +18,7 @@ import {
 import { useUIStore } from '@/stores/useUIStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useGlobalSessionsStore, resolveGlobalSessionDirectory } from '@/stores/useGlobalSessionsStore';
-import { resolveWorkspaceEntry } from '@/lib/workspaceEntry';
+import { selectSessionsForEntry } from '@/lib/workspaceEntry';
 import { useWorkspaceEntry } from '@/hooks/useWorkspaceEntry';
 import { isBtwSession } from '@/lib/sessionBtwMetadata';
 import { useSessionPinnedStore } from '@/stores/useSessionPinnedStore';
@@ -108,6 +108,8 @@ export const CommandPalette: React.FC = () => {
 
   // The palette jumps to a session, so it offers the ones the workbench entry is
   // showing — offering the rest would send the user to a list they cannot see.
+  // The project group below is deliberately *not* narrowed by this: it is search-only
+  // navigation, and the way into the other partition on purpose.
   const workspaceEntry = useWorkspaceEntry();
 
   const activeSessions = useGlobalSessionsStore(React.useCallback(
@@ -454,9 +456,11 @@ export const CommandPalette: React.FC = () => {
   // ---------------------------------------------------------------------------
   const orderedActiveSessions = React.useMemo(() => {
     // btw forks stay hidden until promoted to a full session
-    const visibleSessions = activeSessions.filter((session) => (
-      !isBtwSession(session) && resolveWorkspaceEntry(resolveGlobalSessionDirectory(session)) === workspaceEntry
-    ));
+    const visibleSessions = selectSessionsForEntry(
+      activeSessions.filter((session) => !isBtwSession(session)),
+      workspaceEntry,
+      resolveGlobalSessionDirectory,
+    );
     return orderSessionsByLifecycleScopes(visibleSessions, pinnedSessionIds, sessionOrderRanks);
   }, [activeSessions, pinnedSessionIds, sessionOrderRanks, workspaceEntry]);
 

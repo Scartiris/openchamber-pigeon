@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
+import { resolveProjectForDirectory } from '@/lib/projectResolution';
+
 import {
   ENTRY_ICONS,
   ENTRY_LABEL_KEY,
@@ -8,6 +10,7 @@ import {
   resolveEntryDraftTarget,
   resolveWorkspaceEntry,
   selectProjectsForEntry,
+  selectSessionsForEntry,
 } from './workspaceEntry';
 
 type TestProject = {
@@ -91,6 +94,49 @@ describe('selectProjectsForEntry', () => {
   test('an entry with no project yields an empty list rather than a guess', () => {
     expect(selectProjectsForEntry([testProject('code', '/home/openchamber/workspaces/code')], 'work')).toEqual([]);
     expect(selectProjectsForEntry([], 'code')).toEqual([]);
+  });
+});
+
+describe('selectSessionsForEntry', () => {
+  type TestSession = { id: string; directory: string | null };
+  const testSession = (id: string, directory: string | null): TestSession => ({ id, directory });
+  const directoryOf = (session: TestSession): string | null => session.directory;
+  const ids = (sessions: TestSession[]): string[] => sessions.map((session) => session.id);
+
+  // One row per way a flat session list can be judged. `loose-work` is the one that
+  // decides the basis this function uses: `/home/openchamber` *is* a registered
+  // project on the deployment, so resolving an owning project would file that
+  // unregistered 工作 专项 under 代码 — and the archive page lists such sessions
+  // precisely because the sidebar hides them.
+  const mixed = [
+    testSession('gongwen', '/home/openchamber/workspaces/work/公文'),
+    testSession('loose-work', '/home/openchamber/workspaces/work/模板/2026'),
+    testSession('code', '/home/openchamber/workspaces/code'),
+    testSession('chat', '/home/openchamber/.config/openchamber/chats/2026-09-15/session-9fbcdbd9-c445-42da-8b39-45e02d9a1c00'),
+    testSession('home', '/home/openchamber'),
+    testSession('unknown', null),
+  ];
+
+  test('splits a session list on its own directory, work rows and all', () => {
+    expect(ids(selectSessionsForEntry(mixed, 'work', directoryOf))).toEqual(['gongwen', 'loose-work']);
+    expect(ids(selectSessionsForEntry(mixed, 'code', directoryOf))).toEqual(['code', 'chat', 'home', 'unknown']);
+  });
+
+  test('the owning project answers the loose row wrongly, which is the basis choice on record', () => {
+    // The alternative spelled out instead of asserted away: this deployment registers
+    // the home directory itself, so ownership resolves the unregistered 工作 专项 to a
+    // *code* project. Pinning the disagreement is what stops a later "let's reuse the
+    // sidebar's rule here" from reading as a cleanup — it would move that session into
+    // the other entry, and the row below is the assertion that catches it.
+    const registered = [
+      testProject('home', '/home/openchamber'),
+      testProject('code', '/home/openchamber/workspaces/code'),
+    ];
+    const looseWork = '/home/openchamber/workspaces/work/模板/2026';
+    const owner = resolveProjectForDirectory(registered, looseWork);
+    expect(owner?.id).toBe('home');
+    expect(resolveWorkspaceEntry(owner?.path)).toBe('code');
+    expect(ids(selectSessionsForEntry([testSession('loose', looseWork)], 'work', directoryOf))).toEqual(['loose']);
   });
 });
 

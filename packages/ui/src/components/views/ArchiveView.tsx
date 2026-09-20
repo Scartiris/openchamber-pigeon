@@ -11,7 +11,7 @@ import { useUIStore } from '@/stores/useUIStore';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { resolveGlobalSessionDirectory, useGlobalSessionsStore } from '@/stores/useGlobalSessionsStore';
-import { resolveWorkspaceEntry } from '@/lib/workspaceEntry';
+import { selectSessionsForEntry } from '@/lib/workspaceEntry';
 import { useWorkspaceEntry } from '@/hooks/useWorkspaceEntry';
 import { formatSessionDateLabel, normalizePath } from '@/components/session/sidebar/utils';
 import { useShallow } from 'zustand/react/shallow';
@@ -36,13 +36,12 @@ export function ArchiveView(): React.ReactNode {
   const homeDirectory = useDirectoryStore((state) => state.homeDirectory);
   const allArchivedSessions = useGlobalSessionsStore(useShallow((state) => open ? state.archivedSessions : []));
   // Archived sessions never appear in the sidebar's project sections, so this page
-  // is the one place the other entry's history would still surface. It classifies
-  // the session's own directory — the very value it buckets by below.
+  // is the one place the other entry's history would still surface. It asks the same
+  // question the flat session lists ask — see `selectSessionsForEntry`, which also
+  // says why this page must not resolve an owning project instead.
   const workspaceEntry = useWorkspaceEntry();
   const archivedSessions = React.useMemo(
-    () => allArchivedSessions.filter((session) => (
-      resolveWorkspaceEntry(resolveGlobalSessionDirectory(session)) === workspaceEntry
-    )),
+    () => selectSessionsForEntry(allArchivedSessions, workspaceEntry, resolveGlobalSessionDirectory),
     [allArchivedSessions, workspaceEntry],
   );
   const [query, setQuery] = React.useState('');
