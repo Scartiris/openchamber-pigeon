@@ -139,10 +139,17 @@ describe('entryShowsManagedChats', () => {
     // and this predicate is only honest while the rule keeps classifying that as code.
     // A new partition shape that captured it would turn this red instead of quietly
     // hiding the chats block from the entry the user is in.
+    //
+    // The bare root is pinned too, but the path the app actually classifies is a
+    // per-chat descendant — this is the directory `createChatDirectory` builds, taken
+    // verbatim from the deployed store (`…/chats/2026-09-15/session-9fbcdbd9-…`).
     const chatsRoot = '/home/openchamber/.config/openchamber/chats';
-    const entry = resolveWorkspaceEntry(chatsRoot);
-    expect(entry).toBe('code');
-    expect(entryShowsManagedChats(entry)).toBe(true);
+    const oneChat = `${chatsRoot}/2026-09-15/session-9fbcdbd9-c445-42da-8b39-45e02d9a1c00`;
+    for (const directory of [chatsRoot, oneChat]) {
+      const entry = resolveWorkspaceEntry(directory);
+      expect(entry).toBe('code');
+      expect(entryShowsManagedChats(entry)).toBe(true);
+    }
   });
 });
 
