@@ -24,6 +24,7 @@ import type { Session } from '@opencode-ai/sdk/v2';
 
 import { SegmentedSlider } from '@/components/ui/segmented-slider';
 import { useWorkspaceEntry } from '@/hooks/useWorkspaceEntry';
+import { isVSCodeRuntime } from '@/lib/desktop';
 import { useI18n } from '@/lib/i18n';
 import { resolveProjectForDirectory } from '@/lib/projectResolution';
 import {
@@ -68,6 +69,7 @@ export const WorkspaceEntrySwitch = React.memo(function WorkspaceEntrySwitch() {
   const setWorkspaceEntry = useSessionDisplayStore((state) => state.setWorkspaceEntry);
   const setCurrentSession = useSessionUIStore((state) => state.setCurrentSession);
   const openNewSessionDraft = useSessionUIStore((state) => state.openNewSessionDraft);
+  const isVSCode = React.useMemo(() => isVSCodeRuntime(), []);
 
   const handleSelect = React.useCallback((next: WorkspaceEntry) => {
     if (next === entry) return;
@@ -94,6 +96,12 @@ export const WorkspaceEntrySwitch = React.memo(function WorkspaceEntrySwitch() {
     const target = resolveEntryDraftTarget(useProjectsStore.getState().projects, next);
     openNewSessionDraft(target ?? {});
   }, [entry, openNewSessionDraft, setCurrentSession, setWorkspaceEntry]);
+
+  // VS Code has one workspace and no project registry, so the sidebar lists
+  // everything it has whatever the entry says — the bypass the list itself takes.
+  // Two stops that cannot change the list would only ever close the surface the
+  // press lands on, so the switch is not rendered there at all.
+  if (isVSCode) return null;
 
   return (
     // `data-workspace-entry` is what the mount test and a grep of the shipped bundle

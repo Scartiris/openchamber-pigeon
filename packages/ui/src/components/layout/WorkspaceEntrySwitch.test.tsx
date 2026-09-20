@@ -78,7 +78,7 @@ const sessions = (): Session[] => [
 
 const originalFetch = globalThis.fetch;
 
-const mountTree = async (node: React.ReactElement) => {
+const mountTree = async (node: React.ReactElement, init: { vscodeWorkspace?: boolean } = {}) => {
   const win = new Window({ url: 'http://localhost' });
   const values = {
     window: win,
@@ -106,6 +106,18 @@ const mountTree = async (node: React.ReactElement) => {
   for (const [key, value] of Object.entries(values)) {
     Object.defineProperty(globalThis, key, { configurable: true, value });
   }
+  if (init.vscodeWorkspace) {
+    // The extension host injects this object into the webview HTML before any bundle
+    // evaluates, and `isVSCodeRuntime()` reads it first — so this is the signal the
+    // real host sends, not a stub of the predicate. It has to be set on the fresh
+    // window above, which is why it belongs inside the mount helper. `defineProperty`
+    // matches the other VS Code tests: the bootstrap key is not on the Window type,
+    // and asserting through `as unknown as` trips anti-slop without adding evidence.
+    Object.defineProperty(win, '__VSCODE_CONFIG__', {
+      configurable: true,
+      value: { workspaceFolder: '/workspace' },
+    });
+  }
   // React DOM decides how to wire input events while the module is first evaluated,
   // so it is imported only after this window owns the globals. A top-level import
   // would make that decision for every other test file sharing this process, and the
@@ -125,7 +137,7 @@ const mountTree = async (node: React.ReactElement) => {
 };
 
 const mountSwitch = () => mountTree(<WorkspaceEntrySwitch />);
-const mountTitlebar = () => mountTree(<TitlebarLeftControls />);
+const mountTitlebar = (init: { vscodeWorkspace?: boolean } = {}) => mountTree(<TitlebarLeftControls />, init);
 
 const surface = (container: HTMLElement) =>
   container.querySelector<HTMLElement>('[data-workspace-entry]');
@@ -292,6 +304,17 @@ describe('WorkspaceEntrySwitch', () => {
 
       expect(document.documentElement.getAttribute('style') ?? '')
         .toContain('--oc-titlebar-controls-width');
+    });
+
+    test('a VS Code workspace gets the toggle without the switch', async () => {
+      const { container } = await mountTitlebar({ vscodeWorkspace: true });
+
+      // VS Code has one workspace and no project registry, so the sidebar lists
+      // everything there whatever the entry says. Two stops over an unpartitionable
+      // list are not a choice but a button that closes the page you are reading, so
+      // the whole control is absent — and the toggle beside it still has to be there.
+      expect(surface(container)).toBeNull();
+      expect(buttonWithIcon(container, 'layout-left')).not.toBeUndefined();
     });
   });
 });
