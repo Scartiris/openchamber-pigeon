@@ -106,6 +106,15 @@ export const selectProjectsForEntry = <P extends ProjectPath>(
   entry: WorkspaceEntry,
 ): P[] => projects.filter((project) => resolveWorkspaceEntry(project.path) === entry);
 
+/**
+ * Managed chats are created under the home directory, which the rule classifies as
+ * `code`, so under another entry they are not this entry's surface at all. The
+ * sidebar asks the same question twice — the group it lists, and the Recent block
+ * that carries the "new chat" affordance — and one answer is what stops those two
+ * from disagreeing.
+ */
+export const entryShowsManagedChats = (entry: WorkspaceEntry): boolean => entry === 'code';
+
 const recencyOf = (project: EntryDraftProject): number => project.lastOpenedAt ?? project.addedAt ?? 0;
 
 /**

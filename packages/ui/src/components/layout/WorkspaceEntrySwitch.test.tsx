@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { Session } from '@opencode-ai/sdk/v2';
 
 import { WorkspaceEntrySwitch } from './WorkspaceEntrySwitch';
+import { TitlebarLeftControls } from './TitlebarLeftControls';
 import { I18nProvider } from '@/lib/i18n';
 import type { ProjectEntry } from '@/lib/api/types';
 import { useGlobalSessionsStore } from '@/stores/useGlobalSessionsStore';
@@ -77,7 +78,7 @@ const sessions = (): Session[] => [
 
 const originalFetch = globalThis.fetch;
 
-const mountSwitch = async () => {
+const mountTree = async (node: React.ReactElement) => {
   const win = new Window({ url: 'http://localhost' });
   const values = {
     window: win,
@@ -118,14 +119,13 @@ const mountSwitch = async () => {
   document.body.appendChild(container);
   const root = createRoot(container);
   await act(async () => {
-    root.render(
-      <I18nProvider>
-        <WorkspaceEntrySwitch />
-      </I18nProvider>,
-    );
+    root.render(<I18nProvider>{node}</I18nProvider>);
   });
   return { container, root };
 };
+
+const mountSwitch = () => mountTree(<WorkspaceEntrySwitch />);
+const mountTitlebar = () => mountTree(<TitlebarLeftControls />);
 
 const surface = (container: HTMLElement) =>
   container.querySelector<HTMLElement>('[data-workspace-entry]');
@@ -143,6 +143,10 @@ const clickEntry = async (container: HTMLElement, index: number) => {
 
 const pressedIndex = (container: HTMLElement) =>
   entryButtons(container).findIndex((button) => button.getAttribute('aria-pressed') === 'true');
+
+const buttonWithIcon = (container: HTMLElement, name: string) =>
+  Array.from(container.querySelectorAll<HTMLButtonElement>('button'))
+    .find((button) => button.querySelector('use')?.getAttribute('href') === `#oc-${name}`);
 
 describe('WorkspaceEntrySwitch', () => {
   beforeEach(() => {
@@ -266,5 +270,28 @@ describe('WorkspaceEntrySwitch', () => {
     }
     expect(thumb?.className).toContain('h-6');
     expect(thumb?.className).toContain('w-6');
+  });
+
+  describe('mounted into the titlebar', () => {
+    test('shares the measured cluster with the sidebar toggle', async () => {
+      const { container } = await mountTitlebar();
+      const host = surface(container);
+      const sidebarToggle = buttonWithIcon(container, 'layout-left');
+
+      expect(host).not.toBeNull();
+      expect(sidebarToggle).not.toBeUndefined();
+      // The overlay publishes its own width so the header can reserve the same space
+      // when the sidebar is collapsed. A switch mounted outside that cluster widens
+      // nothing that is measured, and the title slides under it for a frame on load —
+      // so the sibling relation is the assertion, not the switch merely existing.
+      expect(host?.parentElement).toBe(sidebarToggle?.parentElement);
+    });
+
+    test('mounting the titlebar publishes the width the header reserves', async () => {
+      await mountTitlebar();
+
+      expect(document.documentElement.getAttribute('style') ?? '')
+        .toContain('--oc-titlebar-controls-width');
+    });
   });
 });

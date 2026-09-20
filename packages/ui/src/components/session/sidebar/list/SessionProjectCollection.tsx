@@ -31,7 +31,7 @@ import type { DeleteSessionConfirmState } from '../sessions/useSessionActions';
 import { useExpandedParents } from '../sessions/useExpandedParents';
 import { SessionGroupSection } from '../projects/SessionGroupSection';
 import { CHAT_DRAFT_PROJECT_ID, getChatsRootForHome, getChatsRootFromDirectory } from '@/lib/chatDirectories';
-import { selectProjectsForEntry, type WorkspaceEntry } from '@/lib/workspaceEntry';
+import { entryShowsManagedChats, selectProjectsForEntry, type WorkspaceEntry } from '@/lib/workspaceEntry';
 import { isCapacitorApp } from '@/lib/platform';
 
 const PR_NO_PR_RETRY_MS = 5 * 60_000;
@@ -224,7 +224,7 @@ const VisibleSessionProjects: React.FC<SessionProjectCollectionProps> = ({ topol
     // code entry — so they are simply not this entry's surface. Returning null
     // here also empties `standaloneGroups`, which is what takes them out of the
     // search data as well as out of the list.
-    if (view.workspaceEntry !== 'code') return null;
+    if (!entryShowsManagedChats(view.workspaceEntry)) return null;
     const chatsRoot = getChatsRootForHome(view.homeDirectory)
       ?? collection.chatSessions.map((session) => getChatsRootFromDirectory(session.directory)).find(Boolean)
       ?? null;
@@ -516,7 +516,7 @@ const VisibleSessionProjects: React.FC<SessionProjectCollectionProps> = ({ topol
       renderChatsSection={renderChatsSection}
       onNewChat={handleOpenNewChat}
       showRecentSection={showRecentSection && !singleProjectMode}
-      showChatsSection={view.workspaceEntry === 'code'}
+      showChatsSection={entryShowsManagedChats(view.workspaceEntry)}
     /> : null
   ), [
     actions.startSessionWorktreeMenuLoad,

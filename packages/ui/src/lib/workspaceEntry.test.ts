@@ -4,6 +4,7 @@ import {
   ENTRY_ICONS,
   ENTRY_LABEL_KEY,
   ENTRY_ORDER,
+  entryShowsManagedChats,
   resolveEntryDraftTarget,
   resolveWorkspaceEntry,
   selectProjectsForEntry,
@@ -124,6 +125,24 @@ describe('resolveEntryDraftTarget', () => {
     const projects = [testProject('code', '/home/openchamber/workspaces/code')];
     expect(resolveEntryDraftTarget(projects, 'work')).toBeNull();
     expect(resolveEntryDraftTarget([], 'code')).toBeNull();
+  });
+});
+
+describe('entryShowsManagedChats', () => {
+  test('only the code entry, and every entry gets an answer', () => {
+    expect(ENTRY_ORDER.map((entry) => [entry, entryShowsManagedChats(entry)] as const))
+      .toEqual([['code', true], ['work', false]]);
+  });
+
+  test('says what the path rule says about the directory chats live in', () => {
+    // Not a second opinion: chats are created under `<home>/.config/openchamber/chats`,
+    // and this predicate is only honest while the rule keeps classifying that as code.
+    // A new partition shape that captured it would turn this red instead of quietly
+    // hiding the chats block from the entry the user is in.
+    const chatsRoot = '/home/openchamber/.config/openchamber/chats';
+    const entry = resolveWorkspaceEntry(chatsRoot);
+    expect(entry).toBe('code');
+    expect(entryShowsManagedChats(entry)).toBe(true);
   });
 });
 
