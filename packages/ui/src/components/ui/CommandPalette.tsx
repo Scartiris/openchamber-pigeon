@@ -18,6 +18,8 @@ import {
 import { useUIStore } from '@/stores/useUIStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useGlobalSessionsStore, resolveGlobalSessionDirectory } from '@/stores/useGlobalSessionsStore';
+import { resolveWorkspaceEntry } from '@/lib/workspaceEntry';
+import { useWorkspaceEntry } from '@/hooks/useWorkspaceEntry';
 import { isBtwSession } from '@/lib/sessionBtwMetadata';
 import { useSessionPinnedStore } from '@/stores/useSessionPinnedStore';
 import {
@@ -103,6 +105,10 @@ export const CommandPalette: React.FC = () => {
   const setCurrentSession = useSessionUIStore((s) => s.setCurrentSession);
   const currentSessionId = useSessionUIStore((s) => s.currentSessionId);
   const togglePinnedSession = useSessionPinnedStore((s) => s.toggle);
+
+  // The palette jumps to a session, so it offers the ones the workbench entry is
+  // showing — offering the rest would send the user to a list they cannot see.
+  const workspaceEntry = useWorkspaceEntry();
 
   const activeSessions = useGlobalSessionsStore(React.useCallback(
     (state) => isCommandPaletteOpen ? state.activeSessions : EMPTY_SESSIONS,
@@ -448,9 +454,11 @@ export const CommandPalette: React.FC = () => {
   // ---------------------------------------------------------------------------
   const orderedActiveSessions = React.useMemo(() => {
     // btw forks stay hidden until promoted to a full session
-    const visibleSessions = activeSessions.filter((session) => !isBtwSession(session));
+    const visibleSessions = activeSessions.filter((session) => (
+      !isBtwSession(session) && resolveWorkspaceEntry(resolveGlobalSessionDirectory(session)) === workspaceEntry
+    ));
     return orderSessionsByLifecycleScopes(visibleSessions, pinnedSessionIds, sessionOrderRanks);
-  }, [activeSessions, pinnedSessionIds, sessionOrderRanks]);
+  }, [activeSessions, pinnedSessionIds, sessionOrderRanks, workspaceEntry]);
 
   const allBranches = useGitAllBranches();
   const worktreeMetadata = useSessionUIStore((s) => s.worktreeMetadata);

@@ -86,6 +86,13 @@ import { buildSessionTreeMoveMessages, requestSessionTreeMove, useIsSessionWorkt
 
 const DESKTOP_HEADER_ICON_BUTTON_CLASS = 'app-region-no-drag inline-flex h-8 w-8 items-center justify-center gap-2 rounded-md typography-ui-label font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-interactive-hover transition-colors';
 
+/**
+ * The `TitlebarLeftControls` cluster's stand-in width until it measures itself.
+ * 9.5rem covers the sidebar toggle, the two-stop entry switch (54px) and their
+ * gaps, with room left for the app menu / window controls that can share it.
+ */
+const TITLEBAR_CONTROLS_FALLBACK_WIDTH = '9.5rem';
+
 type HeaderIconActionButtonProps = {
   visible?: boolean;
   title: string;
@@ -1126,9 +1133,15 @@ export const Header: React.FC = () => {
   // slides in/out in lockstep with the sidebar. When the sidebar is open the
   // overlay is over the sidebar, so the header only keeps normal content padding.
   const headerInsetSpacerWidth = isSidebarOpen ? '0.75rem' : 'var(--oc-titlebar-left-inset, 0.75rem)';
+  // The overlay publishes its measured width on the first layout effect, so this
+  // fallback only speaks for the frame before it. It has to be an over-estimate:
+  // a short reserve lets the session title slide in for one frame and then jump.
+  // The cluster is the sidebar toggle plus the two-stop entry switch (54px) — the
+  // generous margin above that also covers the frameless app menu and the Windows
+  // controls, which are the other things that can occupy it.
   const headerControlsSpacerWidth = isSidebarOpen
     ? '0px'
-    : 'calc(var(--oc-titlebar-controls-width, 5.5rem) + 0.5rem)';
+    : `calc(var(--oc-titlebar-controls-width, ${TITLEBAR_CONTROLS_FALLBACK_WIDTH}) + 0.5rem)`;
 
   useEffect(() => {
     if (!isDesktopApp || !isMacPlatform) {

@@ -6,6 +6,7 @@ import { I18nProvider } from '@/lib/i18n';
 import { useSessionGrouping } from './useSessionGrouping';
 import { useSessionSidebarSections } from './useSessionSidebarSections';
 import type { SessionGroup } from '../types';
+import { selectProjectsForEntry, type WorkspaceEntry } from '@/lib/workspaceEntry';
 
 const CHATS_ROOT = '/home/user/.config/openchamber/chats';
 
@@ -178,5 +179,104 @@ describe('sidebar search over standalone groups', () => {
 
     expect(sections.groupSearchDataByGroup.has(group)).toBe(false);
     expect(sections.searchMatchCount).toBe(0);
+  });
+});
+
+// The workbench entry owns a single input to this hook: which projects go in. Both
+// renderings and the header's match count are projected from that one list, which
+// is what makes "the count says 3 but the list shows 1" unreachable — and is why
+// the filter is applied here rather than in whichever view happens to render.
+describe('sidebar sections under a workbench entry', () => {
+  const WORK = '/home/openchamber/workspaces/work/公文';
+  const CODE = '/home/openchamber/workspaces/code/pigeoncore';
+  const HOME = '/home/openchamber';
+
+  type Project = { id: string; path: string; normalizedPath: string };
+
+  const projects: Project[] = [
+    { id: 'work', path: WORK, normalizedPath: WORK },
+    { id: 'code', path: CODE, normalizedPath: CODE },
+    { id: 'home', path: HOME, normalizedPath: HOME },
+  ];
+
+  // Every title matches the query, so a count above one can only mean the other
+  // partition leaked into the list. The token is ASCII on purpose: the fuzzy
+  // matcher lets a two-character CJK query match group metadata (the project
+  // root label and path) as well, which would bury this assertion under a
+  // matching quirk that has nothing to do with the partition.
+  const TITLE = 'Release notes';
+  const QUERY = 'release';
+  // A session sits in the project's rendered group only when its directory is
+  // the project root or a registered worktree; anything else is the archived
+  // bucket. Root directories keep these rows in the list the entry filters.
+  const sessionsByProject = new Map<string, Session[]>([
+    ['work', [{ ...chatSession('ses_work', TITLE), directory: WORK }]],
+    ['code', [{ ...chatSession('ses_code', TITLE), directory: CODE }]],
+    ['home', [{ ...chatSession('ses_home', TITLE), directory: HOME }]],
+  ]);
+
+  const renderEntrySections = (entry: WorkspaceEntry, query: string): Sections => {
+    let captured: Sections | null = null;
+    const Harness = () => {
+      const grouping = useSessionGrouping({
+        homeDirectory: '/home/openchamber',
+        worktreeMetadata: new Map(),
+        pinnedSessionIds: new Set(),
+        sessionOrderRanks: new Map(),
+        gitBranches: new Map(),
+        isVSCode: false,
+      });
+      captured = useSessionSidebarSections({
+        normalizedProjects: selectProjectsForEntry(projects, entry),
+        getSessionsForProject: (projectId) => sessionsByProject.get(projectId) ?? [],
+        getArchivedSessionsForProject: () => [],
+        availableWorktreesByProject: new Map(),
+        projectRepoStatus: new Map(),
+        projectRootBranches: new Map(),
+        gitBranches: new Map(),
+        lastRepoStatus: false,
+        buildGroupedSessions: grouping.buildGroupedSessions,
+        hasSessionSearchQuery: query.length > 0,
+        normalizedSessionSearchQuery: query,
+        filterSessionNodesForSearch: grouping.filterSessionNodesForSearch,
+        buildGroupSearchText: grouping.buildGroupSearchText,
+        foldersMap: {},
+        standaloneGroups: [],
+      });
+      return null;
+    };
+
+    renderToStaticMarkup(React.createElement(I18nProvider, null, React.createElement(Harness)));
+    if (!captured) throw new Error('sections hook was not mounted');
+    return captured;
+  };
+
+  const listedSessionIds = (sections: Sections, grouped: boolean) => (
+    (grouped ? sections.sectionsForRender : sections.flatSectionsForRender)
+      .flatMap((section) => section.groups.flatMap((group) => group.sessions.map((node) => node.session.id)))
+  );
+
+  for (const grouped of [true, false]) {
+    test(`${grouped ? 'grouped' : 'flat'} rendering lists one entry's projects only`, () => {
+      expect(listedSessionIds(renderEntrySections('work', ''), grouped)).toEqual(['ses_work']);
+      expect(listedSessionIds(renderEntrySections('code', ''), grouped)).toEqual(['ses_code', 'ses_home']);
+    });
+  }
+
+  test('a query that matches every partition counts and renders the visible one only', () => {
+    const work = renderEntrySections('work', QUERY);
+    expect(listedSessionIds(work, true)).toEqual(['ses_work']);
+    expect(listedSessionIds(work, false)).toEqual(['ses_work']);
+    expect(work.searchMatchCount).toBe(1);
+
+    const code = renderEntrySections('code', QUERY);
+    expect(code.searchMatchCount).toBe(2);
+    expect(listedSessionIds(code, true)).toEqual(['ses_code', 'ses_home']);
+  });
+
+  test('the unlabelled home directory stays in the code entry', () => {
+    // It is the one registration on the server with no label and no workspaces
+    // segment, and the fallback must never strand it outside both entries.
+    expect(selectProjectsForEntry(projects, 'code').map((project) => project.id)).toEqual(['code', 'home']);
   });
 });

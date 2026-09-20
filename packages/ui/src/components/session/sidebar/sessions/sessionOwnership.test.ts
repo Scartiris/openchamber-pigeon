@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import type { Session } from '@opencode-ai/sdk/v2';
 
-import { createSessionOwnershipIndex } from './sessionOwnership';
+import { selectProjectsForEntry, type WorkspaceEntry } from '@/lib/workspaceEntry';
+import { createSessionOwnershipIndex, selectSessionsOwnedByProjects } from './sessionOwnership';
 
 describe('createSessionOwnershipIndex', () => {
   test('assigns sessions to the deepest project and registered worktree', () => {
@@ -126,5 +127,49 @@ describe('createSessionOwnershipIndex', () => {
     expect(ownership.bySessionId.size).toBe(14_561);
     expect(ownership.directoryResolutions).toBeLessThan(14_561 * 2);
     expect([...ownership.sessionsByProject.values()].reduce((total, bucket) => total + bucket.length, 0)).toBe(14_561);
+  });
+});
+
+// The sidebar's Recent strip narrows by entry through this helper rather than by
+// each session's own path, because ownership already collapses a session onto the
+// project that owns it — and a worktree of that project can live anywhere on disk.
+describe('selectSessionsOwnedByProjects', () => {
+  const WORK = '/home/openchamber/workspaces/work';
+  const CODE = '/home/openchamber/workspaces/code';
+  const WORKTREE = '/tmp/worktrees/quick-fix';
+
+  const projects = [
+    { id: 'work', path: WORK, normalizedPath: WORK },
+    { id: 'code', path: CODE, normalizedPath: CODE },
+  ];
+  // SAFETY: the ownership index reads a session's `id` and its directory only, and
+  // `atDirectory` supplies exactly that pair — the SDK's Session type has no directory
+  // field, so nothing this test exercises is missing from the asserted shape.
+  const atDirectory = (id: string, directory: string): Session => ({ id, directory }) as Session;
+  const sessions = [
+    atDirectory('work-root', WORK),
+    atDirectory('work-worktree', WORKTREE),
+    atDirectory('code-root', CODE),
+    atDirectory('stray', '/home/openchamber/elsewhere'),
+  ];
+  const ownership = createSessionOwnershipIndex(sessions, projects, new Map([[WORK, [{ path: WORKTREE }]]]), false);
+  const entryIds = (entry: WorkspaceEntry) => new Set(selectProjectsForEntry(projects, entry).map((project) => project.id));
+  const idsOf = (entry: WorkspaceEntry) => selectSessionsOwnedByProjects(sessions, ownership.bySessionId, entryIds(entry)).map((session) => session.id);
+
+  test('keeps a work project whose worktree sits outside the partition', () => {
+    expect(ownership.bySessionId.get('work-worktree')?.projectId).toBe('work');
+    expect(idsOf('work')).toEqual(['work-root', 'work-worktree']);
+  });
+
+  test('gives the code entry its own sessions and the unowned leftovers', () => {
+    expect(idsOf('code')).toEqual(['code-root']);
+    expect(ownership.bySessionId.has('stray')).toBe(false);
+  });
+
+  test('keeps the order it was handed, so the Recent sort stays in one place', () => {
+    expect(idsOf('work')).toEqual(['work-root', 'work-worktree']);
+    const reversed = [...sessions].reverse();
+    expect(selectSessionsOwnedByProjects(reversed, ownership.bySessionId, entryIds('work')).map((session) => session.id))
+      .toEqual(['work-worktree', 'work-root']);
   });
 });

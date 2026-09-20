@@ -55,3 +55,33 @@ describe('useSessionDisplayStore project display', () => {
     });
   });
 });
+
+describe('useSessionDisplayStore workspace entry', () => {
+  test('starts unchosen, so the session on screen decides the first frame', () => {
+    expect(useSessionDisplayStore.getState().workspaceEntry).toBeNull();
+  });
+
+  test('pressing the switch pins the entry', () => {
+    useSessionDisplayStore.getState().setWorkspaceEntry('work');
+    expect(useSessionDisplayStore.getState().workspaceEntry).toBe('work');
+
+    useSessionDisplayStore.getState().setWorkspaceEntry('code');
+    expect(useSessionDisplayStore.getState().workspaceEntry).toBe('code');
+
+    useSessionDisplayStore.setState({ workspaceEntry: null });
+  });
+
+  test('a v5 blob carries no entry, and migration invents none', () => {
+    const migrated = migrateSessionDisplayState({ projectSortOrder: 'a-z', showRecentSection: false }, 5);
+
+    expect('workspaceEntry' in migrated).toBe(false);
+    expect(migrated.projectSortOrder).toBe('a-z');
+    expect(migrated.showRecentSection).toBe(false);
+  });
+
+  test('a stored entry survives migration untouched', () => {
+    const migrated = migrateSessionDisplayState({ workspaceEntry: 'work', projectSortOrder: 'manual' }, 6);
+
+    expect(migrated.workspaceEntry).toBe('work');
+  });
+});

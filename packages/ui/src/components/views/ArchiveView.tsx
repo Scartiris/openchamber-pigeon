@@ -11,6 +11,8 @@ import { useUIStore } from '@/stores/useUIStore';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { resolveGlobalSessionDirectory, useGlobalSessionsStore } from '@/stores/useGlobalSessionsStore';
+import { resolveWorkspaceEntry } from '@/lib/workspaceEntry';
+import { useWorkspaceEntry } from '@/hooks/useWorkspaceEntry';
 import { formatSessionDateLabel, normalizePath } from '@/components/session/sidebar/utils';
 import { useShallow } from 'zustand/react/shallow';
 import { SessionSearchInput } from '@/components/session/SessionSearchInput';
@@ -32,7 +34,17 @@ export function ArchiveView(): React.ReactNode {
   const setCurrentSession = useSessionUIStore((state) => state.setCurrentSession);
   const unarchiveSession = useSessionUIStore((state) => state.unarchiveSession);
   const homeDirectory = useDirectoryStore((state) => state.homeDirectory);
-  const archivedSessions = useGlobalSessionsStore(useShallow((state) => open ? state.archivedSessions : []));
+  const allArchivedSessions = useGlobalSessionsStore(useShallow((state) => open ? state.archivedSessions : []));
+  // Archived sessions never appear in the sidebar's project sections, so this page
+  // is the one place the other entry's history would still surface. It classifies
+  // the session's own directory — the very value it buckets by below.
+  const workspaceEntry = useWorkspaceEntry();
+  const archivedSessions = React.useMemo(
+    () => allArchivedSessions.filter((session) => (
+      resolveWorkspaceEntry(resolveGlobalSessionDirectory(session)) === workspaceEntry
+    )),
+    [allArchivedSessions, workspaceEntry],
+  );
   const [query, setQuery] = React.useState('');
   const [selectedDirectory, setSelectedDirectory] = React.useState<string | null>(null);
   const [visibleCount, setVisibleCount] = React.useState(PAGE_SIZE);

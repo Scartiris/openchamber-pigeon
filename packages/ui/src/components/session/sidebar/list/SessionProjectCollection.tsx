@@ -14,7 +14,7 @@ import type { WorktreeMetadata } from '@/types/worktree';
 import { buildActiveSessionNode, useRecentSessionCollection, useSessionProjectCollection } from './sessionCollection';
 import { buildSessionBootstrapDemands } from './sessionBootstrapDemands';
 import { useChildStoreManager } from '@/sync/sync-context';
-import { createSessionOwnershipIndex } from '../sessions/sessionOwnership';
+import { createSessionOwnershipIndex, selectSessionsOwnedByProjects } from '../sessions/sessionOwnership';
 import { useProjectSessionLists } from '../projects/useProjectSessionLists';
 import { useSessionSidebarSections } from '../projects/useSessionSidebarSections';
 import { SessionPrefetchEffect } from './useSessionPrefetch';
@@ -31,6 +31,7 @@ import type { DeleteSessionConfirmState } from '../sessions/useSessionActions';
 import { useExpandedParents } from '../sessions/useExpandedParents';
 import { SessionGroupSection } from '../projects/SessionGroupSection';
 import { CHAT_DRAFT_PROJECT_ID, getChatsRootForHome, getChatsRootFromDirectory } from '@/lib/chatDirectories';
+import { selectProjectsForEntry, type WorkspaceEntry } from '@/lib/workspaceEntry';
 import { isCapacitorApp } from '@/lib/platform';
 
 const PR_NO_PR_RETRY_MS = 5 * 60_000;
@@ -81,6 +82,12 @@ type SessionProjectCollectionProps = {
     showOnlyMainWorkspace: boolean;
     isDesktopShellRuntime: boolean;
     stickyZoneHeaders: boolean;
+    /**
+     * Which workbench entry is showing. Everything below is projected from the
+     * projects this entry owns — the one place the partition is applied, so no
+     * surface (grouped, flat, search, Recent, chats) can disagree with another.
+     */
+    workspaceEntry: WorkspaceEntry;
     projectSortOrder: import('@/stores/useSessionDisplayStore').ProjectSortOrder;
     emptyState: React.ReactNode;
     searchEmptyState: React.ReactNode;
@@ -151,13 +158,15 @@ const VisibleSessionProjects: React.FC<SessionProjectCollectionProps> = ({ topol
   const setSingleProjectId = useSessionDisplayStore((state) => state.setSingleProjectId);
   const supportsSingleProjectMode = !topology.isVSCode && !isCapacitorApp();
   const singleProjectMode = supportsSingleProjectMode && projectDisplayMode === 'single';
-  const recentSessions = useRecentSessionCollection({
-    enabled: showRecentSection && !singleProjectMode,
-    isVSCode: topology.isVSCode,
-    pinnedSessionIds: collection.pinnedSessionIds,
-    sessionOrderRanks: collection.sessionOrderRanks,
-    sessions: collection.rootSessions,
-  });
+  // VS Code has one workspace and no project registry to partition, so the entry
+  // is inert there rather than applied to a single project.
+  const entryProjects = React.useMemo(() => (
+    topology.isVSCode ? topology.projects : selectProjectsForEntry(topology.projects, view.workspaceEntry)
+  ), [topology.isVSCode, topology.projects, view.workspaceEntry]);
+  const entryProjectIds = React.useMemo(
+    () => new Set(entryProjects.map((project) => project.id)),
+    [entryProjects],
+  );
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editTitle, setEditTitle] = React.useState('');
   const [openSidebarMenuKey, setOpenSidebarMenuKey] = React.useState<string | null>(null);
@@ -191,11 +200,31 @@ const VisibleSessionProjects: React.FC<SessionProjectCollectionProps> = ({ topol
     [collection.archivedSessions, collection.sessions, topology.availableWorktreesByProject, topology.isVSCode, topology.projects],
   );
   const { getSessionsForProject, getArchivedSessionsForProject } = useProjectSessionLists({ ownership });
+  // Recent classifies through ownership for the same reason the project sections
+  // do: a worktree of a work project may live outside the partition, and it stays
+  // with its parent project here as it does below.
+  const recentCandidateSessions = React.useMemo(() => (
+    topology.isVSCode
+      ? collection.rootSessions
+      : selectSessionsOwnedByProjects(collection.rootSessions, ownership.bySessionId, entryProjectIds)
+  ), [collection.rootSessions, entryProjectIds, ownership, topology.isVSCode]);
+  const recentSessions = useRecentSessionCollection({
+    enabled: showRecentSection && !singleProjectMode,
+    isVSCode: topology.isVSCode,
+    pinnedSessionIds: collection.pinnedSessionIds,
+    sessionOrderRanks: collection.sessionOrderRanks,
+    sessions: recentCandidateSessions,
+  });
   // Built before the sections hook runs, because that hook owns the search data
   // for every group the sidebar renders — the chats group included. A group the
   // hook never sees renders an empty list while a search is active.
   const chatGroup = React.useMemo<SessionGroup | null>(() => {
     if (topology.isVSCode) return null;
+    // Managed chats live in the home directory, which the rule classifies as the
+    // code entry — so they are simply not this entry's surface. Returning null
+    // here also empties `standaloneGroups`, which is what takes them out of the
+    // search data as well as out of the list.
+    if (view.workspaceEntry !== 'code') return null;
     const chatsRoot = getChatsRootForHome(view.homeDirectory)
       ?? collection.chatSessions.map((session) => getChatsRootFromDirectory(session.directory)).find(Boolean)
       ?? null;
@@ -220,13 +249,13 @@ const VisibleSessionProjects: React.FC<SessionProjectCollectionProps> = ({ topol
         .filter((session) => !session.time?.archived && isRootSession(session))
         .map((session) => buildActiveSessionNode(collection.childrenMap, session)),
     };
-  }, [collection.chatSessions, collection.childrenMap, topology.isVSCode, view.homeDirectory]);
+  }, [collection.chatSessions, collection.childrenMap, topology.isVSCode, view.homeDirectory, view.workspaceEntry]);
   const standaloneGroups = React.useMemo<SessionGroup[]>(
     () => chatGroup ? [chatGroup] : EMPTY_STANDALONE_GROUPS,
     [chatGroup],
   );
   const { projectSections, groupSearchDataByGroup, sectionsForRender, flatSectionsForRender, searchMatchCount } = useSessionSidebarSections({
-    normalizedProjects: topology.projects,
+    normalizedProjects: entryProjects,
     getSessionsForProject,
     getArchivedSessionsForProject,
     availableWorktreesByProject: topology.availableWorktreesByProject,
@@ -449,7 +478,7 @@ const VisibleSessionProjects: React.FC<SessionProjectCollectionProps> = ({ topol
   }, [scrollerActions, view.mobileVariant]);
   const recentSection = React.useMemo(() => (
     !topology.isVSCode ? <RecentSessionSection
-      projects={topology.projects}
+      projects={entryProjects}
       availableWorktreesByProject={topology.availableWorktreesByProject}
       gitBranches={topology.gitBranches}
       homeDirectory={view.homeDirectory}
@@ -487,6 +516,7 @@ const VisibleSessionProjects: React.FC<SessionProjectCollectionProps> = ({ topol
       renderChatsSection={renderChatsSection}
       onNewChat={handleOpenNewChat}
       showRecentSection={showRecentSection && !singleProjectMode}
+      showChatsSection={view.workspaceEntry === 'code'}
     /> : null
   ), [
     actions.startSessionWorktreeMenuLoad,
@@ -511,13 +541,14 @@ const VisibleSessionProjects: React.FC<SessionProjectCollectionProps> = ({ topol
     topology.availableWorktreesByProject,
     topology.gitBranches,
     topology.isVSCode,
-    topology.projects,
+    entryProjects,
     collection.chatSessions,
     view.hasSessionSearchQuery,
     view.homeDirectory,
     view.isDesktopShellRuntime,
     view.mobileVariant,
     view.normalizedSessionSearchQuery,
+    view.workspaceEntry,
   ]);
   // The chats live in the scroller's top content, which the "no project section
   // matched" branch drops. Tell the scroller when that content is itself a

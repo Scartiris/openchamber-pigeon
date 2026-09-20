@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/useUIStore';
 import { useI18n } from '@/lib/i18n';
 import { WindowsWindowControls } from '@/components/desktop/WindowsWindowControls';
+import { WorkspaceEntrySwitch } from '@/components/layout/WorkspaceEntrySwitch';
 import { formatShortcutForDisplay, getEffectiveShortcutCombo } from '@/lib/shortcuts';
 import { invokeDesktop } from '@/lib/desktop';
 import { useDesktopWindowControlsLayout } from '@/hooks/useDesktopWindowControlsLayout';
@@ -13,7 +14,8 @@ const ICON_BUTTON_CLASS =
   'app-region-no-drag inline-flex h-8 w-8 items-center justify-center gap-2 rounded-md typography-ui-label font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring hover:bg-interactive-hover transition-colors';
 
 /**
- * Persistent top-left titlebar controls (app menu on frameless chrome + sidebar toggle).
+ * Persistent top-left titlebar controls (app menu on frameless chrome + sidebar
+ * toggle + workbench entry switch).
  *
  * Rendered exactly once as an absolutely-positioned overlay above both the
  * sidebar and the header, so the buttons never migrate / re-mount between the
@@ -120,6 +122,8 @@ export const TitlebarLeftControls: React.FC = () => {
             <p>{t('header.actions.openSessionsWithShortcut', { shortcut: toggleShortcut })}</p>
           </TooltipContent>
         </Tooltip>
+
+        <WorkspaceEntrySwitch />
       </div>
     </div>
   );

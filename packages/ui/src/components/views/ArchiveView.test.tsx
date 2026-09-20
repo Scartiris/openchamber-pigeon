@@ -15,9 +15,12 @@ const { createRoot } = await import('react-dom/client');
 const { I18nProvider } = await import('@/lib/i18n');
 const { useUIStore } = await import('@/stores/useUIStore');
 const { useGlobalSessionsStore } = await import('@/stores/useGlobalSessionsStore');
+const { useSessionDisplayStore } = await import('@/stores/useSessionDisplayStore');
+const { useSessionUIStore } = await import('@/sync/session-ui-store');
 const { ArchiveView } = await import('./ArchiveView');
 const initialUI = useUIStore.getState();
 const initialSessions = useGlobalSessionsStore.getState();
+const initialDisplay = useSessionDisplayStore.getState();
 const session = (id: string, title: string, archived = 2): Session => ({
   id, title, slug: id, projectID: 'project', version: '1', directory: '/workspace',
   time: { created: 1, updated: 1, archived },
@@ -28,12 +31,19 @@ beforeEach(() => {
   document.body.append(host);
   root = createRoot(host);
   useUIStore.setState({ isArchivePageOpen: true });
+  // This page narrows by the workbench entry, which derives from these two when the
+  // user has never switched. `bun test` shares one process across files, so without
+  // pinning them the rows depend on which file happened to run first.
+  useSessionDisplayStore.setState({ workspaceEntry: null });
+  useSessionUIStore.setState({ currentSessionDirectory: null });
 });
 
 afterEach(async () => {
   await act(async () => root.unmount());
   useUIStore.setState(initialUI);
   useGlobalSessionsStore.setState(initialSessions);
+  useSessionDisplayStore.setState({ ...initialDisplay, workspaceEntry: null });
+  useSessionUIStore.setState({ currentSessionDirectory: null });
   document.body.replaceChildren();
 });
 
@@ -75,4 +85,23 @@ test('archive search uses exact IDs and preserves title search and archive membe
   expect(await search('release')).toEqual(['Release notes']);
   expect(await search('releaze')).toEqual(['Release notes']);
   expect(await search('')).toHaveLength(2);
+});
+
+// The sidebar hides a session whose directory no registered project owns, but an
+// archived one never appears in the sidebar at all: this page is the only place the
+// other entry's history would still surface, so it carries the same predicate.
+test('the archive page lists the workbench entry it is showing', async () => {
+  const codeDoc = session('ses_code_doc', 'Release notes');
+  const workDoc = { ...session('ses_work_doc', 'Year summary'), directory: '/home/openchamber/workspaces/work/公文' };
+  useGlobalSessionsStore.setState({ archivedSessions: [codeDoc, workDoc] });
+  const rowTitles = () => [...document.querySelectorAll('[role="button"] > span:first-child')].map((row) => row.textContent);
+
+  await act(async () => {
+    useSessionDisplayStore.setState({ workspaceEntry: 'code' });
+    root.render(<I18nProvider><ArchiveView /></I18nProvider>);
+  });
+  expect(rowTitles()).toEqual(['Release notes']);
+
+  await act(async () => useSessionDisplayStore.setState({ workspaceEntry: 'work' }));
+  expect(rowTitles()).toEqual(['Year summary']);
 });

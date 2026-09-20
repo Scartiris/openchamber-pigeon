@@ -43,6 +43,8 @@ import { streamPerfCount, streamPerfMark } from '@/stores/utils/streamDebug';
 import { runBackgroundNetworkTask } from '@/lib/background-network';
 import { buildKnownSessionDirectories } from './sidebar/list/sessionListDirectories';
 import { sortProjectsByOrder } from './sidebar/list/projectSort';
+import { resolveEntryDraftTarget } from '@/lib/workspaceEntry';
+import { useWorkspaceEntry } from '@/hooks/useWorkspaceEntry';
 import { z } from 'zod';
 import { subscribeOpenchamberEvents } from '@/lib/openchamberEvents';
 import {
@@ -459,6 +461,7 @@ const SessionSidebarComponent: React.FC<SessionSidebarProps> = ({
   const showArchivedSessions = useSessionDisplayStore((state) => state.showArchivedSessions);
   const projectSortOrder = useSessionDisplayStore((state) => state.projectSortOrder);
   const stickyZoneHeaders = useSessionDisplayStore((state) => state.stickyZoneHeaders);
+  const workspaceEntry = useWorkspaceEntry();
   const manualProjectOrder = useProjectsStore((state) => state.manualProjectOrder);
 
   const sidebarRenderSources = {
@@ -615,8 +618,13 @@ const SessionSidebarComponent: React.FC<SessionSidebarProps> = ({
     if (mobileVariant) {
       setSessionSwitcherOpen(false);
     }
-    openNewSessionDraft();
-  }, [mobileVariant, openNewSessionDraft, setSessionSwitcherOpen]);
+    // The entry decides where a new session lands, so starting one from 工作 never
+    // asks the user to pick a project. No project in the entry — and never in VS
+    // Code, which has no registry to partition — keeps the stored draft target,
+    // which is exactly the previous behaviour.
+    const target = isVSCode ? null : resolveEntryDraftTarget(sortedProjects, workspaceEntry);
+    openNewSessionDraft(target ?? {});
+  }, [isVSCode, mobileVariant, openNewSessionDraft, setSessionSwitcherOpen, sortedProjects, workspaceEntry]);
 
   return (
     // One shared tooltip provider for the whole sidebar, matching the opencode
@@ -694,6 +702,7 @@ const SessionSidebarComponent: React.FC<SessionSidebarProps> = ({
           showOnlyMainWorkspace,
           isDesktopShellRuntime,
           stickyZoneHeaders,
+          workspaceEntry,
           projectSortOrder,
           emptyState,
           searchEmptyState,

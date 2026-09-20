@@ -35,6 +35,13 @@ type Props = {
   renderChatsSection: (items: ActivityItem[]) => React.ReactNode;
   onNewChat: () => void;
   showRecentSection: boolean;
+  /**
+   * Managed chats belong to one workbench entry, so the other entry renders no
+   * chats block at all. `SidebarActivitySections` keeps an empty chats section
+   * on purpose — it carries the "new chat" affordance — so hiding it cannot be
+   * done by passing an empty list.
+   */
+  showChatsSection: boolean;
 } & Pick<SessionTreeItemProps,
   | 'setEditingId'
   | 'setEditTitle'
@@ -68,6 +75,7 @@ export const RecentSessionSection: React.FC<Props> = (props) => {
     recentSessions,
     chatSessions,
     showRecentSection,
+    showChatsSection,
   } = props;
   const { t } = useI18n();
   const sessionLocationById = React.useMemo(() => {
@@ -112,7 +120,7 @@ export const RecentSessionSection: React.FC<Props> = (props) => {
     query: hasSessionSearchQuery ? normalizedSessionSearchQuery : '',
   }), [getSessionLocation, getSessionNode, hasSessionSearchQuery, normalizedSessionSearchQuery, recentSessions]);
   const sections = React.useMemo(() => [
-    {
+    ...(showChatsSection ? [{
       key: 'chats' as const,
       title: t('sessions.sidebar.activity.chatsTitle'),
       items: chatSessions.map((session) => ({
@@ -121,9 +129,9 @@ export const RecentSessionSection: React.FC<Props> = (props) => {
         groupDirectory: session.directory ?? null,
         secondaryMeta: null,
       })),
-    },
+    }] : []),
     ...(showRecentSection ? recentSections.map((section) => ({ ...section, title: t('sessions.sidebar.activity.recentTitle') })) : []),
-  ], [chatSessions, getSessionNode, recentSections, showRecentSection, t]);
+  ], [chatSessions, getSessionNode, recentSections, showChatsSection, showRecentSection, t]);
   return (
     <SidebarActivitySections
       sections={sections}

@@ -50,6 +50,20 @@ const resolveSessionDirectory = (session: Session): string | null => {
   return normalizePath(record.directory) ?? normalizePath(record.project?.worktree);
 };
 
+/**
+ * The sessions this set of projects owns, in the order given. A session no
+ * registered project owns belongs to none of them: it is already hidden from the
+ * project sections, and `RecentSessionSection` drops those too.
+ */
+export const selectSessionsOwnedByProjects = (
+  sessions: readonly Session[],
+  bySessionId: ReadonlyMap<string, DirectoryOwner>,
+  projectIds: ReadonlySet<string>,
+): Session[] => sessions.filter((session) => {
+  const owner = bySessionId.get(session.id);
+  return owner !== undefined && projectIds.has(owner.projectId);
+});
+
 export const createSessionOwnershipIndex = (
   sessions: Session[],
   projects: Project[],
