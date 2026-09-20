@@ -81,6 +81,20 @@ export const isAgentChoice = (agentName: string): boolean => !isModeAgentName(ag
 export const filterAgentChoices = (agents: readonly Agent[]): Agent[] =>
   filterVisibleAgents([...agents]).filter((agent) => isAgentChoice(agent.name));
 
+/**
+ * The agent a project's `defaultAgent` asks for, or undefined when it asks for
+ * something a project must not own.
+ *
+ * The project directory is the user's one switch for "what kind of work this is",
+ * so its default agent has to beat the app-wide default. Two things it must not
+ * beat: a hand-picked agent in this session (`resolveSelectionWithManualGuard`
+ * owns that), and either agent the mode switch owns — binding `plan` to a
+ * directory would open the switch on a position the user cannot leave by pressing
+ * it, because leaving means returning to the agent they never chose.
+ */
+export const resolveProjectDefaultAgent = (agentName: string | null | undefined): string | undefined =>
+  agentName && isAgentChoice(agentName) ? agentName : undefined;
+
 /** Whether the switch can offer this position at all. */
 export const isModeAvailable = (agents: readonly Agent[], mode: ComposerMode): boolean => {
   const selectable = getSelectablePrimaryAgents(agents);

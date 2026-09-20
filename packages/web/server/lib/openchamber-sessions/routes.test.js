@@ -378,6 +378,49 @@ describe('openchamber session routes', () => {
         return { ok: true, json: async () => ({ providers: [{ id: 'openai', models: { 'gpt-5.5': { id: 'gpt-5.5' } } }] }) };
       }
       if (text.includes('/agent')) {
+        return { ok: true, json: async () => [{ name: 'build', mode: 'primary' }, { name: 'review', mode: 'primary' }] };
+      }
+      if (text.includes('/config')) {
+        return { ok: true, json: async () => ({}) };
+      }
+      return { ok: true, json: async () => ({ id: 'ses_123' }) };
+    });
+    globalThis.fetch = fetchMock;
+    const { app } = createApp({
+      readSettingsFromDiskMigrated: async () => ({
+        defaultModel: 'openai/gpt-5.5',
+        defaultAgent: 'build',
+        projects: [{ id: 'proj_1', path: '/repo/app', defaultAgent: 'review' }],
+      }),
+    });
+    try {
+      const response = await request(app)
+        .post(`/api/openchamber/sessions${endpoint}`)
+        .send({ ...scope, prompt: 'Run this' })
+        .expect(200);
+
+      expect(response.body.agent).toBe('review');
+      const promptCall = fetchMock.mock.calls.find(([url]) => String(url).includes('/prompt_async'));
+      expect(JSON.parse(promptCall?.[1]?.body)).toMatchObject({ agent: 'review' });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('ignores a project default the composer mode switch owns', async () => {
+    // `plan` and `chat` are the mode switch's to give (see
+    // `packages/ui/src/lib/composerModes.ts`): a project that names one would open
+    // on a position the user cannot leave by pressing it. The app-wide default wins.
+    const originalFetch = globalThis.fetch;
+    const fetchMock = vi.fn(async (url) => {
+      const text = String(url);
+      if (text.includes('/prompt_async')) {
+        return { ok: true, text: async () => '' };
+      }
+      if (text.includes('/config/providers')) {
+        return { ok: true, json: async () => ({ providers: [{ id: 'openai', models: { 'gpt-5.5': { id: 'gpt-5.5' } } }] }) };
+      }
+      if (text.includes('/agent')) {
         return { ok: true, json: async () => [{ name: 'build', mode: 'primary' }, { name: 'plan', mode: 'primary' }] };
       }
       if (text.includes('/config')) {
@@ -395,13 +438,11 @@ describe('openchamber session routes', () => {
     });
     try {
       const response = await request(app)
-        .post(`/api/openchamber/sessions${endpoint}`)
-        .send({ ...scope, prompt: 'Run this' })
+        .post('/api/openchamber/sessions')
+        .send({ projectId: 'proj_1', directory: '/repo/app', prompt: 'Run this' })
         .expect(200);
 
-      expect(response.body.agent).toBe('plan');
-      const promptCall = fetchMock.mock.calls.find(([url]) => String(url).includes('/prompt_async'));
-      expect(JSON.parse(promptCall?.[1]?.body)).toMatchObject({ agent: 'plan' });
+      expect(response.body.agent).toBe('build');
     } finally {
       globalThis.fetch = originalFetch;
     }

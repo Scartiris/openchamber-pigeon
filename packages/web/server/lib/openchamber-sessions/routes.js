@@ -83,13 +83,24 @@ const resolveVariant = (providers, providerID, modelID, variant) => {
 
 const parseConfigModel = (value) => splitModel(value);
 
+// The composer's mode switch owns the plan and chat agents on the client
+// (`packages/ui/src/lib/composerModes.ts`), so a project may not name either as its
+// default: that would open the directory on a switch position the user cannot leave
+// by pressing it. Mirrored here because this route resolves a new session's agent
+// without going through the client's cascade.
+const MODE_AGENT_NAMES = new Set(['plan', 'chat']);
+const asProjectDefaultAgent = (value) => {
+  const name = asNonEmptyString(value);
+  return name && !MODE_AGENT_NAMES.has(name) ? name : null;
+};
+
 const resolveProjectDefaults = (settings, directory, projectId) => {
   const projects = Array.isArray(settings?.projects) ? settings.projects : [];
   const matchedProject = projectId
     ? projects.find((entry) => entry?.id === projectId) || null
     : projects.find((entry) => entry?.path === directory) || null;
   return {
-    defaultAgent: asNonEmptyString(matchedProject?.defaultAgent),
+    defaultAgent: asProjectDefaultAgent(matchedProject?.defaultAgent),
     defaultModel: asNonEmptyString(matchedProject?.defaultModel),
     defaultVariant: asNonEmptyString(matchedProject?.defaultVariant),
   };

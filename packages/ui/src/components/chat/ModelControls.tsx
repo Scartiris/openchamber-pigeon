@@ -1056,7 +1056,18 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                 return;
             }
 
-            const fallbackAgent = agents.find(agent => agent.name === 'build') || primaryAgents[0] || agents[0];
+            // The active project's own default beats `build`: the directory is the
+            // choice the user made, and a session that reaches here with no recorded
+            // agent (created by the CLI, or before the binding existed) should still
+            // run on the agent that partition is configured for.
+            const projectDefaultAgentName = useConfigStore.getState().getProjectDefaultAgentForActiveDirectory();
+            const fallbackAgent =
+                (projectDefaultAgentName
+                    ? agents.find(agent => agent.name === projectDefaultAgentName)
+                    : undefined)
+                || agents.find(agent => agent.name === 'build')
+                || primaryAgents[0]
+                || agents[0];
             if (!fallbackAgent) {
                 return;
             }

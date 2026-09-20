@@ -1341,7 +1341,7 @@ describe('useConfigStore provider persistence', () => {
     useConfigStore.setState({
       activeDirectoryKey: DIRECTORY,
       providers: [provider('openai', 'gpt-5.5')],
-      agents: [testAgent('build'), testAgent('plan')],
+      agents: [testAgent('build'), testAgent('review')],
       currentProviderId: '',
       currentModelId: '',
       currentVariant: undefined,
@@ -1351,10 +1351,36 @@ describe('useConfigStore provider persistence', () => {
       directoryScoped: {},
     });
 
-    useConfigStore.getState().applyDefaultModelAgentSelection({ projectDefaultAgent: 'plan' });
+    useConfigStore.getState().applyDefaultModelAgentSelection({ projectDefaultAgent: 'review' });
 
-    expect(useConfigStore.getState().currentAgentName).toBe('plan');
+    expect(useConfigStore.getState().currentAgentName).toBe('review');
   });
+
+  // `bun:test`'s typings here expose no `test.each`, so the two special agents are
+  // spelled out with a loop at describe scope.
+  for (const modeAgent of ['plan', 'chat']) {
+    test(`a project default cannot claim the ${modeAgent} agent the mode switch owns`, () => {
+      // The switch reads its position back from the session's agent, so a directory
+      // that opened on one of its two special agents would leave the user on a
+      // position they cannot leave by pressing it. The global default wins instead.
+      useConfigStore.setState({
+        activeDirectoryKey: DIRECTORY,
+        providers: [provider('openai', 'gpt-5.5')],
+        agents: [testAgent('build'), testAgent('plan'), testAgent('chat')],
+        currentProviderId: '',
+        currentModelId: '',
+        currentVariant: undefined,
+        settingsDefaultAgent: 'build',
+        settingsDefaultModel: 'openai/gpt-5.5',
+        selectionSource: 'auto',
+        directoryScoped: {},
+      });
+
+      useConfigStore.getState().applyDefaultModelAgentSelection({ projectDefaultAgent: modeAgent });
+
+      expect(useConfigStore.getState().currentAgentName).toBe('build');
+    });
+  }
 
   test('an unknown project default agent falls back to the global default agent', () => {
     useConfigStore.setState({
@@ -1518,27 +1544,27 @@ describe('useConfigStore provider persistence', () => {
     projectsState = {
       activeProjectId: 'project',
       projects: [
-        { id: 'project', path: DIRECTORY, label: 'Project', defaultAgent: 'plan' },
+        { id: 'project', path: DIRECTORY, label: 'Project', defaultAgent: 'docs' },
         { id: 'other', path: OTHER_DIRECTORY, label: 'Other' },
       ],
     };
     useConfigStore.setState({
       activeDirectoryKey: DIRECTORY,
       providers: [provider('openai', 'gpt-5.5')],
-      agents: [testAgent('build'), testAgent('plan'), testAgent('review')],
+      agents: [testAgent('build'), testAgent('docs'), testAgent('review')],
       currentProviderId: 'openai',
       currentModelId: 'gpt-5.5',
-      currentAgentName: 'plan',
+      currentAgentName: 'docs',
       settingsDefaultAgent: 'build',
       selectedProviderId: 'openai',
       selectionSource: 'auto',
       directoryScoped: {
         [DIRECTORY]: {
           providers: [provider('openai', 'gpt-5.5')],
-          agents: [testAgent('build'), testAgent('plan'), testAgent('review')],
+          agents: [testAgent('build'), testAgent('docs'), testAgent('review')],
           currentProviderId: 'openai',
           currentModelId: 'gpt-5.5',
-          currentAgentName: 'plan',
+          currentAgentName: 'docs',
           selectedProviderId: 'openai',
           agentModelSelections: {},
           defaultProviders: {},
@@ -1550,8 +1576,8 @@ describe('useConfigStore provider persistence', () => {
     emitSyncConfigChanged(DIRECTORY, { default_agent: 'review', model: 'openai/gpt-5.5' });
 
     const state = useConfigStore.getState();
-    expect(state.currentAgentName).toBe('plan');
-    expect(state.directoryScoped[DIRECTORY]?.currentAgentName).toBe('plan');
+    expect(state.currentAgentName).toBe('docs');
+    expect(state.directoryScoped[DIRECTORY]?.currentAgentName).toBe('docs');
   });
 
   test('sync config defaults do not close the add-provider settings flow', () => {
@@ -1676,28 +1702,28 @@ describe('useConfigStore provider persistence', () => {
     projectsState = {
       activeProjectId: 'project',
       projects: [
-        { id: 'project', path: DIRECTORY, label: 'Project', defaultAgent: 'plan' },
+        { id: 'project', path: DIRECTORY, label: 'Project', defaultAgent: 'docs' },
         { id: 'other', path: OTHER_DIRECTORY, label: 'Other' },
       ],
     };
-    liveAgents = [testAgent('build'), testAgent('plan')];
+    liveAgents = [testAgent('build'), testAgent('docs')];
     useConfigStore.setState({
       activeDirectoryKey: DIRECTORY,
       providers: [provider('openai', 'gpt-5.5')],
-      agents: [testAgent('build'), testAgent('plan')],
+      agents: [testAgent('build'), testAgent('docs')],
       currentProviderId: 'openai',
       currentModelId: 'gpt-5.5',
-      currentAgentName: 'plan',
+      currentAgentName: 'docs',
       settingsDefaultAgent: 'build',
       selectedProviderId: 'openai',
       selectionSource: 'auto',
       directoryScoped: {
         [DIRECTORY]: {
           providers: [provider('openai', 'gpt-5.5')],
-          agents: [testAgent('build'), testAgent('plan')],
+          agents: [testAgent('build'), testAgent('docs')],
           currentProviderId: 'openai',
           currentModelId: 'gpt-5.5',
-          currentAgentName: 'plan',
+          currentAgentName: 'docs',
           selectedProviderId: 'openai',
           agentModelSelections: {},
           defaultProviders: {},
@@ -1709,8 +1735,8 @@ describe('useConfigStore provider persistence', () => {
     await useConfigStore.getState().loadAgents({ directory: DIRECTORY, source: 'test:projectAgentWinsRefresh' });
 
     const state = useConfigStore.getState();
-    expect(state.currentAgentName).toBe('plan');
-    expect(state.directoryScoped[DIRECTORY]?.currentAgentName).toBe('plan');
+    expect(state.currentAgentName).toBe('docs');
+    expect(state.directoryScoped[DIRECTORY]?.currentAgentName).toBe('docs');
   });
 
   test('in-flight loadAgents does not restore defaults cleared by a sync config event', async () => {

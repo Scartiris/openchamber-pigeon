@@ -13,6 +13,7 @@ import {
   resolveBuildModeAgent,
   resolveComposerMode,
   resolveModeSelection,
+  resolveProjectDefaultAgent,
 } from './composerModes';
 
 // Same shape the config store tests build agents with: the rules under test
@@ -54,6 +55,24 @@ describe('isModeAgentName / isAgentChoice', () => {
     expect(isModeAgentName(null)).toBe(false);
     expect(isModeAgentName(undefined)).toBe(false);
     expect(isModeAgentName('')).toBe(false);
+  });
+});
+
+describe('resolveProjectDefaultAgent', () => {
+  test('an ordinary agent named by a project is honoured', () => {
+    expect(resolveProjectDefaultAgent('工作')).toBe('工作');
+    expect(resolveProjectDefaultAgent('build')).toBe('build');
+  });
+
+  test('neither agent the mode switch owns can be a project default', () => {
+    expect(resolveProjectDefaultAgent(PLAN_AGENT_NAME)).toBeUndefined();
+    expect(resolveProjectDefaultAgent(CHAT_AGENT_NAME)).toBeUndefined();
+  });
+
+  test('an unset default stays unset', () => {
+    expect(resolveProjectDefaultAgent(undefined)).toBeUndefined();
+    expect(resolveProjectDefaultAgent(null)).toBeUndefined();
+    expect(resolveProjectDefaultAgent('')).toBeUndefined();
   });
 });
 

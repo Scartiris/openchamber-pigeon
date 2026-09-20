@@ -8,7 +8,7 @@ import { scopeMatches, subscribeToConfigChanges } from "@/lib/configSync";
 import type { ModelMetadata } from "@/types";
 import { createDeferredSafeJSONStorage } from "./utils/safeStorage";
 import { isPrimaryMode } from "@/components/chat/mobileControlsUtils";
-import { filterAgentChoices } from "@/lib/composerModes";
+import { filterAgentChoices, resolveProjectDefaultAgent } from "@/lib/composerModes";
 import { useSessionUIStore } from "@/sync/session-ui-store";
 import { useSelectionStore } from "@/sync/selection-store";
 import { loadDesktopSettings, updateDesktopSettings } from "@/lib/persistence";
@@ -331,8 +331,13 @@ const resolveDefaultAgentModelSelection = ({
     const primaryAgents = agents.filter((agent) => isPrimaryMode(agent.mode));
 
     let resolvedAgent: Agent | undefined;
-    if (projectDefaultAgent) {
-        resolvedAgent = agents.find((agent) => agent.name === projectDefaultAgent);
+    // A project may name its own agent, but never one the mode switch owns: see
+    // `resolveProjectDefaultAgent`. Filtering here (rather than at each caller that
+    // reads `project.defaultAgent`) is what makes the rule hold for every path into
+    // the cascade, including a draft that passes the value straight through.
+    const requestedProjectAgent = resolveProjectDefaultAgent(projectDefaultAgent);
+    if (requestedProjectAgent) {
+        resolvedAgent = agents.find((agent) => agent.name === requestedProjectAgent);
     }
     if (!resolvedAgent && settingsDefaultAgent) {
         resolvedAgent = agents.find((agent) => agent.name === settingsDefaultAgent);
@@ -1222,6 +1227,10 @@ interface ConfigStore {
     // plan and chat agents belong to the composer's mode switch
     // (`lib/composerModes.ts`).
     getVisibleAgents: () => Agent[];
+    // The agent the active project names as its default, already filtered by the
+    // project-default rule. For the fallback paths that resolve an agent outside
+    // the cascade and have no directory of their own.
+    getProjectDefaultAgentForActiveDirectory: () => string | undefined;
 }
 
 declare global {
@@ -3610,6 +3619,10 @@ export const useConfigStore = create<ConfigStore>()(
                     // plan-mode switch's to give, so it is not offered as a pick.
                     return filterAgentChoices(agents);
                 },
+
+                getProjectDefaultAgentForActiveDirectory: () => resolveProjectDefaultAgent(
+                    getProjectDefaultsForConfigDirectory(fromDirectoryKey(get().activeDirectoryKey)).projectDefaultAgent,
+                ),
             }),
             {
                 name: "config-store",
