@@ -116,8 +116,11 @@ export const ComposerModeSwitch = React.memo(function ComposerModeSwitch(props: 
         // the controls next to it.
         stopClassName="h-[18px] w-[14px]"
         className="h-[22px]"
-        // 10px leaves ~4px of track showing around the glyph at 14px wide.
-        iconClassName="h-2.5 w-2.5"
+        // 12px is the largest glyph that still reads as *inside* the 14px stop:
+        // it leaves 1px of track on each side, where 13px already crowds the
+        // track edge. Remixicon draws on a 24 grid with its own inset, so the
+        // ink lands well within the stop at this size.
+        iconClassName="h-3 w-3"
       />
     </div>
   );

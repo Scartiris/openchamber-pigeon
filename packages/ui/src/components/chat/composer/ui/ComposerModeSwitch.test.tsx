@@ -147,6 +147,16 @@ describe('ComposerModeSwitch', () => {
     // The thumb copies the stop's geometry instead of declaring its own.
     expect(thumb?.className).toContain('w-[14px]');
     expect(thumb?.className).toContain('h-[18px]');
+
+    // An icon with no size class is the glyph-side version of the same bug: an
+    // <svg> with a viewBox but no width/height lays out at its 300×150 default,
+    // which swallows the whole track. 12px fills the 14×18 stop with 1px to
+    // spare on each side.
+    for (const button of buttons) {
+      const icon = button.querySelector('svg');
+      expect(icon?.getAttribute('class')).toContain('h-3');
+      expect(icon?.getAttribute('class')).toContain('w-3');
+    }
   });
 
   test('the thumb is centred on the track axis, not pinned to the padding edge', async () => {

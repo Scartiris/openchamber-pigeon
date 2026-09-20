@@ -56,7 +56,7 @@ type SegmentedSliderProps<Value extends string> = {
   stopClassName: string;
   /** Extra classes for the thumb, e.g. an inset ring. Size comes from the stop. */
   thumbClassName?: string;
-  /** Size of a stop's icon. Defaults to a glyph that fits a ~14px stop. */
+  /** Size of a stop's icon. Defaults to a glyph that fills a ~14px stop. */
   iconClassName?: string;
 };
 
@@ -114,7 +114,7 @@ export function SegmentedSlider<Value extends string>(props: SegmentedSliderProp
               <Icon
                 name={option.icon}
                 className={cn(
-                  iconClassName ?? 'h-2.5 w-2.5',
+                  iconClassName ?? 'h-3 w-3',
                   // The covered stop's glyph sits on the thumb, so it takes the
                   // selection foreground; the others stay muted on the track.
                   selected ? 'text-interactive-selection-foreground' : 'text-muted-foreground',
