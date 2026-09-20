@@ -119,19 +119,19 @@ export const WorkspaceEntrySwitch = React.memo(function WorkspaceEntrySwitch() {
         options={ENTRY_ORDER.map((candidate) => ({
           value: candidate,
           icon: ENTRY_ICONS[candidate],
-          // The stop's `title` is the only place an uncovered entry is explained, so
-          // it carries what choosing it does as well as its name — same shape the
-          // composer's mode switch uses.
+          // Visible name on the stop: a bare glyph does not say 代码 / 工作.
+          // `title` still carries the longer "what choosing this does" hint.
+          text: t(ENTRY_LABEL_KEY[candidate]),
           label: `${t(ENTRY_LABEL_KEY[candidate])} — ${t('header.workspaceEntry.hint')}`,
         }))}
-        // Sized to the titlebar's own buttons (`h-8 w-8` with an 18px icon, see
-        // `TitlebarLeftControls`), so the switch reads as one of them: one stop is
-        // 24×24, two stops plus padding and border make a 54×30px track. The cluster
-        // measures itself and publishes `--oc-titlebar-controls-width`, which the
-        // header reserves, so the only cost is title room.
-        stopClassName="h-6 w-6"
-        className="h-[30px]"
-        iconClassName="h-[18px] w-[18px]"
+        // Larger than the footer's icon-only buttons on purpose: this is a
+        // partition of the workbench, not a quiet toolbar toggle. Stops are a
+        // fixed equal width so the thumb (which copies `stopClassName`) stays
+        // aligned when locale text lengths differ. Sized with icon+text in
+        // mind — two stops ≈ 156px, plus the sidebar toggle beside it.
+        stopClassName="h-8 w-[76px] gap-1 px-2"
+        className="h-9"
+        iconClassName="h-5 w-5"
       />
     </span>
   );

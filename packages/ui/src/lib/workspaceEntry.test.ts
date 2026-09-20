@@ -6,6 +6,7 @@ import {
   ENTRY_ICONS,
   ENTRY_LABEL_KEY,
   ENTRY_ORDER,
+  entryRendersSessionTab,
   entryShowsManagedChats,
   resolveEntryDraftTarget,
   resolveWorkspaceEntry,
@@ -212,5 +213,38 @@ describe('ENTRY_ORDER', () => {
       code: 'header.workspaceEntry.code',
       work: 'header.workspaceEntry.work',
     });
+  });
+});
+
+describe('entryRendersSessionTab', () => {
+  const WORK = '/home/openchamber/workspaces/work/公文';
+  const CODE = '/home/openchamber/workspaces/code/示例';
+  const HOME = '/home/openchamber';
+
+  test('shows a tab when the owning project sits in the entry, hides it otherwise', () => {
+    expect(entryRendersSessionTab(WORK, 'work')).toBe(true);
+    expect(entryRendersSessionTab(WORK, 'code')).toBe(false);
+    expect(entryRendersSessionTab(CODE, 'code')).toBe(true);
+    expect(entryRendersSessionTab(CODE, 'work')).toBe(false);
+    expect(entryRendersSessionTab(HOME, 'code')).toBe(true);
+    expect(entryRendersSessionTab(HOME, 'work')).toBe(false);
+  });
+
+  test('the session on screen always renders, even across a partition deep link', () => {
+    // Hiding the active tab would orphan the header title behind an empty strip.
+    expect(entryRendersSessionTab(WORK, 'code', { isCurrent: true })).toBe(true);
+    expect(entryRendersSessionTab(CODE, 'work', { isCurrent: true })).toBe(true);
+  });
+
+  test('an unowned session is hidden unless it is the one on screen', () => {
+    expect(entryRendersSessionTab(null, 'code')).toBe(false);
+    expect(entryRendersSessionTab(undefined, 'work')).toBe(false);
+    expect(entryRendersSessionTab(null, 'work', { isCurrent: true })).toBe(true);
+  });
+
+  test('VS Code keeps every open tab — it has no project partition to filter by', () => {
+    expect(entryRendersSessionTab(WORK, 'code', { isVSCode: true })).toBe(true);
+    expect(entryRendersSessionTab(CODE, 'work', { isVSCode: true })).toBe(true);
+    expect(entryRendersSessionTab(null, 'code', { isVSCode: true })).toBe(true);
   });
 });

@@ -36,6 +36,11 @@ import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useGlobalSessionStatus } from '@/sync/sync-context';
 import { useSessionUnseenCount } from '@/sync/notification-store';
 import { useIsSessionAiRenamePending } from '@/sync/use-session-ai-rename';
+import { useWorkspaceEntry } from '@/hooks/useWorkspaceEntry';
+import { isVSCodeRuntime } from '@/lib/desktop';
+import { resolveProjectForDirectory } from '@/lib/projectResolution';
+import { entryRendersSessionTab } from '@/lib/workspaceEntry';
+import { useProjectsStore } from '@/stores/useProjectsStore';
 
 const restrictToXAxis: Modifier = ({ transform }) => ({ ...transform, y: 0 });
 
@@ -285,6 +290,14 @@ const SessionTabItem: React.FC<{
  * active one activates its neighbour. Ids whose session has not loaded (or
  * was archived/deleted) stay in the store but do not render, so a partial
  * session list never destroys the working set.
+ *
+ * The strip follows the workbench entry (代码 / 工作): tabs owned by the other
+ * partition stay in the store but do not render — the same "filter render, not
+ * the working set" rule the sidebar uses. Classification is by owning project
+ * (not raw path), so a work project's worktree stays with 工作. The tab of the
+ * session on screen always renders, even across a partition deep link, so the
+ * header title is never orphaned behind an empty strip. VS Code has no project
+ * partition and shows every open tab.
  */
 export const SessionTabsStrip: React.FC<{
   /** Menu items for one tab's session, supplied by the header. */
@@ -304,6 +317,9 @@ export const SessionTabsStrip: React.FC<{
   const currentSessionId = useSessionUIStore((state) => state.currentSessionId);
   const setCurrentSession = useSessionUIStore((state) => state.setCurrentSession);
   const activeSessions = useGlobalSessionsStore((state) => state.activeSessions);
+  const workspaceEntry = useWorkspaceEntry();
+  const projects = useProjectsStore((state) => state.projects);
+  const isVSCode = React.useMemo(() => isVSCodeRuntime(), []);
 
   // Opening a session anywhere (sidebar, palette, deep link) adds its tab.
   React.useEffect(() => {
@@ -317,14 +333,21 @@ export const SessionTabsStrip: React.FC<{
   }, [activeSessions]);
 
   // Only tabs with a known live session render; unknown ids stay stored.
+  // Entry filter is render-only — the store keeps the other partition's tabs.
   const tabs = React.useMemo<SessionTab[]>(() => {
     const list: SessionTab[] = [];
     for (const id of tabIds) {
       const session = sessionsById.get(id);
-      if (session) list.push({ id, session });
+      if (!session) continue;
+      // VS Code has no project partition — leave every open tab visible there.
+      if (!isVSCode) {
+        const owner = resolveProjectForDirectory(projects, resolveGlobalSessionDirectory(session));
+        if (!entryRendersSessionTab(owner?.path, workspaceEntry, { isCurrent: id === currentSessionId })) continue;
+      }
+      list.push({ id, session });
     }
     return list;
-  }, [tabIds, sessionsById]);
+  }, [tabIds, sessionsById, isVSCode, projects, workspaceEntry, currentSessionId]);
 
   const handleSelect = React.useCallback((tab: SessionTab) => {
     setCurrentSession(tab.id, resolveGlobalSessionDirectory(tab.session));

@@ -15,7 +15,7 @@ const ICON_BUTTON_CLASS =
 
 /**
  * Persistent top-left titlebar controls (app menu on frameless chrome + sidebar
- * toggle + workbench entry switch).
+ * toggle + workbench entry switch — VS Code omits the switch).
  *
  * Rendered exactly once as an absolutely-positioned overlay above both the
  * sidebar and the header, so the buttons never migrate / re-mount between the

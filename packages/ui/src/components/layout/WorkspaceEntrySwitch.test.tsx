@@ -268,20 +268,24 @@ describe('WorkspaceEntrySwitch', () => {
     expect(useUIStore.getState().isArchivePageOpen).toBe(false);
   });
 
-  test('every stop is a real hit area and the thumb copies its geometry', async () => {
+  test('every stop is a real hit area, carries a visible name, and the thumb copies its geometry', async () => {
     const { container } = await mountSwitch();
     const buttons = entryButtons(container);
     const thumb = container.querySelector<HTMLElement>('[data-workspace-entry] span[aria-hidden]');
 
     // A stop with no width is the bug this guards: the thumb overflows the track and
     // sits on the neighbouring control, and the button has no hit area at all.
+    // Fixed equal widths also keep the thumb aligned when locale text lengths differ.
     for (const button of buttons) {
-      expect(button.className).toContain('h-6');
-      expect(button.className).toContain('w-6');
-      expect(button.querySelector('svg')?.getAttribute('class')).toContain('h-[18px]');
+      expect(button.className).toContain('h-8');
+      expect(button.className).toContain('w-[76px]');
+      expect(button.querySelector('svg')?.getAttribute('class')).toContain('h-5');
+      // Meaning, not just a glyph: the entry name is on the stop itself.
+      const visibleText = button.querySelector('span:not(.sr-only)')?.textContent ?? '';
+      expect(visibleText.length).toBeGreaterThan(0);
     }
-    expect(thumb?.className).toContain('h-6');
-    expect(thumb?.className).toContain('w-6');
+    expect(thumb?.className).toContain('h-8');
+    expect(thumb?.className).toContain('w-[76px]');
   });
 
   describe('mounted into the titlebar', () => {

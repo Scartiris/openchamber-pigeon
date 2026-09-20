@@ -139,6 +139,26 @@ export const selectSessionsForEntry = <S>(
   directoryOf: (session: S) => string | null | undefined,
 ): S[] => sessions.filter((session) => resolveWorkspaceEntry(directoryOf(session)) === entry);
 
+/**
+ * Whether a session tab renders under this entry.
+ *
+ * Classification is by the owning project's path (same basis the switch uses to
+ * jump), not the raw session directory — a work project's worktree stays with
+ * 工作. The session on screen always renders: a deep link across partitions must
+ * not orphan the header title behind an empty strip. VS Code has no project
+ * partition, so every open tab stays visible there.
+ */
+export const entryRendersSessionTab = (
+  ownerPath: string | null | undefined,
+  entry: WorkspaceEntry,
+  options: { isCurrent?: boolean; isVSCode?: boolean } = {},
+): boolean => {
+  if (options.isVSCode === true) return true;
+  if (options.isCurrent === true) return true;
+  if (!ownerPath) return false;
+  return resolveWorkspaceEntry(ownerPath) === entry;
+};
+
 const recencyOf = (project: EntryDraftProject): number => project.lastOpenedAt ?? project.addedAt ?? 0;
 
 /**

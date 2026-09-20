@@ -41,6 +41,12 @@ export type SegmentedSliderOption<Value extends string> = {
   label: string;
   /** Small glyph drawn inside the stop. Without it the stop is blank track. */
   icon?: IconName;
+  /**
+   * Visible short name drawn inside the stop next to the icon. `label` stays
+   * the accessible/title text (often a longer sentence); this is what the user
+   * reads at a glance when a glyph alone is not self-explanatory.
+   */
+  text?: string;
   disabled?: boolean;
 };
 
@@ -122,8 +128,19 @@ export function SegmentedSlider<Value extends string>(props: SegmentedSliderProp
                   // The covered stop's glyph sits on the thumb, so it takes the
                   // selection foreground; the others stay muted on the track.
                   selected ? 'text-interactive-selection-foreground' : 'text-muted-foreground',
+                  option.text && 'shrink-0',
                 )}
               />
+            ) : null}
+            {option.text ? (
+              <span
+                className={cn(
+                  'truncate text-[13px] font-medium leading-none',
+                  selected ? 'text-interactive-selection-foreground' : 'text-muted-foreground',
+                )}
+              >
+                {option.text}
+              </span>
             ) : null}
             <span className="sr-only">{option.label}</span>
           </button>
