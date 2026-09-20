@@ -141,21 +141,21 @@ describe('ComposerModeSwitch', () => {
     // A stop with no width is the bug this guards: the thumb then overflows the
     // track and lands on top of whatever sits next to the control.
     for (const button of buttons) {
-      expect(button.className).toContain('w-[14px]');
-      expect(button.className).toContain('h-[18px]');
+      expect(button.className).toContain('h-6');
+      expect(button.className).toContain('w-6');
     }
     // The thumb copies the stop's geometry instead of declaring its own.
-    expect(thumb?.className).toContain('w-[14px]');
-    expect(thumb?.className).toContain('h-[18px]');
+    expect(thumb?.className).toContain('h-6');
+    expect(thumb?.className).toContain('w-6');
 
     // An icon with no size class is the glyph-side version of the same bug: an
     // <svg> with a viewBox but no width/height lays out at its 300×150 default,
-    // which swallows the whole track. 12px fills the 14×18 stop with 1px to
-    // spare on each side.
+    // which swallows the whole track. 18px is what the footer's own buttons use,
+    // so the switch matches them instead of reading as a smaller control.
     for (const button of buttons) {
       const icon = button.querySelector('svg');
-      expect(icon?.getAttribute('class')).toContain('h-3');
-      expect(icon?.getAttribute('class')).toContain('w-3');
+      expect(icon?.getAttribute('class')).toContain('h-[18px]');
+      expect(icon?.getAttribute('class')).toContain('w-[18px]');
     }
   });
 
@@ -163,10 +163,11 @@ describe('ComposerModeSwitch', () => {
     const { container } = await mountSwitch('s1');
     const thumb = container.querySelector<HTMLElement>('[data-composer-mode-switch] span[aria-hidden]');
 
-    // A stop is 18px tall inside a 22px track with 2px padding, so it overflows
-    // the 16px content box and flex-centring lifts it above the padding edge. A
-    // thumb pinned with `top-0.5` therefore sat 1px low, putting the covered
-    // stop's icon visibly off-centre inside it.
+    // A stop can be taller than the track's content box (a 24px stop in a 30px
+    // track leaves exactly 24px, but any caller whose stop overflows would hit
+    // this): flex-centring then lifts it above the padding edge, and a thumb
+    // pinned with `top-0.5` sat 1px low, putting the covered stop's icon visibly
+    // off-centre inside it.
     expect(thumb?.className).toContain('top-1/2');
     expect(thumb?.style.transform).toContain('-50%');
   });

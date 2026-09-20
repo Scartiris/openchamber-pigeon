@@ -110,17 +110,23 @@ export const ComposerModeSwitch = React.memo(function ComposerModeSwitch(props: 
             : t('chat.composerMode.unavailable', { mode: t(LABEL_KEY[candidate]) }),
           disabled: !availability[candidate],
         }))}
-        // One stop is 14×18px, so the track is 3 stops + its 2px padding = 58px:
-        // small enough for the footer, and every stop keeps a real hit area.
-        // The thumb takes its size from the stop, so it can never overflow onto
-        // the controls next to it.
-        stopClassName="h-[18px] w-[14px]"
-        className="h-[22px]"
-        // 12px is the largest glyph that still reads as *inside* the 14px stop:
-        // it leaves 1px of track on each side, where 13px already crowds the
-        // track edge. Remixicon draws on a 24 grid with its own inset, so the
-        // ink lands well within the stop at this size.
-        iconClassName="h-3 w-3"
+        // Sized to the footer's own controls, which are `h-6 w-6` buttons with
+        // `h-[18px] w-[18px]` icons (`ChatInput.tsx`). Anything smaller read as a
+        // shrunken control next to them — the glyphs were legible in isolation
+        // and too small in place, which is the only place that counts.
+        // One stop is 24×24, so the track is 3 stops + 2px padding + 1px border
+        // on each side = 78×30px: wider than before, but still narrower than the
+        // three footer buttons it sits beside, and every stop keeps a real hit
+        // area. The thumb takes its size from the stop, so it can never overflow
+        // onto the controls next to it.
+        // 30px cannot grow the footer row: that row is `flex items-center` with no
+        // fixed height, and its other group already holds the model control's `h-8`
+        // trigger (`ModelControls.tsx`), so the row is 32px with or without us.
+        stopClassName="h-6 w-6"
+        className="h-[30px]"
+        // The same 18px the footer's other icons use, so the switch reads as one
+        // of them rather than as a smaller cousin.
+        iconClassName="h-[18px] w-[18px]"
       />
     </div>
   );
