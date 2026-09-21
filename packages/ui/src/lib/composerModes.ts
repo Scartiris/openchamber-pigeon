@@ -29,7 +29,7 @@ export const PLAN_AGENT_NAME = 'plan';
 /** The conversation-only agent defined for this deployment (`ops/workmode/chat.md`). */
 export const CHAT_AGENT_NAME = 'chat';
 
-/** OpenCode's built-in default agent, used as the last named fallback. */
+/** OpenCode's built-in default agent (code entry; i18n display 构建). */
 const BUILD_AGENT_NAME = 'build';
 
 /**

@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAgentsStore } from '@/stores/useAgentsStore';
 import { filterAgentChoices } from '@/lib/composerModes';
+import { formatAgentDisplayName, agentBuiltinLabelKey } from '@/lib/agentDisplayName';
 import { selectConfigAgentsForDirectory, useConfigStore } from '@/stores/useConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useDeviceInfo } from '@/lib/device';
@@ -117,7 +118,9 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
                                 }}
                             >
                                 <div className="flex flex-col">
-                                    <span className="typography-meta font-medium">{agent.name}</span>
+                                    <span className="typography-meta font-medium">
+                                        {formatAgentDisplayName(agent.name, t(agentBuiltinLabelKey(agent.name) as Parameters<typeof t>[0]))}
+                                    </span>
                                     {agent.description && (
                                         <span className="typography-micro text-muted-foreground">
                                             {agent.description}
@@ -204,7 +207,9 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
                                 className="typography-meta"
                                 onSelect={() => handleAgentChange(agent.name)}
                             >
-                                <span className="font-medium">{agent.name}</span>
+                                <span className="font-medium">
+                                    {formatAgentDisplayName(agent.name, t(agentBuiltinLabelKey(agent.name) as Parameters<typeof t>[0]))}
+                                </span>
                             </DropdownMenuItem>
                         ))}
                     </DropdownMenuContent>

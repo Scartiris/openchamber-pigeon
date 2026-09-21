@@ -25,6 +25,7 @@ import { useAgentColors } from '@/hooks/useAgentColors';
 import { useDeviceInfo } from '@/lib/device';
 import { mergeModelMetadataWithLiveModel } from '@/lib/modelMetadata';
 import { getModelDisplayName as getSharedModelDisplayName } from '@/lib/modelDisplay';
+import { formatAgentDisplayName, agentBuiltinLabelKey } from '@/lib/agentDisplayName';
 import { getEditModeColors } from '@/lib/permissions/editModeColors';
 import { cn } from '@/lib/utils';
 import { matchesRankQuery, rankByQuery } from '@/lib/search/fuzzySearch';
@@ -1377,9 +1378,8 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
         return agent ? capitalizeAgentName(agent.name) : capitalizeAgentName(uiAgentName);
     };
 
-    const capitalizeAgentName = (name: string) => {
-        return name.charAt(0).toUpperCase() + name.slice(1);
-    };
+    const capitalizeAgentName = (name: string) =>
+        formatAgentDisplayName(name, t(agentBuiltinLabelKey(name) as Parameters<typeof t>[0]));
 
     const toggleMobileProviderExpansion = React.useCallback((providerId: string) => {
         setExpandedMobileProviders((prev) => {

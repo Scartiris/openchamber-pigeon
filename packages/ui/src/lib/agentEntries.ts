@@ -15,14 +15,13 @@ export type AgentEntryMembership = Partial<Record<string, WorkspaceEntry[]>>;
 
 /**
  * Deployment defaults.
- * - `工作` is the work partition's agent — not offered while browsing 代码.
- * - `build` is the built-in construction agent — only the 代码 entry; work
- *   sessions should pick 工作 (or another explicitly checked work agent).
- * Missing keys still mean "visible in every entry".
+ * - `build` is OpenCode's built-in construction agent — 代码 only (i18n label: 构建).
+ * - `工作` is the work partition's agent.
+ * Missing key → every entry; empty array → nowhere; non-empty → those entries only.
  */
 export const DEFAULT_AGENT_ENTRY_MEMBERSHIP = {
-  工作: ['work'],
   build: ['code'],
+  工作: ['work'],
 } satisfies AgentEntryMembership;
 
 /**
@@ -55,8 +54,9 @@ export const agentAppearsInEntry = (
   entry: WorkspaceEntry,
   membership: AgentEntryMembership = readAgentEntryMembership(),
 ): boolean => {
+  if (!Object.prototype.hasOwnProperty.call(membership, agentName)) return true;
   const allowed = membership[agentName];
-  if (!allowed || allowed.length === 0) return true;
+  if (!allowed || allowed.length === 0) return false;
   return allowed.includes(entry);
 };
 

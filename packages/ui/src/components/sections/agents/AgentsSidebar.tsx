@@ -28,6 +28,7 @@ import { SettingsProjectSelector } from '@/components/sections/shared/SettingsPr
 import { SidebarGroup } from '@/components/sections/shared/SidebarGroup';
 import { Icon } from "@/components/icon/Icon";
 import { useI18n } from '@/lib/i18n';
+import { formatAgentDisplayName, agentBuiltinLabelKey } from '@/lib/agentDisplayName';
 import { SETTINGS_PANEL_TITLE_CLASS } from '@/components/sections/shared/SettingsSection';
 
 interface AgentsSidebarProps {
@@ -605,7 +606,7 @@ const AgentListItem: React.FC<AgentListItemProps> = ({
         >
           <div className="flex items-center gap-1.5">
             <span className="typography-ui-label font-normal truncate text-foreground">
-              {agent.name}
+              {formatAgentDisplayName(agent.name, t(agentBuiltinLabelKey(agent.name) as Parameters<typeof t>[0]))}
             </span>
             {getAgentModeIcon(agent.mode)}
             {(extAgent.scope || isAgentBuiltIn(agent)) && (

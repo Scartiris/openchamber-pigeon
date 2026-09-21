@@ -2617,6 +2617,7 @@ export const dict: Record<I18nKey, string> = {
   'chat.modelControls.thinking': '思考',
   'chat.modelControls.default': 'デフォルト',
   'chat.modelControls.selectAgent': 'エージェントを選択',
+  'agents.builtin.build': 'ビルド',
   'chat.modelControls.costPerMillion': 'コスト（$/100万トークン）',
   'chat.modelControls.metadataUnavailable': 'モデルのメタデータは利用できません。',
   'chat.modelControls.addNewProvider': '新しいプロバイダーを追加',

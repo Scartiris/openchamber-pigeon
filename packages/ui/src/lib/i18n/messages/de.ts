@@ -2391,6 +2391,7 @@ export const dict = {
   'chat.modelControls.thinking': 'Denken',
   'chat.modelControls.default': 'Standard',
   'chat.modelControls.selectAgent': 'Agent auswählen',
+  'agents.builtin.build': 'Build',
   'chat.modelControls.costPerMillion': 'Kosten ($/1M Tokens)',
   'chat.modelControls.metadataUnavailable': 'Modell-Metadaten nicht verfügbar.',
   'chat.modelControls.addNewProvider': 'Neuen Anbieter hinzufügen',

@@ -2553,6 +2553,7 @@ export const dict = {
   'chat.modelControls.thinking': 'Düşünme',
   'chat.modelControls.default': 'Varsayılan',
   'chat.modelControls.selectAgent': 'Agent seç',
+  'agents.builtin.build': 'Build',
   'chat.modelControls.costPerMillion': 'Maliyet ($/1M token)',
   'chat.modelControls.metadataUnavailable': 'Model meta verileri kullanılamıyor.',
   'chat.modelControls.addNewProvider': 'Yeni provider ekle',
