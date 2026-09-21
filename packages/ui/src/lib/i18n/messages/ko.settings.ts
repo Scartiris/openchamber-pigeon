@@ -674,6 +674,8 @@ export const settingsDict = {
   'settings.agents.page.field.descriptionPlaceholder': '이 에이전트는 어떤 작업을 하나요?',
   'settings.agents.page.field.mode': '모드',
   'settings.agents.page.field.modeTooltip': '주 에이전트/보조 에이전트로 표시할지 선택합니다',
+  'settings.agents.page.field.workspaceEntries': '워크벤치 영역',
+  'settings.agents.page.field.workspaceEntriesTooltip': '이 에이전트를 표시할 수 있는 입구(코드 / 업무). 둘 다 해제하면 어디에나 표시됩니다.',
   'settings.agents.page.field.overrideModel': '모델 오버라이드',
   'settings.agents.page.field.variant': '사고 변형',
   'settings.agents.page.field.variantTooltip': '선택 사항. 모델이 추론을 지원하는 경우, 변형은 추론 깊이를 제어합니다.',

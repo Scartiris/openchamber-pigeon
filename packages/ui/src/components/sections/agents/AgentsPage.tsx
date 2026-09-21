@@ -6,6 +6,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui';
 import { useSettingsDirectory } from '@/hooks/useSettingsDirectory';
 import { selectAgentsForDirectory, useAgentsStore, type AgentConfig, type AgentMutationResult, type AgentScope } from '@/stores/useAgentsStore';
+import { DEFAULT_AGENT_ENTRY_MEMBERSHIP, readAgentEntryMembership } from '@/lib/agentEntries';
+import type { WorkspaceEntry } from '@/lib/workspaceEntry';
+import { ENTRY_LABEL_KEY, ENTRY_ORDER } from '@/lib/workspaceEntry';
 import { useShallow } from 'zustand/react/shallow';
 import { ModelSelector } from './ModelSelector';
 import { useI18n } from '@/lib/i18n';
@@ -64,6 +67,8 @@ export const AgentsPage: React.FC = () => {
     updateAgent,
     agentDraft,
     setAgentDraft,
+    agentEntryMembership,
+    setAgentEntryMembership,
   } = useAgentsStore(useShallow((s) => ({
     selectedAgentName: s.selectedAgentName,
     getAgentByName: s.getAgentByName,
@@ -71,6 +76,8 @@ export const AgentsPage: React.FC = () => {
     updateAgent: s.updateAgent,
     agentDraft: s.agentDraft,
     setAgentDraft: s.setAgentDraft,
+    agentEntryMembership: s.agentEntryMembership,
+    setAgentEntryMembership: s.setAgentEntryMembership,
   })));
 
   // Settings browses whichever project its own selector points at; the app
@@ -89,6 +96,7 @@ export const AgentsPage: React.FC = () => {
   const [temperature, setTemperature] = React.useState<number | undefined>(undefined);
   const [topP, setTopP] = React.useState<number | undefined>(undefined);
   const [prompt, setPrompt] = React.useState('');
+  const [entries, setEntries] = React.useState<WorkspaceEntry[]>([...ENTRY_ORDER]);
   const [isSaving, setIsSaving] = React.useState(false);
   const initialStateRef = React.useRef<{
     draftName: string;
@@ -100,6 +108,7 @@ export const AgentsPage: React.FC = () => {
     temperature: number | undefined;
     topP: number | undefined;
     prompt: string;
+    entries: WorkspaceEntry[];
   } | null>(null);
 
   const variantOptions = React.useMemo(() => getVariantOptionsForModel(providers, model), [model, providers]);
@@ -121,6 +130,7 @@ export const AgentsPage: React.FC = () => {
       const temperatureValue = agentDraft.temperature ?? undefined;
       const topPValue = agentDraft.top_p ?? undefined;
       const promptValue = agentDraft.prompt || '';
+      const entryValue = agentDraft.entries ?? [...ENTRY_ORDER];
 
       setDraftName(draftNameValue);
       setDraftScope(draftScopeValue);
@@ -131,6 +141,7 @@ export const AgentsPage: React.FC = () => {
       setTemperature(temperatureValue);
       setTopP(topPValue);
       setPrompt(promptValue);
+      setEntries(entryValue);
 
       initialStateRef.current = {
         draftName: draftNameValue,
@@ -142,6 +153,7 @@ export const AgentsPage: React.FC = () => {
         temperature: temperatureValue,
         topP: topPValue,
         prompt: promptValue,
+        entries: entryValue,
       };
       return;
     }
@@ -156,6 +168,13 @@ export const AgentsPage: React.FC = () => {
       const temperatureValue = selectedAgent.temperature ?? undefined;
       const topPValue = selectedAgent.topP ?? undefined;
       const promptValue = selectedAgent.prompt || '';
+      // SAFETY: membership is a sparse agent-name map; indexing an unknown name
+      // must fall through rather than throw, so the widened record type is the
+      // contract `agentAppearsInEntry` already uses at read time.
+      const membership = agentEntryMembership[selectedAgent.name]
+        ?? readAgentEntryMembership()[selectedAgent.name]
+        ?? (DEFAULT_AGENT_ENTRY_MEMBERSHIP as Record<string, WorkspaceEntry[] | undefined>)[selectedAgent.name]
+        ?? [...ENTRY_ORDER];
 
       setDescription(descriptionValue);
       setMode(modeValue);
@@ -165,6 +184,7 @@ export const AgentsPage: React.FC = () => {
       setTemperature(temperatureValue);
       setTopP(topPValue);
       setPrompt(promptValue);
+      setEntries([...membership]);
 
       initialStateRef.current = {
         draftName: '',
@@ -176,9 +196,10 @@ export const AgentsPage: React.FC = () => {
         temperature: temperatureValue,
         topP: topPValue,
         prompt: promptValue,
+        entries: [...membership],
       };
     }
-  }, [agentDraft, isNewAgent, selectedAgent, selectedAgentName]);
+  }, [agentDraft, agentEntryMembership, isNewAgent, selectedAgent, selectedAgentName]);
 
   const isDirty = React.useMemo(() => {
     const initial = initialStateRef.current;
@@ -198,9 +219,13 @@ export const AgentsPage: React.FC = () => {
     if (temperature !== initial.temperature) return true;
     if (topP !== initial.topP) return true;
     if (prompt !== initial.prompt) return true;
+    if (entries.length !== (initial.entries?.length ?? ENTRY_ORDER.length)
+      || ENTRY_ORDER.some((e) => entries.includes(e) !== (initial.entries ?? ENTRY_ORDER).includes(e))) {
+      return true;
+    }
 
     return false;
-  }, [description, draftName, draftScope, isNewAgent, mode, model, prompt, temperature, topP, variant]);
+  }, [description, draftName, draftScope, entries, isNewAgent, mode, model, prompt, temperature, topP, variant]);
 
   const handleSave = async () => {
     const agentName = isNewAgent ? draftName.trim().replace(/\s+/g, '-') : selectedAgentName?.trim();
@@ -231,6 +256,7 @@ export const AgentsPage: React.FC = () => {
         temperature: temperature ?? null,
         top_p: topP ?? null,
         prompt: trimmedPrompt || (isNewAgent ? undefined : null),
+        entries,
         ...(isNewAgent && draftScope ? { scope: draftScope } : {}),
       };
 
@@ -241,7 +267,8 @@ export const AgentsPage: React.FC = () => {
           setAgentDraft(null); // Clear draft after successful creation
         }
       } else {
-        result = await updateAgent(agentName, config, settingsDirectory);
+        result = await updateAgent(agentName, { ...config, entries }, settingsDirectory);
+        setAgentEntryMembership(agentName, entries);
       }
 
       if (result.ok) {
@@ -351,6 +378,31 @@ export const AgentsPage: React.FC = () => {
               { value: 'all', label: t('settings.agents.page.mode.all') },
             ]}
           />
+        </SettingsStackedField>
+
+        <SettingsStackedField
+          label={t('settings.agents.page.field.workspaceEntries')}
+          info={t('settings.agents.page.field.workspaceEntriesTooltip')}
+        >
+          <div className="flex flex-wrap gap-3">
+            {ENTRY_ORDER.map((entry) => {
+              const checked = entries.includes(entry);
+              return (
+                <label key={entry} className="flex cursor-pointer items-center gap-2 typography-ui-label">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => {
+                      setEntries((prev) => (
+                        checked ? prev.filter((e) => e !== entry) : [...prev, entry]
+                      ));
+                    }}
+                  />
+                  <span>{t(ENTRY_LABEL_KEY[entry])}</span>
+                </label>
+              );
+            })}
+          </div>
         </SettingsStackedField>
       </SettingsSection>
 

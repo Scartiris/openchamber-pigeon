@@ -706,6 +706,8 @@ export const settingsDict = {
   'settings.agents.page.field.descriptionPlaceholder': 'What does this agent do?',
   'settings.agents.page.field.mode': 'Mode',
   'settings.agents.page.field.modeTooltip': 'Primary vs Subagent visibility',
+  'settings.agents.page.field.workspaceEntries': 'Workbench entries',
+  'settings.agents.page.field.workspaceEntriesTooltip': 'Which entries (Code / Work) may offer this agent. Uncheck both to show it everywhere.',
   'settings.agents.page.field.overrideModel': 'Override Model',
   'settings.agents.page.field.temperature': 'Temperature',
   'settings.agents.page.field.temperatureTooltip': 'Controls randomness. Higher = creative, Lower = focused.',

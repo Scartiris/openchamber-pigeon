@@ -88,6 +88,8 @@ export const settingsDict = {
   'settings.agents.page.field.descriptionPlaceholder': 'Co robi ten agent?',
   'settings.agents.page.field.mode': 'Tryb',
   'settings.agents.page.field.modeTooltip': 'Widoczność: Główny vs Podagent',
+  'settings.agents.page.field.workspaceEntries': 'Obszary pulpitu',
+  'settings.agents.page.field.workspaceEntriesTooltip': 'W których wejściach (Kod / Praca) ten agent może się pojawić. Odznacz oba, aby pokazywać go wszędzie.',
   'settings.agents.page.field.overrideModel': 'Nadpisz model',
   'settings.agents.page.field.scopePlaceholder': 'Zakres',
   'settings.agents.page.field.systemPromptPlaceholder': 'Jesteś ekspertem w asystowaniu przy kodowaniu...',

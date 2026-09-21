@@ -18,6 +18,8 @@ import type { Agent } from '@opencode-ai/sdk/v2';
 
 import { isPrimaryMode } from '@/components/chat/mobileControlsUtils';
 import { filterVisibleAgents } from '@/stores/useAgentsStore';
+import { filterAgentsForEntry, type AgentEntryMembership } from '@/lib/agentEntries';
+import type { WorkspaceEntry } from '@/lib/workspaceEntry';
 
 export type ComposerMode = 'build' | 'plan' | 'chat';
 
@@ -77,9 +79,23 @@ export const getSelectablePrimaryAgents = (agents: readonly Agent[]): Agent[] =>
  */
 export const isAgentChoice = (agentName: string): boolean => !isModeAgentName(agentName);
 
-/** The list the pickers show: visible agents minus the ones another control owns. */
-export const filterAgentChoices = (agents: readonly Agent[]): Agent[] =>
-  filterVisibleAgents([...agents]).filter((agent) => isAgentChoice(agent.name));
+/**
+ * The list the pickers show: visible agents minus the ones another control owns,
+ * and minus agents whose workbench-entry membership excludes the current entry.
+ *
+ * `entry` omitted / null means "no entry chosen yet" — offer everything the
+ * other filters allow, so the first paint is not empty before the switch pins.
+ */
+export const filterAgentChoices = (
+  agents: readonly Agent[],
+  options?: {
+    entry?: WorkspaceEntry | null;
+    membership?: AgentEntryMembership;
+  },
+): Agent[] => {
+  const choices = filterVisibleAgents([...agents]).filter((agent) => isAgentChoice(agent.name));
+  return filterAgentsForEntry(choices, options?.entry, options?.membership);
+};
 
 /**
  * The agent a project's `defaultAgent` asks for, or undefined when it asks for

@@ -674,6 +674,8 @@ export const settingsDict = {
   'settings.agents.page.field.descriptionPlaceholder': '这个智能体的作用是什么？',
   'settings.agents.page.field.mode': '模式',
   'settings.agents.page.field.modeTooltip': '主智能体与子智能体可见性',
+  'settings.agents.page.field.workspaceEntries': '工作域',
+  'settings.agents.page.field.workspaceEntriesTooltip': '该智能体可以出现在哪些工作台入口（代码 / 工作）。都不勾选则两边都显示。',
   'settings.agents.page.field.overrideModel': '覆盖模型',
   'settings.agents.page.field.variant': '思考变体',
   'settings.agents.page.field.variantTooltip': '可选。如果模型支持推理，变体控制推理深度。',

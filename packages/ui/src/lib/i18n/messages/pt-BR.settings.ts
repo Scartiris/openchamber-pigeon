@@ -676,6 +676,8 @@ export const settingsDict = {
   "settings.agents.page.field.descriptionPlaceholder": "O que este agente faz?",
   "settings.agents.page.field.mode": "Modo",
   "settings.agents.page.field.modeTooltip": "Visibilidade principal vs subagente",
+  "settings.agents.page.field.workspaceEntries": "Áreas da bancada",
+  "settings.agents.page.field.workspaceEntriesTooltip": "Em quais entradas (Código / Trabalho) este agente pode aparecer. Desmarque ambas para mostrar em todas.",
   "settings.agents.page.field.overrideModel": "Sobrescrever modelo",
   "settings.agents.page.field.variant": "Variante de pensamento",
   "settings.agents.page.field.variantTooltip": "Opcional. Se o modelo suportar raciocínio, a variante controla a profundidade do raciocínio.",

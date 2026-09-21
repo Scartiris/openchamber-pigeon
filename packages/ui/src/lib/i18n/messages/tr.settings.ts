@@ -702,6 +702,8 @@ export const settingsDict = {
   'settings.agents.page.field.descriptionPlaceholder': 'Bu agent ne yapar?',
   'settings.agents.page.field.mode': 'Mod',
   'settings.agents.page.field.modeTooltip': 'Birincil ve alt agent görünürlüğü',
+  'settings.agents.page.field.workspaceEntries': 'Tezgah alanları',
+  'settings.agents.page.field.workspaceEntriesTooltip': 'Bu ajanın hangi girişlerde (Kod / İş) sunulabileceği. Her yerde göstermek için ikisini de kaldırın.',
   'settings.agents.page.field.overrideModel': 'Modeli geçersiz kıl',
   'settings.agents.page.field.temperature': 'Temperature',
   'settings.agents.page.field.temperatureTooltip': 'Rastgeleliği kontrol eder. Yüksek = yaratıcı, Düşük = odaklı.',

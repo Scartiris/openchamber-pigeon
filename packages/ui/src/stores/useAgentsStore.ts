@@ -18,6 +18,12 @@ import { useProjectsStore } from "@/stores/useProjectsStore";
 import { useSkillsCatalogStore } from "@/stores/useSkillsCatalogStore";
 import { invalidateSkillsLoadCache, useSkillsStore } from "@/stores/useSkillsStore";
 import { runtimeFetch } from "@/lib/runtime-fetch";
+import {
+  DEFAULT_AGENT_ENTRY_MEMBERSHIP,
+  replaceAgentEntryMembership,
+  type AgentEntryMembership,
+} from "@/lib/agentEntries";
+import type { WorkspaceEntry } from "@/lib/workspaceEntry";
 
 // Note: useDirectoryStore cannot be imported at top level to avoid circular dependency
 // useDirectoryStore -> useAgentsStore (for refreshAfterOpenCodeRestart)
@@ -128,6 +134,8 @@ export interface AgentConfig {
 
   disable?: boolean;
   scope?: AgentScope;
+  /** Workbench entries (代码 / 工作) this agent may appear in. OpenChamber-only. */
+  entries?: WorkspaceEntry[];
 }
 
 /**
@@ -266,6 +274,8 @@ export interface AgentDraft {
   mode?: "primary" | "subagent" | "all";
   permission?: PermissionConfig;
   disable?: boolean;
+  /** Workbench entries this draft agent may appear in. */
+  entries?: WorkspaceEntry[];
 }
 
 interface AgentsStore {
@@ -277,9 +287,12 @@ interface AgentsStore {
   agentsByDirectory: Record<string, Agent[]>;
   isLoading: boolean;
   agentDraft: AgentDraft | null;
+  /** Which workbench entries each agent may appear in. Empty/absent = all. */
+  agentEntryMembership: AgentEntryMembership;
 
   setSelectedAgent: (name: string | null) => void;
   setAgentDraft: (draft: AgentDraft | null) => void;
+  setAgentEntryMembership: (name: string, entries: WorkspaceEntry[]) => void;
   loadAgents: (directory?: string | null) => Promise<boolean>;
   createAgent: (config: AgentConfig, directory?: string | null) => Promise<AgentMutationResult>;
   updateAgent: (name: string, config: Partial<AgentConfig>, directory?: string | null) => Promise<AgentMutationResult>;
@@ -319,6 +332,7 @@ export const useAgentsStore = create<AgentsStore>()(
         agentsByDirectory: {},
         isLoading: false,
         agentDraft: null,
+        agentEntryMembership: { ...DEFAULT_AGENT_ENTRY_MEMBERSHIP },
 
         setSelectedAgent: (name: string | null) => {
           set({ selectedAgentName: name });
@@ -326,6 +340,15 @@ export const useAgentsStore = create<AgentsStore>()(
 
         setAgentDraft: (draft: AgentDraft | null) => {
           set({ agentDraft: draft });
+        },
+
+        setAgentEntryMembership: (name: string, entries: WorkspaceEntry[]) => {
+          const next: AgentEntryMembership = {
+            ...get().agentEntryMembership,
+            [name]: entries,
+          };
+          replaceAgentEntryMembership(next);
+          set({ agentEntryMembership: next });
         },
 
         loadAgents: async (requestedDirectory?: string | null) => {
@@ -454,6 +477,9 @@ export const useAgentsStore = create<AgentsStore>()(
             if (config.permission) agentConfig.permission = config.permission;
             if (config.disable !== undefined) agentConfig.disable = config.disable;
             if (config.scope) agentConfig.scope = config.scope;
+            if (config.entries) {
+              get().setAgentEntryMembership(config.name, config.entries);
+            }
 
             console.log('[AgentsStore] Agent config to save:', agentConfig);
 
@@ -526,6 +552,9 @@ export const useAgentsStore = create<AgentsStore>()(
             if (config.prompt !== undefined) agentConfig.prompt = config.prompt;
             if (config.permission !== undefined) agentConfig.permission = config.permission;
             if (config.disable !== undefined) agentConfig.disable = config.disable;
+            if (config.entries) {
+              get().setAgentEntryMembership(name, config.entries);
+            }
 
             const configDirectory = resolveDirectory(requestedDirectory);
             const queryParams = configDirectory ? `?directory=${encodeURIComponent(configDirectory)}` : '';
@@ -664,7 +693,13 @@ export const useAgentsStore = create<AgentsStore>()(
         storage: createDeferredSafeJSONStorage(),
         partialize: (state) => ({
           selectedAgentName: state.selectedAgentName,
+          agentEntryMembership: state.agentEntryMembership,
         }),
+        onRehydrateStorage: () => (state) => {
+          if (state?.agentEntryMembership) {
+            replaceAgentEntryMembership(state.agentEntryMembership);
+          }
+        },
       },
     ),
     {

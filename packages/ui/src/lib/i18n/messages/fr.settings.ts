@@ -528,6 +528,8 @@ export const settingsDict = {
   'settings.agents.page.field.descriptionPlaceholder': 'Que fait cet agent ?',
   'settings.agents.page.field.mode': 'Mode',
   'settings.agents.page.field.modeTooltip': 'Visibilité principale et sous-agent',
+  'settings.agents.page.field.workspaceEntries': 'Espaces de l atelier',
+  'settings.agents.page.field.workspaceEntriesTooltip': 'Entrées (Code / Travail) où cet agent peut apparaître. Décochez les deux pour le montrer partout.',
   'settings.agents.page.field.overrideModel': 'Remplacer le modèle',
   'settings.agents.page.field.variant': 'Variante de réflexion',
   'settings.agents.page.field.variantTooltip': 'Optionnel. Si le modèle prend en charge le raisonnement, la variante contrôle la profondeur du raisonnement.',

@@ -9,7 +9,10 @@ import type { ModelMetadata } from "@/types";
 import { createDeferredSafeJSONStorage } from "./utils/safeStorage";
 import { isPrimaryMode } from "@/components/chat/mobileControlsUtils";
 import { filterAgentChoices, resolveProjectDefaultAgent } from "@/lib/composerModes";
+import { readAgentEntryMembership } from "@/lib/agentEntries";
+import { resolveWorkspaceEntry } from "@/lib/workspaceEntry";
 import { useSessionUIStore } from "@/sync/session-ui-store";
+import { useSessionDisplayStore } from "@/stores/useSessionDisplayStore";
 import { useSelectionStore } from "@/sync/selection-store";
 import { loadDesktopSettings, updateDesktopSettings } from "@/lib/persistence";
 import { useDirectoryStore } from "@/stores/useDirectoryStore";
@@ -3615,9 +3618,15 @@ export const useConfigStore = create<ConfigStore>()(
                 },
                 getVisibleAgents: () => {
                     const { agents } = get();
-                    // `filterAgentChoices` also drops the plan agent: `plan` is the
-                    // plan-mode switch's to give, so it is not offered as a pick.
-                    return filterAgentChoices(agents);
+                    // `filterAgentChoices` also drops plan/chat: those belong to the
+                    // composer mode switch. Pinned entry wins; otherwise derive from
+                    // the session on screen so the picker matches the list beside it.
+                    const pinned = useSessionDisplayStore.getState().workspaceEntry;
+                    const derived = resolveWorkspaceEntry(useSessionUIStore.getState().currentSessionDirectory);
+                    return filterAgentChoices(agents, {
+                        entry: pinned ?? derived,
+                        membership: readAgentEntryMembership(),
+                    });
                 },
 
                 getProjectDefaultAgentForActiveDirectory: () => resolveProjectDefaultAgent(

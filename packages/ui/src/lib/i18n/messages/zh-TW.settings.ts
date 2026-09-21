@@ -671,6 +671,8 @@ export const settingsDict = {
   'settings.agents.page.field.descriptionPlaceholder': '這個 agent 的作用是什麼？',
   'settings.agents.page.field.mode': '模式',
   'settings.agents.page.field.modeTooltip': 'Primary 與 Subagent 可見性',
+  'settings.agents.page.field.workspaceEntries': '工作域',
+  'settings.agents.page.field.workspaceEntriesTooltip': '此智慧體可出現在哪些工作台入口（程式碼 / 工作）。都不勾選則兩邊都顯示。',
   'settings.agents.page.field.overrideModel': '覆寫模型',
   'settings.agents.page.field.variant': '思考變體',
   'settings.agents.page.field.variantTooltip': '選填。如果模型支援推理，變體控制推理深度。',

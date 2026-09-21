@@ -658,6 +658,8 @@ export const settingsDict = {
   'settings.agents.page.field.descriptionPlaceholder': 'Was macht dieser Agent?',
   'settings.agents.page.field.mode': 'Modus',
   'settings.agents.page.field.modeTooltip': 'Sichtbarkeit: Primär vs. Subagent',
+  'settings.agents.page.field.workspaceEntries': 'Workbench-Bereiche',
+  'settings.agents.page.field.workspaceEntriesTooltip': 'In welchen Bereichen (Code / Arbeit) dieser Agent angeboten wird. Beide abwählen, um ihn überall zu zeigen.',
   'settings.agents.page.field.overrideModel': 'Modell überschreiben',
   'settings.agents.page.field.temperature': 'Temperatur',
   'settings.agents.page.field.temperatureTooltip': 'Steuert die Zufälligkeit. Höher = kreativ, Niedriger = fokussiert.',

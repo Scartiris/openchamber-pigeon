@@ -93,13 +93,26 @@ describe('getSelectablePrimaryAgents', () => {
 });
 
 describe('filterAgentChoices', () => {
-  test('drops both special agents from the list the pickers show', () => {
-    const agents = [buildAgent, planAgent, chatAgent, workAgent, testAgent({ name: 'title', hidden: true })];
+  const agents = [
+    testAgent({ name: 'build' }),
+    testAgent({ name: 'plan' }),
+    testAgent({ name: 'chat' }),
+    testAgent({ name: '工作' }),
+    testAgent({ name: 'reviewer' }),
+  ];
 
-    expect(filterAgentChoices(agents).map((agent) => agent.name)).toEqual(['build', '工作']);
+  test('drops the mode-switch agents from pickers', () => {
+    expect(filterAgentChoices(agents).map((agent) => agent.name)).toEqual(['build', '工作', 'reviewer']);
   });
 
-  test('a hidden special agent is not a choice either', () => {
+  test('hides 工作 when the workbench is on the code entry', () => {
+    expect(filterAgentChoices(agents, { entry: 'code' }).map((a) => a.name))
+      .toEqual(['build', 'reviewer']);
+    expect(filterAgentChoices(agents, { entry: 'work' }).map((a) => a.name))
+      .toEqual(['build', '工作', 'reviewer']);
+  });
+
+  test('a hidden agent is not a choice either', () => {
     expect(filterAgentChoices([testAgent({ name: 'chat', hidden: true })])).toEqual([]);
   });
 });

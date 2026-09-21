@@ -97,11 +97,7 @@ const captureCurrentView = (): WorkspaceEntryLastView | null => {
 const restoreSavedView = (
   saved: WorkspaceEntryLastView | undefined,
   setCurrentSession: (id: string, directory: string | null) => void,
-  openNewSessionDraft: (options?: {
-    target?: 'project' | 'chat' | null;
-    selectedProjectId?: string | null;
-    directoryOverride?: string | null;
-  }) => void,
+  openNewSessionDraft: ReturnType<typeof useSessionUIStore.getState>['openNewSessionDraft'],
 ): boolean => {
   if (!saved) return false;
   if (saved.kind === 'session') {
@@ -113,7 +109,7 @@ const restoreSavedView = (
     return true;
   }
   openNewSessionDraft({
-    target: saved.target,
+    target: saved.target ?? undefined,
     selectedProjectId: saved.selectedProjectId,
     directoryOverride: saved.directoryOverride,
   });

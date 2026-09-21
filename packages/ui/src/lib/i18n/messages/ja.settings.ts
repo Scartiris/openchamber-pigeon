@@ -707,6 +707,8 @@ export const settingsDict = {
   'settings.agents.page.field.descriptionPlaceholder': 'この Agent は何をしますか？',
   'settings.agents.page.field.mode': 'モード',
   'settings.agents.page.field.modeTooltip': 'プライマリと Subagent の表示設定',
+  'settings.agents.page.field.workspaceEntries': 'ワークベンチ領域',
+  'settings.agents.page.field.workspaceEntriesTooltip': 'このエージェントを表示できる入口（コード / 仕事）。両方オフにするとどこにでも表示されます。',
   'settings.agents.page.field.overrideModel': 'モデルを上書き',
   'settings.agents.page.field.temperature': '温度',
   'settings.agents.page.field.temperatureTooltip': 'ランダム性を制御します。高い = 創造的、低い = 集中的。',

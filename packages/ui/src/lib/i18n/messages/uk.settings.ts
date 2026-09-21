@@ -676,6 +676,8 @@ export const settingsDict = {
   "settings.agents.page.field.descriptionPlaceholder": "Що робить цей агент?",
   "settings.agents.page.field.mode": "Режим",
   "settings.agents.page.field.modeTooltip": "Видимість основного або субагента",
+  "settings.agents.page.field.workspaceEntries": "Ділянки робочого стола",
+  "settings.agents.page.field.workspaceEntriesTooltip": "На яких входах (Код / Робота) можна пропонувати цього агента. Зніміть обидва, щоб показувати всюди.",
   "settings.agents.page.field.overrideModel": "Перевизначити модель",
   "settings.agents.page.field.variant": "Варіант мислення",
   "settings.agents.page.field.variantTooltip": "Необов'язково. Якщо модель підтримує міркування, варіант контролює глибину міркування.",
