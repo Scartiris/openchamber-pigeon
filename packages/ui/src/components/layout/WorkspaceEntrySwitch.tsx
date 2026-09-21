@@ -13,6 +13,11 @@
  * a full-page surface left open over a list that no longer contains it, or a chat
  * still showing the other partition, both read as "the switch half-worked".
  *
+ * Leaving an entry remembers what was on screen — session *or* new-session draft —
+ * so coming back restores that pane instead of force-opening some other session.
+ * Without a memory (first visit, or the remembered session is gone) it falls back
+ * to the entry's newest session, then to a draft in that entry's project.
+ *
  * It is mounted in the titlebar overlay, not in the sidebar, so it stays reachable
  * with the sidebar collapsed — which is also why the newest session is resolved from
  * the global store instead of the sidebar's computed list (that one does not exist
@@ -37,7 +42,10 @@ import {
 } from '@/lib/workspaceEntry';
 import { resolveGlobalSessionDirectory, useGlobalSessionsStore } from '@/stores/useGlobalSessionsStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
-import { useSessionDisplayStore } from '@/stores/useSessionDisplayStore';
+import {
+  useSessionDisplayStore,
+  type WorkspaceEntryLastView,
+} from '@/stores/useSessionDisplayStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 
@@ -63,6 +71,55 @@ const mostRecentlyUpdated = (sessions: readonly Session[]): Session | null => se
   null,
 );
 
+/** What the pane is showing right now — session, or an open new-session draft. */
+const captureCurrentView = (): WorkspaceEntryLastView | null => {
+  const ui = useSessionUIStore.getState();
+  if (ui.newSessionDraft.open && !ui.currentSessionId) {
+    return {
+      kind: 'draft',
+      target: ui.newSessionDraft.target,
+      selectedProjectId: ui.newSessionDraft.selectedProjectId,
+      directoryOverride: ui.newSessionDraft.directoryOverride,
+    };
+  }
+  if (!ui.currentSessionId) return null;
+  const session = useGlobalSessionsStore.getState().activeSessions.find(
+    (candidate) => candidate.id === ui.currentSessionId,
+  );
+  return {
+    kind: 'session',
+    sessionId: ui.currentSessionId,
+    directory: session ? resolveGlobalSessionDirectory(session) : ui.currentSessionDirectory,
+  };
+};
+
+/** Restore a remembered pane only if it is still live; otherwise null → fallback. */
+const restoreSavedView = (
+  saved: WorkspaceEntryLastView | undefined,
+  setCurrentSession: (id: string, directory: string | null) => void,
+  openNewSessionDraft: (options?: {
+    target?: 'project' | 'chat' | null;
+    selectedProjectId?: string | null;
+    directoryOverride?: string | null;
+  }) => void,
+): boolean => {
+  if (!saved) return false;
+  if (saved.kind === 'session') {
+    const stillThere = useGlobalSessionsStore.getState().activeSessions.some(
+      (session) => session.id === saved.sessionId,
+    );
+    if (!stillThere) return false;
+    setCurrentSession(saved.sessionId, saved.directory);
+    return true;
+  }
+  openNewSessionDraft({
+    target: saved.target,
+    selectedProjectId: saved.selectedProjectId,
+    directoryOverride: saved.directoryOverride,
+  });
+  return true;
+};
+
 export const WorkspaceEntrySwitch = React.memo(function WorkspaceEntrySwitch() {
   const { t } = useI18n();
   const entry = useWorkspaceEntry();
@@ -73,10 +130,20 @@ export const WorkspaceEntrySwitch = React.memo(function WorkspaceEntrySwitch() {
 
   const handleSelect = React.useCallback((next: WorkspaceEntry) => {
     if (next === entry) return;
+
+    // Remember the pane we are leaving *before* any navigation overwrites it.
+    const leaving = captureCurrentView();
+    if (leaving) {
+      useSessionDisplayStore.getState().setWorkspaceEntryLastView(entry, leaving);
+    }
+
     setWorkspaceEntry(next);
     // `closeMainSurfaces` first: it unmounts the very views whose session lists
     // are about to stop containing what they are showing.
     useUIStore.getState().closeMainSurfaces();
+
+    const saved = useSessionDisplayStore.getState().workspaceEntryLastViews[next];
+    if (restoreSavedView(saved, setCurrentSession, openNewSessionDraft)) return;
 
     const candidate = mostRecentlyUpdated(
       useGlobalSessionsStore.getState().activeSessions.filter(

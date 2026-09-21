@@ -164,7 +164,7 @@ describe('WorkspaceEntrySwitch', () => {
   beforeEach(() => {
     useProjectsStore.setState({ projects: projects(), activeProjectId: 'code' });
     useGlobalSessionsStore.setState({ activeSessions: sessions() });
-    useSessionDisplayStore.setState({ workspaceEntry: null });
+    useSessionDisplayStore.setState({ workspaceEntry: null, workspaceEntryLastViews: {} });
     useUIStore.setState({ isArchivePageOpen: false });
     useSessionUIStore.setState({ currentSessionId: null, currentSessionDirectory: null });
     useSessionUIStore.getState().closeNewSessionDraft();
@@ -176,7 +176,7 @@ describe('WorkspaceEntrySwitch', () => {
     // process, so a work directory left on screen here silently decides what another
     // file's `useWorkspaceEntry()` derives — the next file then fails for a reason it
     // cannot see. Clearing is part of the teardown, not a courtesy.
-    useSessionDisplayStore.setState({ workspaceEntry: null });
+    useSessionDisplayStore.setState({ workspaceEntry: null, workspaceEntryLastViews: {} });
     useSessionUIStore.setState({ currentSessionId: null, currentSessionDirectory: null });
     useSessionUIStore.getState().closeNewSessionDraft();
   });
@@ -185,8 +185,9 @@ describe('WorkspaceEntrySwitch', () => {
     const { container } = await mountSwitch();
     const buttons = entryButtons(container);
 
+    // terminal-box, not bare `<>`: angle brackets alone read as punctuation.
     expect(buttons.map((button) => button.querySelector('use')?.getAttribute('href')))
-      .toEqual(['#oc-code', '#oc-briefcase']);
+      .toEqual(['#oc-terminal-box', '#oc-briefcase']);
     expect(pressedIndex(container)).toBe(0);
     expect(surface(container)?.getAttribute('data-workspace-entry')).toBe('code');
   });
@@ -257,6 +258,61 @@ describe('WorkspaceEntrySwitch', () => {
     // pressing the stop that merely repeats it must not pin the choice or navigate.
     expect(useSessionDisplayStore.getState().workspaceEntry).toBeNull();
     expect(useSessionUIStore.getState().currentSessionId).toBeNull();
+    expect(useSessionUIStore.getState().newSessionDraft.open).toBe(false);
+  });
+
+  test('coming back to an entry restores the session that was on screen', async () => {
+    const { container } = await mountSwitch();
+    // Pin code on a specific session first (not merely "whatever is newest later").
+    useSessionUIStore.setState({ currentSessionId: 's-code', currentSessionDirectory: CODE_ROOT });
+    await clickEntry(container, 1);
+    expect(useSessionUIStore.getState().currentSessionId).toBe('s-work');
+
+    await clickEntry(container, 0);
+    // Memory wins over "newest in the entry" — both happen to be s-code here; the
+    // draft test below is what separates restore from fallback.
+    expect(useSessionUIStore.getState().currentSessionId).toBe('s-code');
+    expect(useSessionUIStore.getState().currentSessionDirectory).toBe(CODE_ROOT);
+  });
+
+  test('coming back to an entry reopens the new-session draft that was left there', async () => {
+    useGlobalSessionsStore.setState({ activeSessions: sessions() });
+    // Pin 工作 first: the draft lives *on that entry*, and clicking the entry that
+    // is already derived as current (null store + no session ⇒ code) is a no-op.
+    useSessionDisplayStore.setState({ workspaceEntry: 'work', workspaceEntryLastViews: {} });
+    useSessionUIStore.getState().openNewSessionDraft({
+      target: 'project',
+      selectedProjectId: 'work-gongwen',
+      directoryOverride: WORK_GONGWEN,
+    });
+    const { container } = await mountSwitch();
+    expect(pressedIndex(container)).toBe(1);
+
+    // Peek at 代码 — it has sessions, so fallback lands on one and closes the draft.
+    await clickEntry(container, 0);
+    expect(useSessionUIStore.getState().currentSessionId).toBe('s-code');
+    expect(useSessionUIStore.getState().newSessionDraft.open).toBe(false);
+
+    // Returning to 工作 must restore the draft, not force-open the newest work session.
+    await clickEntry(container, 1);
+    expect(useSessionUIStore.getState().currentSessionId).toBeNull();
+    const draft = useSessionUIStore.getState().newSessionDraft;
+    expect(draft.open).toBe(true);
+    expect([draft.target, draft.selectedProjectId, draft.directoryOverride])
+      .toEqual(['project', 'work-gongwen', WORK_GONGWEN]);
+  });
+
+  test('a remembered session that no longer exists falls back to the entry newest', async () => {
+    useSessionDisplayStore.setState({
+      workspaceEntry: null,
+      workspaceEntryLastViews: {
+        work: { kind: 'session', sessionId: 's-deleted', directory: WORK_GONGWEN },
+      },
+    });
+    const { container } = await mountSwitch();
+    await clickEntry(container, 1);
+
+    expect(useSessionUIStore.getState().currentSessionId).toBe('s-work');
     expect(useSessionUIStore.getState().newSessionDraft.open).toBe(false);
   });
 

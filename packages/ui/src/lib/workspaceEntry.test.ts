@@ -208,7 +208,8 @@ describe('ENTRY_ORDER', () => {
   test('every entry has a glyph and the label keys the dictionaries ship', () => {
     // Pinned exactly rather than "truthy": these two maps are what the switch renders,
     // and a label key that drifted from the dictionaries is a missing translation.
-    expect(ENTRY_ICONS).toEqual({ code: 'code', work: 'briefcase' });
+    // Code is terminal-box (not bare angle brackets) so the stop still reads as coding.
+    expect(ENTRY_ICONS).toEqual({ code: 'terminal-box', work: 'briefcase' });
     expect(ENTRY_LABEL_KEY).toEqual({
       code: 'header.workspaceEntry.code',
       work: 'header.workspaceEntry.work',

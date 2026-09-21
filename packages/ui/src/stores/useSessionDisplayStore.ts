@@ -6,9 +6,23 @@ import type { WorkspaceEntry } from '@/lib/workspaceEntry';
 type ProjectSortOrder = 'manual' | 'a-z' | 'z-a' | 'date-added' | 'recent';
 
 // 'by-worktree' keeps per-worktree sub-headers inside each project zone
-// (parallel-work overview); 'flat' merges everything into one recency list.
+// (parallel-work overview); 'flat' merges everything into a recentcy list.
 type SessionGroupingMode = 'by-worktree' | 'flat';
 type ProjectDisplayMode = 'all' | 'single';
+
+/**
+ * What the workbench was showing the last time the user left an entry.
+ * A draft is a first-class view: switching away from a "new session" screen
+ * and back must return there, not force-open some other session.
+ */
+export type WorkspaceEntryLastView =
+  | { kind: 'session'; sessionId: string; directory: string | null }
+  | {
+    kind: 'draft';
+    target?: 'project' | 'chat' | null;
+    selectedProjectId?: string | null;
+    directoryOverride?: string | null;
+  };
 
 type SessionDisplayStore = {
   projectDisplayMode: ProjectDisplayMode;
@@ -23,6 +37,9 @@ type SessionDisplayStore = {
    */
   workspaceEntry: WorkspaceEntry | null;
   setWorkspaceEntry: (entry: WorkspaceEntry) => void;
+  /** Per-entry memory of the last pane, written when the user leaves that entry. */
+  workspaceEntryLastViews: Partial<Record<WorkspaceEntry, WorkspaceEntryLastView>>;
+  setWorkspaceEntryLastView: (entry: WorkspaceEntry, view: WorkspaceEntryLastView) => void;
   sessionGroupingMode: SessionGroupingMode;
   setSessionGroupingMode: (mode: SessionGroupingMode) => void;
   /** Project/recent zone headers stick to the top while their zone scrolls. */
@@ -71,6 +88,11 @@ export const useSessionDisplayStore = create<SessionDisplayStore>()(
       setSingleProjectId: (projectId) => set({ singleProjectId: projectId }),
       workspaceEntry: null,
       setWorkspaceEntry: (entry) => set({ workspaceEntry: entry }),
+      workspaceEntryLastViews: {},
+      setWorkspaceEntryLastView: (entry, view) =>
+        set((state) => ({
+          workspaceEntryLastViews: { ...state.workspaceEntryLastViews, [entry]: view },
+        })),
       sessionGroupingMode: 'by-worktree',
       setSessionGroupingMode: (mode) => set({ sessionGroupingMode: mode }),
       stickyZoneHeaders: true,
@@ -89,7 +111,7 @@ export const useSessionDisplayStore = create<SessionDisplayStore>()(
     }),
     {
       name: 'session-display-mode',
-      version: 6,
+      version: 7,
       // v1→v2 adds projectSortOrder using the canonical manual ordering.
       // v2→v3 replaces the previously shipped recent default with manual.
       // v3→v4 removes displayMode (single sidebar row layout).
@@ -97,6 +119,8 @@ export const useSessionDisplayStore = create<SessionDisplayStore>()(
       // v5→v6 adds workspaceEntry. Nothing to rewrite: an older blob simply has no
       // key, and the absent state is exactly the new default (derive from the session
       // on screen, rather than silently moving a returning user into one partition).
+      // v6→v7 adds workspaceEntryLastViews (per-entry restore target). Absent = {}
+      // and the switch falls back to "newest session / draft target" as before.
       migrate: migrateSessionDisplayState,
     },
   ),

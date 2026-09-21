@@ -31,8 +31,11 @@ export const ENTRY_ORDER: readonly WorkspaceEntry[] = ['code', 'work'];
  * only collects names it finds in that shape (or inside a `: Record<…IconName…> = {`
  * literal), and an icon it misses renders as an empty `<use>` — no error, no build
  * failure. `satisfies` then checks the pair covers both entries without widening.
+ *
+ * Code is `terminal-box`, not bare `<>`: angle brackets alone read as punctuation
+ * next to the entry name, while a terminal-in-a-box still says "coding" at 20px.
  */
-const CODE_ICON: IconName = 'code';
+const CODE_ICON: IconName = 'terminal-box';
 const WORK_ICON: IconName = 'briefcase';
 export const ENTRY_ICONS = {
   code: CODE_ICON,
