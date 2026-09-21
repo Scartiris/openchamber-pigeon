@@ -14,11 +14,15 @@ import type { WorkspaceEntry } from '@/lib/workspaceEntry';
 export type AgentEntryMembership = Partial<Record<string, WorkspaceEntry[]>>;
 
 /**
- * Deployment defaults. `工作` is the work partition's agent — offering it while
- * the user is browsing 代码 sessions is noise; code keeps the built-in `build`.
+ * Deployment defaults.
+ * - `工作` is the work partition's agent — not offered while browsing 代码.
+ * - `build` is the built-in construction agent — only the 代码 entry; work
+ *   sessions should pick 工作 (or another explicitly checked work agent).
+ * Missing keys still mean "visible in every entry".
  */
 export const DEFAULT_AGENT_ENTRY_MEMBERSHIP = {
   工作: ['work'],
+  build: ['code'],
 } satisfies AgentEntryMembership;
 
 /**

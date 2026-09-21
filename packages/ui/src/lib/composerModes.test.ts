@@ -105,11 +105,11 @@ describe('filterAgentChoices', () => {
     expect(filterAgentChoices(agents).map((agent) => agent.name)).toEqual(['build', '工作', 'reviewer']);
   });
 
-  test('hides 工作 when the workbench is on the code entry', () => {
+  test('build is code-only; 工作 is work-only', () => {
     expect(filterAgentChoices(agents, { entry: 'code' }).map((a) => a.name))
       .toEqual(['build', 'reviewer']);
     expect(filterAgentChoices(agents, { entry: 'work' }).map((a) => a.name))
-      .toEqual(['build', '工作', 'reviewer']);
+      .toEqual(['工作', 'reviewer']);
   });
 
   test('a hidden agent is not a choice either', () => {
