@@ -332,16 +332,17 @@ describe('WorkspaceEntrySwitch', () => {
     // A stop with no width is the bug this guards: the thumb overflows the track and
     // sits on the neighbouring control, and the button has no hit area at all.
     // Fixed equal widths also keep the thumb aligned when locale text lengths differ.
+    // Sized to the titlebar's h-8 icon buttons (28px stop / 30px track / 16px glyph).
     for (const button of buttons) {
-      expect(button.className).toContain('h-8');
-      expect(button.className).toContain('w-[76px]');
-      expect(button.querySelector('svg')?.getAttribute('class')).toContain('h-5');
+      expect(button.className).toContain('h-7');
+      expect(button.className).toContain('w-[68px]');
+      expect(button.querySelector('svg')?.getAttribute('class')).toContain('h-4');
       // Meaning, not just a glyph: the entry name is on the stop itself.
       const visibleText = button.querySelector('span:not(.sr-only)')?.textContent ?? '';
       expect(visibleText.length).toBeGreaterThan(0);
     }
-    expect(thumb?.className).toContain('h-8');
-    expect(thumb?.className).toContain('w-[76px]');
+    expect(thumb?.className).toContain('h-7');
+    expect(thumb?.className).toContain('w-[68px]');
   });
 
   describe('mounted into the titlebar', () => {

@@ -135,7 +135,9 @@ export function SegmentedSlider<Value extends string>(props: SegmentedSliderProp
             {option.text ? (
               <span
                 className={cn(
-                  'truncate text-[13px] font-medium leading-none',
+                  // Same quiet UI label the chips and footer use — a hardcoded
+                  // 13px/medium stack reads as a bolt-on control next to them.
+                  'typography-ui-label truncate leading-none',
                   selected ? 'text-interactive-selection-foreground' : 'text-muted-foreground',
                 )}
               >

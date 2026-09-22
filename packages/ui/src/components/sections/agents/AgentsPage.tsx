@@ -384,22 +384,26 @@ export const AgentsPage: React.FC = () => {
           label={t('settings.agents.page.field.workspaceEntries')}
           info={t('settings.agents.page.field.workspaceEntriesTooltip')}
         >
-          <div className="flex flex-wrap gap-3">
+          {/* Multi-select chips — same family as the Mode picker above, not raw checkboxes. */}
+          <div role="group" aria-label={t('settings.agents.page.field.workspaceEntries')} className="flex flex-wrap items-center gap-1">
             {ENTRY_ORDER.map((entry) => {
               const checked = entries.includes(entry);
               return (
-                <label key={entry} className="flex cursor-pointer items-center gap-2 typography-ui-label">
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => {
-                      setEntries((prev) => (
-                        checked ? prev.filter((e) => e !== entry) : [...prev, entry]
-                      ));
-                    }}
-                  />
-                  <span>{t(ENTRY_LABEL_KEY[entry])}</span>
-                </label>
+                <Button
+                  key={entry}
+                  type="button"
+                  variant="chip"
+                  size="xs"
+                  aria-pressed={checked}
+                  className="!font-normal"
+                  onClick={() => {
+                    setEntries((prev) => (
+                      checked ? prev.filter((e) => e !== entry) : [...prev, entry]
+                    ));
+                  }}
+                >
+                  {t(ENTRY_LABEL_KEY[entry])}
+                </Button>
               );
             })}
           </div>

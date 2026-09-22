@@ -88,11 +88,11 @@ const DESKTOP_HEADER_ICON_BUTTON_CLASS = 'app-region-no-drag inline-flex h-8 w-8
 
 /**
  * The `TitlebarLeftControls` cluster's stand-in width until it measures itself.
- * 12.5rem covers the sidebar toggle, the labelled entry switch (two 76px stops)
+ * 11.5rem covers the sidebar toggle, the labelled entry switch (two 68px stops)
  * and their gaps, with room left for the app menu / window controls that can
  * share it.
  */
-const TITLEBAR_CONTROLS_FALLBACK_WIDTH = '12.5rem';
+const TITLEBAR_CONTROLS_FALLBACK_WIDTH = '11.5rem';
 
 type HeaderIconActionButtonProps = {
   visible?: boolean;

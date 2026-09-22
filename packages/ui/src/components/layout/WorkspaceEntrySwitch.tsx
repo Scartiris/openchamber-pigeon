@@ -187,14 +187,13 @@ export const WorkspaceEntrySwitch = React.memo(function WorkspaceEntrySwitch() {
           text: t(ENTRY_LABEL_KEY[candidate]),
           label: `${t(ENTRY_LABEL_KEY[candidate])} — ${t('header.workspaceEntry.hint')}`,
         }))}
-        // Larger than the footer's icon-only buttons on purpose: this is a
-        // partition of the workbench, not a quiet toolbar toggle. Stops are a
-        // fixed equal width so the thumb (which copies `stopClassName`) stays
-        // aligned when locale text lengths differ. Sized with icon+text in
-        // mind — two stops ≈ 156px, plus the sidebar toggle beside it.
-        stopClassName="h-8 w-[76px] gap-1 px-2"
-        className="h-9"
-        iconClassName="h-5 w-5"
+        // Sits in the titlebar beside h-8 icon buttons: one stop is 28×68 so the
+        // track is 30px tall (same as the composer slider) and still reads as a
+        // quiet chrome control, not a bolted-on segmented bar. Icon 16px + short
+        // name; equal stop widths keep the thumb aligned across locales.
+        stopClassName="h-7 w-[68px] gap-1 px-2"
+        className="h-[30px]"
+        iconClassName="h-4 w-4"
       />
     </span>
   );

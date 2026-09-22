@@ -254,10 +254,12 @@ describe('ComposerModeSwitch', () => {
     const { container } = await mountSwitch('s1');
 
     // Every picker, `@`-mention list and cycle shortcut reads this list.
+    // Entry membership: build is 代码-only, 工作 is 工作-only — this mount is on code.
     const offered = useConfigStore.getState().getVisibleAgents().map((agent) => agent.name);
     expect(offered).not.toContain('plan');
     expect(offered).not.toContain('chat');
-    expect(offered).toContain('工作');
+    expect(offered).toContain('build');
+    expect(offered).not.toContain('工作');
 
     await clickMode(container, 2);
     expect(useConfigStore.getState().currentAgentName).toBe('chat');
