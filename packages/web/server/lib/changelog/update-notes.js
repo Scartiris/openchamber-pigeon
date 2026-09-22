@@ -10,7 +10,9 @@
 // Any failure (network, 404, unexpected shape) yields null: the update is
 // still offered, only without notes.
 
-export const CHANGELOG_INDEX_URL = 'https://raw.githubusercontent.com/openchamber/openchamber/main/changelog/index.json';
+// Product fork, not upstream — same slug the update check advertises.
+export const CHANGELOG_INDEX_URL = process.env.OPENCHAMBER_CHANGELOG_INDEX_URL
+  || 'https://raw.githubusercontent.com/Scartiris/openchamber-pigeon/main/changelog/index.json';
 
 const GROUPS = [
   ['new', 'New'],

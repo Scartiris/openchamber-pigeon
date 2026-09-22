@@ -12,9 +12,23 @@ const __dirname = path.dirname(__filename);
 const PACKAGE_NAME = '@openchamber/web';
 const PACKAGE_PATH_SEGMENTS = PACKAGE_NAME.split('/');
 const NPM_REGISTRY_URL = `https://registry.npmjs.org/${PACKAGE_NAME}`;
-const GITHUB_RELEASES_URL = 'https://github.com/openchamber/openchamber/releases';
-const GITHUB_RELEASES_API_URL = 'https://api.github.com/repos/openchamber/openchamber/releases';
+// Product fork: the workbench must not advertise upstream's GitHub.
+// Override with OPENCHAMBER_GITHUB_REPO=owner/name when the release feed lives elsewhere.
+const GITHUB_REPO_SLUG = process.env.OPENCHAMBER_GITHUB_REPO || 'Scartiris/openchamber-pigeon';
+const GITHUB_RELEASES_URL = `https://github.com/${GITHUB_REPO_SLUG}/releases`;
+const GITHUB_RELEASES_API_URL = `https://api.github.com/repos/${GITHUB_REPO_SLUG}/releases`;
 let cachedDetectedPm = null;
+
+function githubApiHeaders() {
+  const headers = {
+    Accept: 'application/vnd.github+json',
+    'User-Agent': 'openchamber-update-check',
+  };
+  // Private release feeds need a token; public forks do not.
+  const token = process.env.OPENCHAMBER_GITHUB_TOKEN || process.env.GITHUB_TOKEN;
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
 
 function getSpawnSyncBaseOptions() {
   return process.platform === 'win32' ? { windowsHide: true } : {};
@@ -97,10 +111,7 @@ async function resolveAndroidApkUrl(version, candidateUrl) {
 
   try {
     const response = await fetch(`${GITHUB_RELEASES_API_URL}/tags/v${version}`, {
-      headers: {
-        Accept: 'application/vnd.github+json',
-        'User-Agent': 'openchamber-update-check',
-      },
+      headers: githubApiHeaders(),
       signal: AbortSignal.timeout(10000),
     });
     if (!response.ok) return undefined;
