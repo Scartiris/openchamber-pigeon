@@ -41,11 +41,11 @@ const buildAgent = testAgent({ name: 'build' });
 const workAgent = testAgent({ name: '工作' });
 
 describe('isModeAgentName / isAgentChoice', () => {
-  test('the two special agents are modes, not choices', () => {
+  test('plan and chat stay recognized as mode agents but are choosable', () => {
     expect(isModeAgentName(PLAN_AGENT_NAME)).toBe(true);
     expect(isModeAgentName(CHAT_AGENT_NAME)).toBe(true);
-    expect(isAgentChoice(PLAN_AGENT_NAME)).toBe(false);
-    expect(isAgentChoice(CHAT_AGENT_NAME)).toBe(false);
+    expect(isAgentChoice(PLAN_AGENT_NAME)).toBe(true);
+    expect(isAgentChoice(CHAT_AGENT_NAME)).toBe(true);
   });
 
   test('ordinary agents stay choosable', () => {
@@ -64,9 +64,9 @@ describe('resolveProjectDefaultAgent', () => {
     expect(resolveProjectDefaultAgent('build')).toBe('build');
   });
 
-  test('neither agent the mode switch owns can be a project default', () => {
-    expect(resolveProjectDefaultAgent(PLAN_AGENT_NAME)).toBeUndefined();
-    expect(resolveProjectDefaultAgent(CHAT_AGENT_NAME)).toBeUndefined();
+  test('plan and chat may now be a project default (they are picker choices)', () => {
+    expect(resolveProjectDefaultAgent(PLAN_AGENT_NAME)).toBe('plan');
+    expect(resolveProjectDefaultAgent(CHAT_AGENT_NAME)).toBe('chat');
   });
 
   test('an unset default stays unset', () => {
@@ -101,15 +101,16 @@ describe('filterAgentChoices', () => {
     testAgent({ name: 'reviewer' }),
   ];
 
-  test('drops the mode-switch agents from pickers', () => {
-    expect(filterAgentChoices(agents).map((agent) => agent.name)).toEqual(['build', '工作', 'reviewer']);
+  test('lists every visible agent including plan and chat', () => {
+    expect(filterAgentChoices(agents).map((agent) => agent.name))
+      .toEqual(['build', 'plan', 'chat', '工作', 'reviewer']);
   });
 
-  test('build is code-only; 工作 is work-only', () => {
+  test('entry membership still narrows the list (build/工作 only)', () => {
     expect(filterAgentChoices(agents, { entry: 'code' }).map((a) => a.name))
-      .toEqual(['build', 'reviewer']);
+      .toEqual(['build', 'plan', 'chat', 'reviewer']);
     expect(filterAgentChoices(agents, { entry: 'work' }).map((a) => a.name))
-      .toEqual(['工作', 'reviewer']);
+      .toEqual(['plan', 'chat', '工作', 'reviewer']);
   });
 
   test('a hidden agent is not a choice either', () => {

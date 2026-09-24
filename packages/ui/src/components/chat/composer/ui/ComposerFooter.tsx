@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils';
 import { ModelControls } from '../../ModelControls';
 import { ComposerActionButtons } from './ComposerActionButtons';
 import { ComposerAttachmentControls } from './ComposerAttachmentControls';
-import { ComposerModeSwitch } from './ComposerModeSwitch';
+
 import { FocusModeButton } from './FocusModeButton';
 import { PermissionAutoAcceptButton } from './PermissionAutoAcceptButton';
 import { PromptEnhanceButton } from './PromptEnhanceButton';
@@ -257,7 +257,7 @@ export function ComposerFooter(props: ComposerFooterProps) {
                             handlePermissionAutoAcceptToggle={onTogglePermissionAutoAccept}
                             withTooltip
                         />
-                        {!isBtw ? <ComposerModeSwitch sessionId={currentSessionId} /> : null}
+
                         {!isBtw ? <SessionGoalButton
                             sessionId={currentSessionId}
                             directory={directory}

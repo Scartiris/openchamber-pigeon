@@ -72,20 +72,12 @@ export const getSelectablePrimaryAgents = (agents: readonly Agent[]): Agent[] =>
 /**
  * Whether an agent is offered to the user as an explicit choice.
  *
- * The plan and chat agents are not: the composer's mode switch owns them, so they
- * are kept out of the agent pickers, the `@`-mention list and the cycle shortcut.
- * They stay selectable — the switch sets them by name — which is why this filters
- * *lists*, never state.
+ * Plan and chat are ordinary picker entries again (the composer mode switch is
+ * gone) — the right-hand agent menu lists every visible agent, including those.
  */
-export const isAgentChoice = (agentName: string): boolean => !isModeAgentName(agentName);
+export const isAgentChoice = (_agentName: string): boolean => true;
 
-/**
- * The list the pickers show: visible agents minus the ones another control owns,
- * and minus agents whose workbench-entry membership excludes the current entry.
- *
- * `entry` omitted / null means "no entry chosen yet" — offer everything the
- * other filters allow, so the first paint is not empty before the switch pins.
- */
+/** The list the pickers show: visible agents, then the workbench-entry filter. */
 export const filterAgentChoices = (
   agents: readonly Agent[],
   options?: {
@@ -93,7 +85,7 @@ export const filterAgentChoices = (
     membership?: AgentEntryMembership;
   },
 ): Agent[] => {
-  const choices = filterVisibleAgents([...agents]).filter((agent) => isAgentChoice(agent.name));
+  const choices = filterVisibleAgents([...agents]);
   return filterAgentsForEntry(choices, options?.entry, options?.membership);
 };
 
@@ -142,11 +134,13 @@ export interface BuildModeAgentOptions {
 export const resolveBuildModeAgent = (options: BuildModeAgentOptions): string | null => {
   const selectable = getSelectablePrimaryAgents(options.agents);
   const selectableNames = new Set(selectable.map((agent) => agent.name));
+  // Restore to a *working* agent, never plan/chat — those are picker choices now,
+  // but this chain is what "leave the special mode" would have returned to.
   const isRestorable = (agentName: string | null | undefined): agentName is string =>
     agentName !== null
     && agentName !== undefined
     && agentName.length > 0
-    && isAgentChoice(agentName)
+    && !isModeAgentName(agentName)
     && selectableNames.has(agentName);
 
   if (isRestorable(options.rememberedAgent)) return options.rememberedAgent;
@@ -158,7 +152,7 @@ export const resolveBuildModeAgent = (options: BuildModeAgentOptions): string | 
   if (isRestorable(options.settingsDefaultAgent)) return options.settingsDefaultAgent;
   if (selectableNames.has(BUILD_AGENT_NAME)) return BUILD_AGENT_NAME;
 
-  return selectable.find((agent) => isAgentChoice(agent.name))?.name ?? null;
+  return selectable.find((agent) => !isModeAgentName(agent.name))?.name ?? null;
 };
 
 export type ModeSelectionDecision =
