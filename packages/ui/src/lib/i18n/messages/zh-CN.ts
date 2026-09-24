@@ -2585,6 +2585,8 @@ export const dict: Record<I18nKey, string> = {
   'chat.modelControls.default': '默认',
   'chat.modelControls.selectAgent': '选择智能体',
   'agents.builtin.build': '构建',
+  'agents.builtin.plan': '计划',
+  'agents.builtin.chat': '聊天',
   'chat.modelControls.costPerMillion': '成本（$/100万 tokens）',
   'chat.modelControls.metadataUnavailable': '模型元数据不可用。',
   'chat.modelControls.addNewProvider': '添加新提供商',

@@ -1467,6 +1467,8 @@ export const dict: Record<I18nKey, string> = {
   'chat.modelControls.searchProvidersOrModels': 'Szukaj dostawców lub modeli',
   'chat.modelControls.selectAgent': 'Wybierz agenta',
   'agents.builtin.build': 'Build',
+  'agents.builtin.plan': 'Plan',
+  'agents.builtin.chat': 'Czat',
   'chat.modelControls.selectModel': 'Wybierz model',
   'chat.modelControls.showThinkingModes': 'Pokaż tryby myślenia',
   'chat.modelControls.temperature': 'Temperatura',

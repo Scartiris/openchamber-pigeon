@@ -2585,6 +2585,8 @@ export const dict: Record<I18nKey, string> = {
   "chat.modelControls.default": "Padrão",
   "chat.modelControls.selectAgent": "Selecionar agente",
   "agents.builtin.build": "Build",
+  "agents.builtin.plan": "Plano",
+  "agents.builtin.chat": "Chat",
   "chat.modelControls.costPerMillion": "Custo ($/1M tokens)",
   "chat.modelControls.metadataUnavailable": "Metadados do modelo indisponíveis.",
   "chat.modelControls.addNewProvider": "Adicionar novo provedor",

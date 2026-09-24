@@ -2619,6 +2619,8 @@ export const dict: Record<I18nKey, string> = {
   'chat.modelControls.default': '기본값',
   'chat.modelControls.selectAgent': '에이전트 선택',
   'agents.builtin.build': '빌드',
+  'agents.builtin.plan': '계획',
+  'agents.builtin.chat': '채팅',
   'chat.modelControls.costPerMillion': '비용 ($/1M 토큰)',
   'chat.modelControls.metadataUnavailable': '모델 메타데이터를 사용할 수 없습니다.',
   'chat.modelControls.addNewProvider': '새 프로바이더 추가',

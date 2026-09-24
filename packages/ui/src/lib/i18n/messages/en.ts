@@ -2619,6 +2619,8 @@ export const dict = {
   'chat.modelControls.default': 'Default',
   'chat.modelControls.selectAgent': 'Select agent',
   'agents.builtin.build': 'Build',
+  'agents.builtin.plan': 'Plan',
+  'agents.builtin.chat': 'Chat',
   'chat.modelControls.costPerMillion': 'Cost ($/1M tokens)',
   'chat.modelControls.metadataUnavailable': 'Model metadata unavailable.',
   'chat.modelControls.addNewProvider': 'Add new provider',

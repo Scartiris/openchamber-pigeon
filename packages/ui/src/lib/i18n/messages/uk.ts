@@ -2585,6 +2585,8 @@ export const dict: Record<I18nKey, string> = {
   "chat.modelControls.default": "За замовчуванням",
   "chat.modelControls.selectAgent": "Вибрати агента",
   "agents.builtin.build": "Build",
+  "agents.builtin.plan": "План",
+  "agents.builtin.chat": "Чат",
   "chat.modelControls.costPerMillion": "Вартість ($/1 млн токенів)",
   "chat.modelControls.metadataUnavailable": "Метадані моделі недоступні.",
   "chat.modelControls.addNewProvider": "Додати нового провайдера",
