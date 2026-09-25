@@ -1,5 +1,7 @@
 import type { Agent } from '@opencode-ai/sdk/v2';
 import { getProviderModelDisplayName, type DisplayProvider } from '@/lib/modelDisplay';
+import { agentBuiltinLabelKey, formatAgentDisplayName } from '@/lib/agentDisplayName';
+import { formatMessage, useI18nStore, type I18nKey } from '@/lib/i18n';
 
 export type MobileControlsPanel = 'model' | 'agent' | 'variant' | null;
 
@@ -23,18 +25,22 @@ export const getCycledPrimaryAgentName = (
     return primaryAgents[nextIndex]?.name ?? null;
 };
 
-const capitalizeLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+const translateAgentLabel = (agentName: string) =>
+    // SAFETY: dictionary keys are a closed union; this is the generated
+    // `agents.builtin.<id>` slot, and formatMessage falls back when missing.
+    formatMessage(useI18nStore.getState().dictionary, agentBuiltinLabelKey(agentName) as I18nKey);
 
 export const getAgentDisplayName = (agents: Agent[], agentName?: string) => {
     if (agentName) {
-        const agent = agents.find((entry) => entry.name === agentName);
-        return agent ? capitalizeLabel(agent.name) : capitalizeLabel(agentName);
+        return formatAgentDisplayName(agentName, translateAgentLabel(agentName));
     }
 
     const primaryAgents = agents.filter((agent) => isPrimaryMode(agent.mode));
     const buildAgent = primaryAgents.find((agent) => agent.name === 'build');
     const fallbackAgent = buildAgent || primaryAgents[0] || agents[0];
-    return fallbackAgent ? capitalizeLabel(fallbackAgent.name) : 'Select agent';
+    return fallbackAgent
+        ? formatAgentDisplayName(fallbackAgent.name, translateAgentLabel(fallbackAgent.name))
+        : 'Select agent';
 };
 
 export const getModelDisplayName = (
@@ -53,5 +59,5 @@ export const formatEffortLabel = (variant?: string) => {
     if (/^\d+(\.\d+)?$/.test(trimmed)) {
         return trimmed;
     }
-    return capitalizeLabel(trimmed);
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 };

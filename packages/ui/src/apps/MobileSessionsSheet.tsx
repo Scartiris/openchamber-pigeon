@@ -60,6 +60,18 @@ import { useMobileSessionExpansionStore } from '@/stores/useMobileSessionExpansi
 import { useMobileSessionTreeStore } from '@/stores/useMobileSessionTreeStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
 import { useSessionDisplayStore, type ProjectSortOrder } from '@/stores/useSessionDisplayStore';
+import { useWorkspaceEntry } from '@/hooks/useWorkspaceEntry';
+import {
+  ENTRY_ICONS,
+  ENTRY_LABEL_KEY,
+  ENTRY_ORDER,
+  entryShowsManagedChats,
+  resolveEntryDraftTarget,
+  selectProjectsForEntry,
+  selectSessionsForEntry,
+} from '@/lib/workspaceEntry';
+import { resolveGlobalSessionDirectory } from '@/stores/useGlobalSessionsStore';
+import { SegmentedSlider } from '@/components/ui/segmented-slider';
 import { useSessionPinnedStore } from '@/stores/useSessionPinnedStore';
 import { orderWorktrees, useWorktreeOrderStore } from '@/stores/useWorktreeOrderStore';
 import {
@@ -938,6 +950,8 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
     [open, variant],
   ));
   const projects = useProjectsStore((state) => state.projects);
+  const workspaceEntry = useWorkspaceEntry();
+  const setWorkspaceEntry = useSessionDisplayStore((state) => state.setWorkspaceEntry);
   const activeProjectId = useProjectsStore((state) => state.activeProjectId);
   const currentDirectory = useDirectoryStore((state) => state.currentDirectory);
   const currentSessionId = useSessionUIStore((state) => state.currentSessionId);
@@ -1064,30 +1078,30 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
     };
   }, [git, open, projects, worktreeRefreshKey]);
 
-  const projectsMeta = React.useMemo<ProjectMeta[]>(
-    () =>
-      sortProjectsByOrder(
-        projects.map((project) => ({
-          id: project.id,
-          label: project.label?.trim() || getProjectLabel(project.path),
-          path: normalizePath(project.path),
-          icon: project.icon,
-          color: project.color,
-          iconImage: project.iconImage,
-          iconBackground: project.iconBackground,
-          isGitRepo: gitProjectPaths.has(normalizePath(project.path)),
-          worktrees: orderWorktrees(
-            worktreeOrderByProject[project.id],
-            worktreesByProject.get(normalizePath(project.path)) ?? [],
-          ),
-          addedAt: project.addedAt,
-          lastOpenedAt: project.lastOpenedAt,
-        })),
-        projectSortOrder,
-        manualProjectOrder,
-      ),
-    [gitProjectPaths, manualProjectOrder, projectSortOrder, projects, worktreeOrderByProject, worktreesByProject],
-  );
+  const projectsMeta = React.useMemo<ProjectMeta[]>(() => {
+    // Same partition the desktop sidebar uses: only this entry's projects.
+    const owned = selectProjectsForEntry(projects, workspaceEntry);
+    return sortProjectsByOrder(
+      owned.map((project) => ({
+        id: project.id,
+        label: project.label?.trim() || getProjectLabel(project.path),
+        path: normalizePath(project.path),
+        icon: project.icon,
+        color: project.color,
+        iconImage: project.iconImage,
+        iconBackground: project.iconBackground,
+        isGitRepo: gitProjectPaths.has(normalizePath(project.path)),
+        worktrees: orderWorktrees(
+          worktreeOrderByProject[project.id],
+          worktreesByProject.get(normalizePath(project.path)) ?? [],
+        ),
+        addedAt: project.addedAt,
+        lastOpenedAt: project.lastOpenedAt,
+      })),
+      projectSortOrder,
+      manualProjectOrder,
+    );
+  }, [gitProjectPaths, manualProjectOrder, projectSortOrder, projects, workspaceEntry, worktreeOrderByProject, worktreesByProject]);
 
   /**
    * Global sessions cover all directories — even unbootstrapped ones — so the tree shows
@@ -1107,8 +1121,12 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
     // Archived sessions never show on mobile (no archived view here): the live
     // overlay can carry them for the active directory, and they'd otherwise
     // surface in search and then "disappear" once the overlay refreshes.
-    return merged.filter((session) => !session.time?.archived);
-  }, [globalActiveSessions, liveSessions]);
+    return merged.filter((session) => {
+      if (session.time?.archived) return false;
+      // Keep the working set warm in the store, but only list this entry.
+      return selectSessionsForEntry([session], workspaceEntry, resolveGlobalSessionDirectory).length === 1;
+    });
+  }, [globalActiveSessions, liveSessions, workspaceEntry]);
 
   // Archive and delete take a session's subagents with it. Lineage is resolved
   // over the whole active list rather than the rendered bucket: a subagent can
@@ -1129,9 +1147,14 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
   // by any registered project; they get their own section above the project
   // tree, the same split the desktop sidebar makes. Temporary /btw forks are
   // dropped here as well.
-  const { projectSessions, chatSessions } = React.useMemo(
+  const { projectSessions, chatSessions: allChatSessions } = React.useMemo(
     () => partitionSidebarSessions(sessions, false),
     [sessions],
+  );
+  // Managed chats live under home (code); hide the whole group on 工作.
+  const chatSessions = React.useMemo(
+    () => (entryShowsManagedChats(workspaceEntry) ? allChatSessions : []),
+    [allChatSessions, workspaceEntry],
   );
   const chatsBucket = React.useMemo<WorktreeBucket>(() => ({
     key: CHAT_DRAFT_PROJECT_ID,
@@ -1422,7 +1445,8 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
   };
 
   const handleStartNewChat = () => {
-    openNewSessionDraft();
+    const target = resolveEntryDraftTarget(useProjectsStore.getState().projects, workspaceEntry);
+    openNewSessionDraft(target ?? {});
     onOpenChange(false);
   };
 
@@ -1618,6 +1642,22 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
               auto-scroll to the current session naturally tucks it away, and
               scrolling to the very top brings it back. */}
           <div className={cn('px-4 pb-2 pt-1', editingOrder && 'hidden')}>
+            <div className="mb-2 flex justify-center" data-workspace-entry={workspaceEntry}>
+              <SegmentedSlider
+                ariaLabel={t('header.workspaceEntry.label')}
+                value={workspaceEntry}
+                onChange={(next) => setWorkspaceEntry(next)}
+                options={ENTRY_ORDER.map((candidate) => ({
+                  value: candidate,
+                  icon: ENTRY_ICONS[candidate],
+                  text: t(ENTRY_LABEL_KEY[candidate]),
+                  label: `${t(ENTRY_LABEL_KEY[candidate])} — ${t('header.workspaceEntry.hint')}`,
+                }))}
+                stopClassName="h-8 min-w-[72px] gap-1.5 px-2.5"
+                className="h-10"
+                iconClassName="h-5 w-5"
+              />
+            </div>
             <SessionSearchInput
               value={query}
               onSearch={setQuery}
