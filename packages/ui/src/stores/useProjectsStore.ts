@@ -54,7 +54,11 @@ interface ProjectsStore {
   activeProjectId: string | null;
   manualProjectOrder: string[];
 
-  addProject: (path: string, options?: { label?: string; id?: string }) => Promise<ProjectEntry | null>;
+  addProject: (path: string, options?: {
+    label?: string;
+    id?: string;
+    device?: { id: string; remotePath: string; mountRoot: string };
+  }) => Promise<ProjectEntry | null>;
   addProjects: (paths: string[]) => Promise<ProjectEntry[]>;
   removeProject: (id: string) => void;
   setActiveProject: (id: string) => void;
@@ -320,6 +324,19 @@ const sanitizeProjects = (value: unknown): ProjectEntry[] => {
     }
     if (typeof candidate.sidebarCollapsed === 'boolean') {
       project.sidebarCollapsed = candidate.sidebarCollapsed;
+    }
+    // Keep the host-mounted device binding so health badges survive a
+    // settings round-trip (server sanitizeProjects also preserves it).
+    const deviceSource = candidate.device;
+    if (deviceSource && Object.prototype.toString.call(deviceSource) === '[object Object]') {
+      // SAFETY: the object tag proves a plain object; fields are re-parsed below.
+      const device = deviceSource as { id?: unknown; remotePath?: unknown; mountRoot?: unknown };
+      const deviceId = parseNonEmptyTrimmedString(device.id, {});
+      const remotePath = parseNonEmptyTrimmedString(device.remotePath, {});
+      const mountRoot = parseNonEmptyTrimmedString(device.mountRoot, {});
+      if (deviceId && remotePath && mountRoot) {
+        project.device = { id: deviceId, remotePath, mountRoot };
+      }
     }
     result.push(project);
   }
@@ -594,7 +611,11 @@ export const useProjectsStore = create<ProjectsStore>()(
       return { ok: true, normalizedPath: normalized };
     },
 
-    addProject: async (path: string, options?: { label?: string; id?: string }) => {
+    addProject: async (path: string, options?: {
+      label?: string;
+      id?: string;
+      device?: { id: string; remotePath: string; mountRoot: string };
+    }) => {
       if (isVSCodeProjectsRuntime) {
         // Projects are scoped to VS Code workspace folders in this runtime.
         // Adding a folder through the extension host makes the project appear
@@ -635,6 +656,7 @@ export const useProjectsStore = create<ProjectsStore>()(
       const now = Date.now();
       const label = options?.label?.trim() || deriveProjectLabel(normalizedPath);
       const id = createProjectIdFromPath(normalizedPath);
+      const device = options?.device;
       const entry: ProjectEntry = {
         id,
         path: normalizedPath,
@@ -643,6 +665,13 @@ export const useProjectsStore = create<ProjectsStore>()(
         addedAt: now,
         lastOpenedAt: now,
       };
+      if (device && device.id && device.remotePath && device.mountRoot) {
+        entry.device = {
+          id: device.id,
+          remotePath: device.remotePath,
+          mountRoot: device.mountRoot,
+        };
+      }
 
       const nextProjects = [...get().projects, entry];
       set({ projects: nextProjects });

@@ -338,6 +338,13 @@ const projectEntrySchema = z.object({
   defaultModel: nonEmptyTrimmed.optional().catch(undefined),
   defaultAgent: nonEmptyTrimmed.optional().catch(undefined),
   defaultVariant: nonEmptyTrimmed.optional().catch(undefined),
+  // Host-mounted device project binding. Omitting it would strip the field on
+  // every settings load/save the same way #3552 stripped model defaults.
+  device: z.object({
+    id: nonEmptyTrimmed,
+    remotePath: nonEmptyTrimmed,
+    mountRoot: nonEmptyTrimmed,
+  }).optional().catch(undefined),
 });
 
 export const parseProjects = fromSchema(
@@ -367,6 +374,13 @@ export const parseProjects = fromSchema(
       if (parsed.data.defaultAgent) project.defaultAgent = parsed.data.defaultAgent;
       if (parsed.data.defaultVariant) project.defaultVariant = parsed.data.defaultVariant;
       if (parsed.data.sidebarCollapsed !== undefined) project.sidebarCollapsed = parsed.data.sidebarCollapsed;
+      if (parsed.data.device) {
+        project.device = {
+          id: parsed.data.device.id,
+          remotePath: parsed.data.device.remotePath,
+          mountRoot: parsed.data.device.mountRoot,
+        };
+      }
       result.push(project);
     }
     return result;

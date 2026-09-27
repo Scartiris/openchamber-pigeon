@@ -1,5 +1,7 @@
 import { asBoolean, asFiniteNumber, asNonEmptyString, asObject } from './parse.js';
 import { buildJoinScript } from './join-script.js';
+import { resolveTunnelHost } from './transport.js';
+import { projectPathFromRemote, remoteRelativeSegment } from './project-paths.js';
 
 const readJsonBody = (req) => new Promise((resolve, reject) => {
   if (req.body !== undefined && req.body !== null) {
@@ -48,6 +50,7 @@ export function registerDeviceRoutes(app, runtime) {
     toolRuntime,
     mcpHandler,
     statusRuntime,
+    mountRegistry,
     express,
   } = runtime;
 
@@ -235,6 +238,155 @@ export function registerDeviceRoutes(app, runtime) {
       return res.status(outcome.status).json(outcome.json);
     } catch (error) {
       sendError(res, error, 'Device MCP request failed');
+    }
+  });
+
+  const resolveMountSsh = (device) => {
+    const connection = device?.connection || {};
+    if (connection.tailscale?.host) {
+      return {
+        host: connection.tailscale.host,
+        port: asFiniteNumber(connection.tailscale.sshPort, 22),
+        user: device.auth?.sshUser || 'agent',
+      };
+    }
+    if (connection.tunnel?.sshPort) {
+      return {
+        host: resolveTunnelHost(connection),
+        port: asFiniteNumber(connection.tunnel.sshPort, 22),
+        user: device.auth?.sshUser || 'agent',
+      };
+    }
+    return null;
+  };
+
+  const mountPayloadFor = async (deviceId, { remotePath = null } = {}) => {
+    const device = await registry.getDevice(deviceId);
+    if (!device) {
+      throw Object.assign(new Error('Device not found'), { code: 'device_not_found', statusCode: 404 });
+    }
+    const health = mountRegistry
+      ? await mountRegistry.healthFor(deviceId)
+      : { state: 'absent', mountRoot: null, remoteRoot: null, enabled: false };
+    let projectPath = null;
+    if (remotePath && health.mountRoot && health.remoteRoot) {
+      projectPath = projectPathFromRemote({
+        deviceId,
+        remoteRoot: health.remoteRoot,
+        remotePath,
+      });
+      // Validate escape even when health is not ready.
+      remoteRelativeSegment(health.remoteRoot, remotePath);
+    }
+    return {
+      deviceId,
+      mount: mountRegistry ? await mountRegistry.getMount(deviceId) : null,
+      health,
+      projectPath,
+    };
+  };
+
+  app.get('/api/devices/:id/mount', async (req, res) => {
+    try {
+      if (!mountRegistry) {
+        return res.status(503).json({ error: 'Mount registry unavailable', code: 'mount_unavailable' });
+      }
+      res.json(await mountPayloadFor(req.params.id));
+    } catch (error) {
+      sendError(res, error, 'Failed to read device mount');
+    }
+  });
+
+  app.put('/api/devices/:id/mount', jsonParser, async (req, res) => {
+    try {
+      if (!mountRegistry) {
+        return res.status(503).json({ error: 'Mount registry unavailable', code: 'mount_unavailable' });
+      }
+      const device = await registry.getDevice(req.params.id);
+      if (!device) return res.status(404).json({ error: 'Device not found', code: 'device_not_found' });
+      const body = asObject(req.body) || {};
+      const remoteRoot = asNonEmptyString(body.remoteRoot);
+      if (!remoteRoot) {
+        return res.status(400).json({ error: 'remoteRoot is required', code: 'invalid_input' });
+      }
+      const ssh = resolveMountSsh(device);
+      if (!ssh) {
+        return res.status(400).json({
+          error: 'Device has no reachable SSH transport for mounting',
+          code: 'transport_unavailable',
+        });
+      }
+      const enabled = body.enabled === undefined ? true : asBoolean(body.enabled, true);
+      const entry = await mountRegistry.upsertMount({
+        deviceId: device.id,
+        remoteRoot,
+        ssh,
+        enabled,
+      });
+      const health = await mountRegistry.healthFor(device.id);
+      res.json({ mount: entry, health, mountParent: mountRegistry.mountParent });
+    } catch (error) {
+      sendError(res, error, 'Failed to upsert device mount');
+    }
+  });
+
+  app.post('/api/devices/:id/mount/ensure', jsonParser, async (req, res) => {
+    try {
+      if (!mountRegistry) {
+        return res.status(503).json({ error: 'Mount registry unavailable', code: 'mount_unavailable' });
+      }
+      const device = await registry.getDevice(req.params.id);
+      if (!device) return res.status(404).json({ error: 'Device not found', code: 'device_not_found' });
+      const body = asObject(req.body) || {};
+      const remoteRoot = asNonEmptyString(body.remoteRoot);
+      const remotePath = asNonEmptyString(body.remotePath) || remoteRoot;
+      let entry = await mountRegistry.getMount(device.id);
+      if (remoteRoot) {
+        const ssh = resolveMountSsh(device);
+        if (!ssh) {
+          return res.status(400).json({
+            error: 'Device has no reachable SSH transport for mounting',
+            code: 'transport_unavailable',
+          });
+        }
+        entry = await mountRegistry.upsertMount({
+          deviceId: device.id,
+          remoteRoot,
+          ssh,
+          enabled: true,
+        });
+      } else if (!entry) {
+        return res.status(400).json({
+          error: 'remoteRoot is required when no mount is configured',
+          code: 'invalid_input',
+        });
+      } else if (!entry.enabled) {
+        const ssh = resolveMountSsh(device);
+        entry = await mountRegistry.upsertMount({
+          deviceId: device.id,
+          remoteRoot: entry.remoteRoot,
+          ssh,
+          enabled: true,
+        });
+      }
+      // Full payload including projectPath for the selected remote path.
+      const payload = await mountPayloadFor(device.id, { remotePath: remotePath || entry.remoteRoot });
+      res.json(payload);
+    } catch (error) {
+      sendError(res, error, 'Failed to ensure device mount');
+    }
+  });
+
+  app.delete('/api/devices/:id/mount', async (req, res) => {
+    try {
+      if (!mountRegistry) {
+        return res.status(503).json({ error: 'Mount registry unavailable', code: 'mount_unavailable' });
+      }
+      const entry = await mountRegistry.disableMount(req.params.id);
+      if (!entry) return res.status(404).json({ error: 'Mount not found', code: 'mount_not_found' });
+      res.json({ mount: entry, health: await mountRegistry.healthFor(req.params.id) });
+    } catch (error) {
+      sendError(res, error, 'Failed to disable device mount');
     }
   });
 

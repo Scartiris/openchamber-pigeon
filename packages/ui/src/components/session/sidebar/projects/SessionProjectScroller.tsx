@@ -20,6 +20,7 @@ import { useI18n } from '@/lib/i18n';
 import type { ProjectSortOrder } from '@/stores/useSessionDisplayStore';
 import { streamPerfCount } from '@/stores/utils/streamDebug';
 import { CrossfadeZoneHeaders } from './CrossfadeZoneHeaders';
+import { DeviceProjectHealthBadge } from './DeviceProjectHealthBadge';
 
 type SessionProjectScrollerState = Pick<SessionGroupSectionProps,
   | 'editingId'
@@ -261,7 +262,18 @@ function SessionProjectScrollerComponent(props: Props): React.ReactNode {
                   hideDirectoryControls={view.hideDirectoryControls}
                   mobileVariant={view.mobileVariant}
                   alwaysShowActions={view.alwaysShowActions}
-                   statusIndicator={isCollapsed ? actions.renderProjectStatusIndicator?.(projectKey, section.groups) : null}
+                   statusIndicator={(
+                     <>
+                       {project.device ? (
+                         <DeviceProjectHealthBadge
+                           deviceId={project.device.id}
+                           remotePath={project.device.remotePath}
+                           compact
+                         />
+                       ) : null}
+                       {isCollapsed ? actions.renderProjectStatusIndicator?.(projectKey, section.groups) : null}
+                     </>
+                   )}
                     openSidebarMenuKey={model.state.openSidebarMenuKey}
                   setOpenSidebarMenuKey={model.state.setOpenSidebarMenuKey}
                   projectPickerOptions={model.singleProjectMode ? projectPickerOptions : undefined}

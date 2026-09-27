@@ -24,6 +24,43 @@ describe("useProjectsStore settings synchronization", () => {
     }
   })
 
+  test("keeps a complete device project binding through settings sync", () => {
+    const previous = useProjectsStore.getState()
+    const directoryState = useDirectoryStore.getState()
+    const sdkDirectory = opencodeClient.getDirectory()
+    try {
+      useProjectsStore.getState().synchronizeFromSettings({
+        projects: [
+          {
+            id: "devproj",
+            path: "/mnt/oc-devices/dev_abc/proj",
+            device: {
+              id: "dev_abc",
+              remotePath: "C:/Users/alice/proj",
+              mountRoot: "/mnt/oc-devices/dev_abc",
+            },
+          },
+          {
+            id: "partial",
+            path: "/b",
+            device: { id: "dev_abc", remotePath: "C:/Users/alice/x" },
+          } as ProjectEntry,
+        ],
+      })
+      const projects = useProjectsStore.getState().projects
+      expect(projects[0]?.device).toEqual({
+        id: "dev_abc",
+        remotePath: "C:/Users/alice/proj",
+        mountRoot: "/mnt/oc-devices/dev_abc",
+      })
+      expect(projects[1]?.device).toBeUndefined()
+    } finally {
+      useProjectsStore.setState(previous, true)
+      useDirectoryStore.setState(directoryState, true)
+      opencodeClient.setDirectory(sdkDirectory)
+    }
+  })
+
   test("directory navigation preserves roots and does not create history duplicates for Windows spelling variants", () => {
     const previous = useDirectoryStore.getState()
     const sdkDirectory = opencodeClient.getDirectory()

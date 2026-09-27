@@ -9,6 +9,7 @@ import { createDeviceToolRuntime } from './tools.js';
 import { createDeviceMcpHandler } from './mcp.js';
 import { createDeviceStatusRuntime } from './status.js';
 import { createDeviceMetricsRuntime } from './metrics.js';
+import { createDeviceMountRegistry } from './mount-registry.js';
 import { registerDeviceRoutes } from './routes.js';
 
 export function createDeviceRuntime({
@@ -69,6 +70,11 @@ export function createDeviceRuntime({
     authenticateToken: (token) => tokens.authenticate(token),
   });
   const statusRuntime = createDeviceStatusRuntime({ net, registry });
+  const mountRegistry = createDeviceMountRegistry({
+    fsPromises,
+    path,
+    storePath: path.join(devicesDir, 'device-mounts.json'),
+  });
 
   return {
     registry,
@@ -79,6 +85,7 @@ export function createDeviceRuntime({
     mcpHandler,
     statusRuntime,
     metricsRuntime,
+    mountRegistry,
     express,
     registerRoutes: (app) => registerDeviceRoutes(app, {
       registry,
@@ -88,6 +95,7 @@ export function createDeviceRuntime({
       toolRuntime,
       mcpHandler,
       statusRuntime,
+      mountRegistry,
       express,
     }),
   };

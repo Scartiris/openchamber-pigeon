@@ -733,6 +733,12 @@ export interface ProjectEntry {
   addedAt?: number;
   lastOpenedAt?: number;
   sidebarCollapsed?: boolean;
+  /** Host-mounted device folder; path is the POSIX mount path used as `path`. */
+  device?: {
+    id: string;
+    remotePath: string;
+    mountRoot: string;
+  };
 }
 
 /**

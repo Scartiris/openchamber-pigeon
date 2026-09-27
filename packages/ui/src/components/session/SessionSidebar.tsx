@@ -430,6 +430,7 @@ const SessionSidebarComponent: React.FC<SessionSidebarProps> = ({
         color: project.color ?? undefined,
         iconImage: project.iconImage ?? undefined,
         iconBackground: project.iconBackground ?? undefined,
+        device: project.device ?? undefined,
         addedAt: project.addedAt,
         lastOpenedAt: project.lastOpenedAt,
         sidebarCollapsed: project.sidebarCollapsed,

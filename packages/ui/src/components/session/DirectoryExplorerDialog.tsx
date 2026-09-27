@@ -30,6 +30,15 @@ import {
   isFilesystemError,
   type FilesystemErrorReason,
 } from '@/lib/api/files-errors';
+import {
+  ensureDeviceMount,
+  listDeviceDirectories,
+  listMountedDevices,
+  readDeviceMount,
+  waitForDeviceMountReady,
+  type DeviceBrowseEntry,
+  type DeviceListEntry,
+} from '@/lib/deviceProjects';
 
 interface DirectoryExplorerDialogProps {
   open: boolean;
@@ -180,6 +189,13 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
   const [selectedGitIdentityId, setSelectedGitIdentityId] = React.useState<string | null>(null);
   const [showHidden, setShowHidden] = React.useState(false);
   const [selectedPaths, setSelectedPaths] = React.useState<string[]>([]);
+  const [browseSource, setBrowseSource] = React.useState<'local' | 'device'>('local');
+  const [devices, setDevices] = React.useState<DeviceListEntry[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = React.useState<string | null>(null);
+  const [deviceRemoteRoot, setDeviceRemoteRoot] = React.useState('C:/');
+  const [deviceEntries, setDeviceEntries] = React.useState<DeviceBrowseEntry[]>([]);
+  const [deviceBrowsePath, setDeviceBrowsePath] = React.useState('C:/');
+  const [deviceError, setDeviceError] = React.useState<string | null>(null);
 
   const explorerRootDirectory = dialogHomeDirectory || homeDirectory;
 
@@ -201,6 +217,12 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
     setSelectedGitIdentityId(null);
     setShowHidden(false);
     setSelectedPaths([]);
+    setBrowseSource('local');
+    setSelectedDeviceId(null);
+    setDeviceEntries([]);
+    setDeviceBrowsePath('C:/');
+    setDeviceRemoteRoot('C:/');
+    setDeviceError(null);
     requestAnimationFrame(() => focusPathInput(inputRef.current));
 
     let cancelled = false;
@@ -235,6 +257,49 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
   }, [gitIdentityProfiles, globalGitIdentity]);
 
   React.useEffect(() => {
+    if (!open || browseSource !== 'device') return;
+    let cancelled = false;
+    listMountedDevices()
+      .then((list) => {
+        if (!cancelled) setDevices(list);
+      })
+      .catch(() => {
+        if (!cancelled) setDevices([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [browseSource, open]);
+
+  React.useEffect(() => {
+    if (!open || browseSource !== 'device' || !selectedDeviceId) {
+      setDeviceEntries([]);
+      setDeviceError(null);
+      return;
+    }
+    let cancelled = false;
+    setIsLoading(true);
+    setDeviceError(null);
+    listDeviceDirectories(selectedDeviceId, deviceBrowsePath)
+      .then((entries) => {
+        if (cancelled) return;
+        setDeviceEntries(entries.filter((entry) => entry.isDirectory));
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setDeviceEntries([]);
+          setDeviceError(error instanceof Error ? error.message : 'unknown');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [browseSource, deviceBrowsePath, open, selectedDeviceId]);
+
+  React.useEffect(() => {
     if (!open || !isCloneMode || selectedGitIdentityId !== null) return;
     const defaultId = typeof defaultGitIdentityId === 'string' ? defaultGitIdentityId.trim() : '';
     if (defaultId && availableGitIdentities.some((identity) => identity.id === defaultId)) {
@@ -263,7 +328,7 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
   );
 
   React.useEffect(() => {
-    if (!open || !browseDirectoryAbsolutePath) {
+    if (!open || browseSource !== 'local' || !browseDirectoryAbsolutePath) {
       setEntries([]);
       setBrowseErrorReason(null);
       return;
@@ -302,7 +367,7 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
     return () => {
       cancelled = true;
     };
-  }, [browseDirectoryAbsolutePath, browseReloadKey, open]);
+  }, [browseDirectoryAbsolutePath, browseReloadKey, browseSource, open]);
 
   const filteredEntries = React.useMemo(() => {
     const lowerFilter = browseFilterQuery.toLowerCase();
@@ -314,6 +379,22 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
 
   const rows = React.useMemo<BrowseRow[]>(() => {
     const nextRows: BrowseRow[] = [];
+    if (browseSource === 'device') {
+      if (deviceBrowsePath && deviceBrowsePath !== 'C:/' && deviceBrowsePath !== 'C:') {
+        const parent = deviceBrowsePath.replace(/\\/g, '/').replace(/\/+$/, '').split('/').slice(0, -1).join('/') || 'C:/';
+        nextRows.push({ type: 'up', value: 'browse:up', name: '..', path: `${parent}/` });
+      }
+      for (const entry of deviceEntries) {
+        nextRows.push({
+          type: 'directory',
+          value: `browse:${entry.path}`,
+          name: entry.name,
+          path: entry.path,
+          disabled: false,
+        });
+      }
+      return nextRows;
+    }
     if (canNavigateUp(query)) {
       nextRows.push({ type: 'up', value: 'browse:up', name: '..', path: getBrowseParentPath(query) });
     }
@@ -328,7 +409,7 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
       });
     }
     return nextRows;
-  }, [addedProjectPaths, filteredEntries, query]);
+  }, [addedProjectPaths, browseSource, deviceBrowsePath, deviceEntries, filteredEntries, query]);
 
   React.useEffect(() => {
     setHighlightedIndex(0);
@@ -356,9 +437,12 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
   }, []);
 
   const targetPath = React.useMemo(() => {
+    if (browseSource === 'device') {
+      return trimTrailingSeparators(deviceBrowsePath.replace(/\\/g, '/'));
+    }
     if (!explorerRootDirectory) return '';
     return trimTrailingSeparators(displayPathToAbsolutePath(query, explorerRootDirectory));
-  }, [explorerRootDirectory, query]);
+  }, [browseSource, deviceBrowsePath, explorerRootDirectory, query]);
   const normalizedTargetPath = normalizeDirectoryPath(targetPath);
   const isAlreadyAdded = Boolean(normalizedTargetPath && addedProjectPaths.has(normalizedTargetPath));
   const exactEntry = React.useMemo(() => {
@@ -376,10 +460,14 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
   );
   const canAddProject = !isConfirming
     && !isOpeningFinder
-    && browseErrorReason !== 'os-permission'
-    && browseErrorReason !== 'invalid-response'
-    && browseErrorReason !== 'unknown'
-    && ((!isCloneMode && selectionPaths.length > 0) || (!isAlreadyAdded && Boolean(targetPath)));
+    && (browseSource === 'device'
+      ? Boolean(selectedDeviceId && targetPath && !isAlreadyAdded)
+      : (
+        browseErrorReason !== 'os-permission'
+        && browseErrorReason !== 'invalid-response'
+        && browseErrorReason !== 'unknown'
+        && ((!isCloneMode && selectionPaths.length > 0) || (!isAlreadyAdded && Boolean(targetPath)))
+      ));
   const canSubmitClone = canAddProject && cloneRemoteUrl.trim().length > 0;
   const highlightedRow = rows[highlightedIndex] ?? null;
   const hasHighlightedBrowseItem = Boolean(
@@ -440,22 +528,55 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
     handleClose();
   }, [handleClose, isMobile, openNewSessionDraft, setSessionSwitcherOpen]);
 
-  const handleQuickAdd = React.useCallback(async (event: React.MouseEvent, path: string) => {
-    event.stopPropagation();
-    const normalized = normalizeDirectoryPath(path);
-    if (normalized && addedProjectPaths.has(normalized)) return;
-    const project = await addProject(path);
-    if (!project) {
-      toast.error(t('directoryExplorerDialog.toast.failedToAddProject'), {
-        description: t('directoryExplorerDialog.toast.selectValidDirectoryPath'),
-      });
-      return;
-    }
-    openProjectDraft(project.id, project.path);
-  }, [addProject, addedProjectPaths, openProjectDraft, t]);
-
   const finalizeSelection = React.useCallback(async (target: string) => {
     if (isConfirming) return;
+    if (browseSource === 'device') {
+      if (!selectedDeviceId || !target) return;
+      setIsConfirming(true);
+      try {
+        const remotePath = target;
+        // Prefer a previously configured mount root over the browse default so
+        // ensure never widens (or replaces) a narrower root with `C:/`.
+        const existing = await readDeviceMount(selectedDeviceId).catch(() => null);
+        const remoteRoot = existing?.mount?.remoteRoot
+          || existing?.health.remoteRoot
+          || deviceRemoteRoot
+          || 'C:/';
+        const ensured = await ensureDeviceMount(selectedDeviceId, { remoteRoot, remotePath });
+        const projectPath = ensured.projectPath;
+        if (!projectPath) {
+          toast.error(t('directoryExplorerDialog.toast.failedToAddProject'), {
+            description: t('directoryExplorerDialog.toast.deviceMountPending'),
+          });
+          return;
+        }
+        // Host mounts land asynchronously (systemd timer). Do not register a
+        // project against a path that is not a real directory yet.
+        const ready = await waitForDeviceMountReady(selectedDeviceId, { timeoutMs: 15_000 });
+        const project = await addProject(projectPath, {
+          label: remotePath.split(/[\\/]/).filter(Boolean).pop() || remotePath,
+          device: {
+            id: selectedDeviceId,
+            remotePath,
+            mountRoot: ready.mount?.mountRoot || ready.health.mountRoot || ensured.mount?.mountRoot || '',
+          },
+        });
+        if (!project) {
+          toast.error(t('directoryExplorerDialog.toast.failedToAddProject'), {
+            description: t('directoryExplorerDialog.toast.selectValidDirectoryPath'),
+          });
+          return;
+        }
+        openProjectDraft(project.id, project.path);
+      } catch (error) {
+        toast.error(t('directoryExplorerDialog.toast.failedToSelectDirectory'), {
+          description: error instanceof Error ? error.message : t('directoryExplorerDialog.toast.unknownError'),
+        });
+      } finally {
+        setIsConfirming(false);
+      }
+      return;
+    }
     const normalized = normalizeDirectoryPath(target);
     // Batch selections supersede the single-target flow. Only the single-target
     // flow is blocked by an already-added (or missing) directory.
@@ -516,15 +637,43 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
     } finally {
       setIsConfirming(false);
     }
-  }, [addProject, addProjects, addedProjectPaths, cloneRemoteUrl, handleClose, isCloneMode, isConfirming, openProjectDraft, selectedGitIdentity?.id, selectedPaths, shouldCreateTarget, targetPath, t]);
+  }, [addProject, addProjects, addedProjectPaths, browseSource, cloneRemoteUrl, deviceRemoteRoot, handleClose, isCloneMode, isConfirming, openProjectDraft, selectedDeviceId, selectedGitIdentity?.id, selectedPaths, shouldCreateTarget, t, targetPath]);
+
+  const handleQuickAdd = React.useCallback(async (event: React.MouseEvent, path: string) => {
+    event.stopPropagation();
+    const normalized = normalizeDirectoryPath(path);
+    if (normalized && addedProjectPaths.has(normalized)) return;
+    // Device rows must go through the same ensure+wait path as finalize: a
+    // raw addProject would register a remote path the container cannot see.
+    if (browseSource === 'device') {
+      await finalizeSelection(path);
+      return;
+    }
+    const project = await addProject(path);
+    if (!project) {
+      toast.error(t('directoryExplorerDialog.toast.failedToAddProject'), {
+        description: t('directoryExplorerDialog.toast.selectValidDirectoryPath'),
+      });
+      return;
+    }
+    openProjectDraft(project.id, project.path);
+  }, [addProject, addedProjectPaths, browseSource, finalizeSelection, openProjectDraft, t]);
 
   const browseToDisplayPath = React.useCallback((displayPath: string) => {
+    if (browseSource === 'device') {
+      setDeviceBrowsePath(displayPath.replace(/\\/g, '/'));
+      return;
+    }
     setQuery(ensureBrowseDirectoryPath(displayPath));
-  }, []);
+  }, [browseSource]);
 
   const browseToEntry = React.useCallback((entry: BrowseEntry) => {
+    if (browseSource === 'device') {
+      setDeviceBrowsePath(entry.path.replace(/\\/g, '/'));
+      return;
+    }
     setQuery(appendBrowsePathSegment(query, entry.name));
-  }, [query]);
+  }, [browseSource, query]);
 
   const executeRow = React.useCallback((row: BrowseRow | null) => {
     if (!row) return;
@@ -622,6 +771,71 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
       {t('directoryExplorerDialog.toggle.showHidden')}
     </button>
   );
+
+  const sourceToggle = (
+    <div className="flex items-center gap-1 px-2.5 pt-1.5">
+      {(['local', 'device'] as const).map((source) => (
+        <button
+          key={source}
+          type="button"
+          onClick={() => setBrowseSource(source)}
+          className={cn(
+            'rounded-lg px-2.5 py-1 typography-meta transition-colors',
+            browseSource === source
+              ? 'bg-interactive-selection text-interactive-selection-foreground'
+              : 'text-muted-foreground hover:bg-interactive-hover/40',
+          )}
+          data-directory-source={source}
+        >
+          {source === 'local'
+            ? t('directoryExplorerDialog.source.local')
+            : t('directoryExplorerDialog.source.device')}
+        </button>
+      ))}
+    </div>
+  );
+
+  const devicePicker = browseSource === 'device' && !selectedDeviceId ? (
+    <div className="px-2.5 pb-2">
+      <div className="mb-1.5 typography-meta font-medium uppercase tracking-wide text-muted-foreground/80">
+        {t('directoryExplorerDialog.source.selectDevice')}
+      </div>
+      {devices.length === 0 ? (
+        <div className="py-6 text-center typography-ui-label text-muted-foreground">
+          {t('directoryExplorerDialog.source.noDevices')}
+        </div>
+      ) : (
+        <div className="space-y-0.5">
+          {devices.map((device) => {
+            const online = device.status === 'online';
+            return (
+              <button
+                key={device.id}
+                type="button"
+                disabled={!online}
+                className={cn(
+                  'flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left typography-ui-label',
+                  online ? 'hover:bg-interactive-hover/40' : 'opacity-50',
+                )}
+                onClick={() => {
+                  if (!online) return;
+                  setSelectedDeviceId(device.id);
+                  setDeviceBrowsePath(deviceRemoteRoot);
+                }}
+              >
+                <span>{device.name}</span>
+                <span className="typography-meta text-muted-foreground">
+                  {online
+                    ? t('directoryExplorerDialog.source.deviceOnline')
+                    : t('directoryExplorerDialog.source.deviceOffline')}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  ) : null;
 
   const inputSection = (
     <div className="px-2.5 py-1.5">
@@ -787,8 +1001,10 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
 
   const content = (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      {inputSection}
-      {resultsSection}
+      {sourceToggle}
+      {devicePicker}
+      {!(browseSource === 'device' && !selectedDeviceId) ? inputSection : null}
+      {!(browseSource === 'device' && !selectedDeviceId) ? resultsSection : null}
     </div>
   );
 

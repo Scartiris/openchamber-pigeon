@@ -161,6 +161,17 @@ export const createSettingsNormalizationRuntime = (dependencies) => {
       const lastOpenedAt = Number.isFinite(candidate.lastOpenedAt)
         ? Number(candidate.lastOpenedAt)
         : null;
+      // Optional device-project binding (host-mounted remote folder). Kept so a
+      // settings round-trip does not strip the association the UI needs for
+      // health badges and remount.
+      const deviceSource = candidate.device && typeof candidate.device === 'object' ? candidate.device : null;
+      const deviceId = deviceSource && typeof deviceSource.id === 'string' ? deviceSource.id.trim() : '';
+      const deviceRemotePath = deviceSource && typeof deviceSource.remotePath === 'string'
+        ? deviceSource.remotePath.trim()
+        : '';
+      const deviceMountRoot = deviceSource && typeof deviceSource.mountRoot === 'string'
+        ? deviceSource.mountRoot.trim()
+        : '';
 
       if (!id || !normalizedPath) continue;
       if (seenIds.has(id)) continue;
@@ -182,6 +193,9 @@ export const createSettingsNormalizationRuntime = (dependencies) => {
         ...(defaultModel && defaultModel.includes('/') && defaultVariant ? { defaultVariant } : {}),
         ...(Number.isFinite(addedAt) && addedAt >= 0 ? { addedAt } : {}),
         ...(Number.isFinite(lastOpenedAt) && lastOpenedAt >= 0 ? { lastOpenedAt } : {}),
+        ...(deviceId && deviceRemotePath && deviceMountRoot
+          ? { device: { id: deviceId, remotePath: deviceRemotePath, mountRoot: deviceMountRoot } }
+          : {}),
       };
 
       if (candidate.iconImage === null) {

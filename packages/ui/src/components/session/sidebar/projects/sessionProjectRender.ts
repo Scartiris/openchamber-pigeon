@@ -9,6 +9,7 @@ export type ProjectSection = {
     color?: string;
     iconImage?: { mime: string; updatedAt: number; source: 'custom' | 'auto' };
     iconBackground?: string;
+    device?: { id: string; remotePath: string; mountRoot: string };
   };
   groups: SessionGroup[];
 };

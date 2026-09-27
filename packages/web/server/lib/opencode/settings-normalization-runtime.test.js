@@ -135,6 +135,33 @@ describe('settings normalization runtime - symlink resolution', () => {
       expect(result[0].defaultAgent).toBe('plan');
     });
 
+    it('keeps a complete device project binding and drops partial ones', () => {
+      const runtime = createTestRuntime({
+        realpathSync: (p) => p,
+        path: { resolve: (p) => p, sep: '/', dirname: (p) => p.split('/').slice(0, -1).join('/') || '/' },
+      });
+
+      const result = runtime.sanitizeProjects([
+        {
+          id: 'proj1',
+          path: '/mnt/oc-devices/dev_abc/proj',
+          device: { id: 'dev_abc', remotePath: 'C:/Users/alice/proj', mountRoot: '/mnt/oc-devices/dev_abc' },
+        },
+        {
+          id: 'proj2',
+          path: '/b',
+          device: { id: 'dev_abc', remotePath: 'C:/Users/alice/x' },
+        },
+      ]);
+
+      expect(result[0].device).toEqual({
+        id: 'dev_abc',
+        remotePath: 'C:/Users/alice/proj',
+        mountRoot: '/mnt/oc-devices/dev_abc',
+      });
+      expect(result[1].device).toBe(undefined);
+    });
+
     it('deduplicates projects that resolve to the same realpath', () => {
       const runtime = createTestRuntime({
         realpathSync: (p) => p.startsWith('/symlink') ? '/real/project' : p,
