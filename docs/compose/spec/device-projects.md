@@ -3,7 +3,7 @@ feature: device-projects
 status: delivered
 updated: 2026-09-21
 branch: feature/device-projects
-commits: bdeff4385..(uncommitted working tree)
+commits: bdeff4385..311af9387
 ---
 
 # 设备节点项目 · 服务器工作台选用端上本地目录为项目
