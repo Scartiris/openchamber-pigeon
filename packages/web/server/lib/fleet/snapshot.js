@@ -250,14 +250,38 @@ export const createFleetSnapshotRuntime = ({
     };
   };
 
+  const startBackgroundRefresh = (atMs) => {
+    if (inFlight) return inFlight;
+    const task = build({ atMs })
+      .then((snapshot) => {
+        snapshotCache = snapshot;
+        snapshotAt = now();
+        return snapshot;
+      })
+      .finally(() => {
+        if (inFlight === task) inFlight = null;
+      });
+    inFlight = task;
+    return task;
+  };
+
   const read = async ({ force = false } = {}) => {
     const atMs = now();
     if (!force && snapshotCache && atMs - snapshotAt < hostTtlMs) {
       return { ...snapshotCache, cached: true };
     }
-    // A forced read during an in-flight read joins it: two concurrent polls of a
-    // 20s device probe must not spawn two SSH fleets.
+    // Join an in-flight build whether or not the caller forced: two concurrent
+    // polls of a 20s device probe must not spawn two SSH fleets.
     if (inFlight) return inFlight;
+
+    // Stale-while-revalidate: an expired snapshot is still fine for the header
+    // chip. Hand it back immediately and refresh devices behind the request
+    // instead of blocking the caller on TCP/SSH probes. Without this every page
+    // load past the 10s TTL paid the full probe cost again.
+    if (!force && snapshotCache) {
+      startBackgroundRefresh(atMs);
+      return { ...snapshotCache, cached: true };
+    }
 
     const task = build({ atMs });
     inFlight = task;

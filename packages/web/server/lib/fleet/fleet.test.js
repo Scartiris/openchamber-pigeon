@@ -232,8 +232,10 @@ describe('fleet snapshot', () => {
 
     // Exactly one metrics TTL later the counters are re-read: 3000 bytes over
     // 30s is 100 B/s, derived from the workbench clock rather than the device's.
+    // `force: true` because plain `read()` is stale-while-revalidate and would
+    // hand back the previous snapshot while refreshing in the background.
     clock += 30_000;
-    const second = await runtime.read({});
+    const second = await runtime.read({ force: true });
     const iface = second.devices.items[0].metrics.network.interfaces[0];
     expect(iface.rxBytesPerSec).toBe(100);
     expect(iface.txBytesPerSec).toBe(0);
@@ -304,6 +306,28 @@ describe('fleet snapshot', () => {
     expect(cached.cached).toBe(true);
     expect(calls.hostReads).toBe(1);
 
+    await runtime.read({ force: true });
+    expect(calls.hostReads).toBe(2);
+  });
+
+  test('stale snapshot is served immediately and refreshed behind the request', async () => {
+    let clock = 1_700_000_000_000;
+    const { runtime, calls } = makeSnapshot({
+      host: { ok: true, source: 'helper', stale: false, memory: { usedPercent: 10 }, disks: [{ mount: '/', usedPercent: 10 }], network: null },
+      devices: [],
+      now: () => clock,
+    });
+    const first = await runtime.read({});
+    expect(first.cached).toBe(false);
+
+    // Push past the 10s snapshot TTL but stay inside nothing else.
+    clock += 30_000;
+    const stale = await runtime.read({});
+    // Stale-while-revalidate: the caller is never blocked on the background probe.
+    expect(stale.cached).toBe(true);
+    expect(stale.checkedAt).toBe(first.checkedAt);
+
+    // Let the background refresh settle, then the next poll sees fresh data.
     await runtime.read({ force: true });
     expect(calls.hostReads).toBe(2);
   });

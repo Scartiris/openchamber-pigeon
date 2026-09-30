@@ -156,19 +156,48 @@ ${desktopReturn ? `<a class="return" href="openchamber://focus/mcp-auth">${escap
     return typeof payload?.version === 'string' ? payload.version.trim().replace(/^v/, '') : '';
   };
 
+  // The latest-version lookup reaches the public npm registry and GitHub on
+  // every call; on a lossy international link that costs 2-10 s per
+  // `/api/opencode/upgrade-status` poll. Release cadence is measured in days,
+  // so cache the answer for an hour.
+  const LATEST_VERSION_TTL_MS = 3_600_000;
+  let latestVersionCache = { at: 0, value: null, promise: null };
+
   const fetchLatestOpenCodeVersion = async () => {
-    const results = await Promise.allSettled([
-      fetchLatestOpenCodeVersionFromNpm(),
-      fetchLatestOpenCodeVersionFromGithub(),
-    ]);
-    const versions = results
-      .filter((result) => result.status === 'fulfilled' && result.value)
-      .map((result) => result.value);
-    if (versions.length === 0) {
-      const failure = results.find((result) => result.status === 'rejected');
-      throw failure?.reason instanceof Error ? failure.reason : new Error('Failed to resolve latest OpenCode version');
+    const nowMs = Date.now();
+    if (latestVersionCache.value && nowMs - latestVersionCache.at < LATEST_VERSION_TTL_MS) {
+      return latestVersionCache.value;
     }
-    return versions.sort((left, right) => compareVersions(right, left))[0];
+    if (latestVersionCache.promise) {
+      return latestVersionCache.promise;
+    }
+
+    const lookup = (async () => {
+      const results = await Promise.allSettled([
+        fetchLatestOpenCodeVersionFromNpm(),
+        fetchLatestOpenCodeVersionFromGithub(),
+      ]);
+      const versions = results
+        .filter((result) => result.status === 'fulfilled' && result.value)
+        .map((result) => result.value);
+      if (versions.length === 0) {
+        const failure = results.find((result) => result.status === 'rejected');
+        throw failure?.reason instanceof Error ? failure.reason : new Error('Failed to resolve latest OpenCode version');
+      }
+      const latest = versions.sort((left, right) => compareVersions(right, left))[0];
+      latestVersionCache = { at: Date.now(), value: latest, promise: null };
+      return latest;
+    })();
+
+    latestVersionCache.promise = lookup;
+    try {
+      return await lookup;
+    } catch (error) {
+      if (latestVersionCache.promise === lookup) {
+        latestVersionCache.promise = null;
+      }
+      throw error;
+    }
   };
 
   // OpenCode's `/global/upgrade` requires an explicit semver target and rejects
