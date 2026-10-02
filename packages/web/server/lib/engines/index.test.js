@@ -106,6 +106,60 @@ describe('engines runtime — 同步快照（/health 的约定）', () => {
   });
 });
 
+describe('engines runtime — 快照会自己跟上（stale-while-revalidate）', () => {
+  const flush = () => new Promise((resolve) => { setTimeout(resolve, 5); });
+
+  test('同步读发现过期时，在后台重算一次', async () => {
+    let clock = 0;
+    const { runtime, calls } = runtimeWith({ registryCacheMs: 10, now: () => clock });
+    await runtime.getSnapshot();
+    expect(calls.readdir).toBe(1);
+
+    clock = 11;
+    const stale = runtime.getCachedSnapshot(); // 同步：先给旧值
+    expect(stale).not.toBe(null);
+    await flush();
+    expect(calls.readdir).toBeGreaterThan(1); // 后台已经重算过
+  });
+
+  test('改了 engine 设置，同步快照会在一个 TTL 内跟上（验收时就是被这条卡住的）', async () => {
+    let settings = { engine: '' };
+    let clock = 0;
+    const runtime = createEnginesRuntime({
+      env: {}, logger: quiet, now: () => clock, registryCacheMs: 10,
+      fsPromises: {
+        readdir: async () => ['codex.json'],
+        readFile: async () => descriptor({ id: 'codex', name: 'Codex' }),
+      },
+      readSettingsFromDiskMigrated: async () => settings,
+      getEngineBaseUrl: () => '',
+      getEngineAuthHeaders: () => ({}),
+    });
+
+    await runtime.getSnapshot();
+    expect(runtime.getCachedSnapshot().active.id).toBe('opencode');
+
+    settings = { engine: 'codex' };
+    clock = 11;
+    runtime.getCachedSnapshot(); // 第一次同步读：触发后台刷新，仍返回旧值
+    await flush();
+    expect(runtime.getCachedSnapshot().active.id).toBe('codex');
+  });
+
+  test('并发同步读只放一个后台刷新（不叠加）', async () => {
+    let clock = 0;
+    const { runtime, calls } = runtimeWith({ registryCacheMs: 10, now: () => clock });
+    await runtime.getSnapshot();
+    const before = calls.readdir;
+    clock = 11;
+    runtime.getCachedSnapshot();
+    runtime.getCachedSnapshot();
+    runtime.getCachedSnapshot();
+    await flush();
+    expect(calls.readdir - before).toBeLessThanOrEqual(2);
+  });
+});
+
 describe('engines runtime — 缓存', () => {
   test('描述符目录在 TTL 内只读一次；force 穿透', async () => {
     const { runtime, calls } = runtimeWith({ registryCacheMs: 60_000 });

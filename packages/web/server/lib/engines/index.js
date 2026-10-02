@@ -34,6 +34,8 @@ export const createEnginesRuntime = ({
   // `/health` 是同步处理器，而读目录/读设置都是异步的 —— 所以额外维护一份**同步可读**的
   // 最近快照：异步那边刷新它，`/health` 直接读。读不到时给 null（而不是编一个假的默认值）。
   let cachedSnapshot = null;
+  let cachedSnapshotAt = 0;
+  let snapshotRefreshing = false;
 
   const readRequestedEngineId = async () => {
     try {
@@ -98,11 +100,29 @@ export const createEnginesRuntime = ({
       engines: registry.descriptors.map(describeEngineForApi),
     };
     cachedSnapshot = snapshot;
+    cachedSnapshotAt = now();
     return snapshot;
   };
 
-  /** 同步读最近一次快照（可能还没热起来 → null）。 */
-  const getCachedSnapshot = () => cachedSnapshot;
+  /**
+   * 同步读最近一次快照（可能还没热起来 → null）。
+   *
+   * **过期就顺手在后台重算一次**（stale-while-revalidate）：不做这件事的话，快照只在
+   * "有人调 /api/engines" 或启动预热时更新 —— 于是改了 `engine` 设置之后，
+   * `/health` 会一直报旧引擎直到有人碰一下那个接口。
+   * 2026-10-03 的验收就是被这一条卡住的（设置生效了，/health 却不动）。
+   * 这里保持同步语义：先返回手上这份，刷新在后台跑；并发只放一个。
+   */
+  const getCachedSnapshot = () => {
+    const stale = !cachedSnapshot || now() - cachedSnapshotAt >= registryCacheMs;
+    if (stale && !snapshotRefreshing) {
+      snapshotRefreshing = true;
+      void getSnapshot()
+        .catch((error) => logger.warn?.(`[engines] 刷新引擎注册表失败：${error?.message ?? error}`))
+        .finally(() => { snapshotRefreshing = false; });
+    }
+    return cachedSnapshot;
+  };
 
   /** 真去问一次引擎 —— 给 `/api/engines/active` 用；带短缓存。 */
   const probeActive = async ({ force = false } = {}) => {
