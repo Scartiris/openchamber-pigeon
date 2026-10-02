@@ -1,0 +1,170 @@
+/**
+ * 引擎注册表（UI 侧）。
+ *
+ * 数据源是后端的两个只读端点（M4 加的，**接缝是纯增量的**）：
+ *   GET /api/engines          → 注册表里所有引擎（含能力、地址、来源）
+ *   GET /api/engines/active   → 当前生效的那个（含探活结果）
+ *
+ * 为什么不塞进 useConfigStore：引擎注册表是**只读的运行时事实**（目录里有什么、探活通不通），
+ * 而 config store 管的是"用户选了什么"。两者的刷新时机完全不同 —— 注册表跟着目录变，
+ * 探活还有自己的短缓存（服务端 5s、注册表 10s，见 server/lib/engines/index.js）。
+ *
+ * ⚠️ **在 I/O 边界用 zod 解析**（本仓的既有约定，见 lib/guests、lib/gitApiHttp）：
+ * 不做零散的 `typeof` 判断 —— 那样既过不了 anti-slop 规则，也会把"形状不对"漏到界面里。
+ * 解析不了就当成"读不到引擎"，界面显示错误而不是崩。
+ */
+
+import { create } from 'zustand';
+import { z } from 'zod';
+import { runtimeFetch } from '@/lib/runtime-fetch';
+import { knownCapabilities, type EngineCapability } from '@/lib/engines/capabilities';
+
+// ---------- 边界 schema（服务端形状 → 域类型） ----------
+export const engineDescriptorSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().optional(),
+  protocol: z.string().optional(),
+  /** 描述符里写的地址；没写就是 null（= 回落宿主地址，探测分不清是谁） */
+  endpointUrl: z.string().nullable().optional(),
+  endpoint: z.object({
+    url: z.string().nullable().optional(),
+    healthPath: z.string().nullable().optional(),
+  }).partial().optional(),
+  capabilities: z.array(z.string()).optional(),
+  canServeChat: z.boolean().optional(),
+}).passthrough();
+
+export const engineProbeSchema = z.object({
+  ok: z.boolean().optional(),
+  status: z.number().nullable().optional(),
+  version: z.string().nullable().optional(),
+  latencyMs: z.number().nullable().optional(),
+  error: z.string().nullable().optional(),
+  /** 探的是哪个地址 + 地址从哪来（descriptor = 引擎自己的；host = 回落宿主的） */
+  baseUrl: z.string().nullable().optional(),
+  source: z.string().nullable().optional(),
+}).passthrough();
+
+export const engineRegistrySchema = z.object({
+  dir: z.string().nullable().optional(),
+  readable: z.boolean().optional(),
+  count: z.number().optional(),
+  warnings: z.array(z.string()).optional(),
+}).passthrough();
+
+export const enginesResponseSchema = z.object({
+  engines: z.array(engineDescriptorSchema).optional(),
+  active: z.object({
+    engine: engineDescriptorSchema.nullable().optional(),
+    probe: engineProbeSchema.nullable().optional(),
+    reason: z.string().nullable().optional(),
+  }).passthrough().nullable().optional(),
+  registry: engineRegistrySchema.nullable().optional(),
+}).passthrough();
+
+// ---------- 域类型 ----------
+export type EngineDescriptorView = {
+  id: string;
+  name: string;
+  protocol: string;
+  endpointUrl: string | null;
+  capabilities: EngineCapability[];
+  canServeChat: boolean;
+};
+
+export type EngineProbeView = {
+  ok: boolean;
+  status: number | null;
+  version: string | null;
+  latencyMs: number | null;
+  error: string | null;
+  baseUrl: string | null;
+  source: string | null;
+};
+
+export type EngineRegistryView = {
+  dir: string | null;
+  readable: boolean;
+  count: number | null;
+  warnings: string[];
+};
+
+type EnginesState = {
+  engines: EngineDescriptorView[];
+  activeId: string | null;
+  activeReason: string | null;
+  probe: EngineProbeView | null;
+  registry: EngineRegistryView | null;
+  loading: boolean;
+  error: string | null;
+  loadedAt: number | null;
+  load: (options?: { force?: boolean }) => Promise<void>;
+};
+
+// ---------- 域类型映射（已解析过的输入，这里只做形状搬运） ----------
+export const toEngineDescriptorView = (input: z.infer<typeof engineDescriptorSchema>): EngineDescriptorView => ({
+  id: input.id,
+  name: input.name && input.name.length > 0 ? input.name : input.id,
+  protocol: input.protocol && input.protocol.length > 0 ? input.protocol : 'unknown',
+  endpointUrl: input.endpointUrl ?? input.endpoint?.url ?? null,
+  capabilities: knownCapabilities(input.capabilities ?? []),
+  canServeChat: input.canServeChat === true,
+});
+
+export const toEngineProbeView = (input: z.infer<typeof engineProbeSchema>): EngineProbeView => ({
+  ok: input.ok === true,
+  status: input.status ?? null,
+  version: input.version ?? null,
+  latencyMs: input.latencyMs ?? null,
+  error: input.error ?? null,
+  baseUrl: input.baseUrl ?? null,
+  source: input.source ?? null,
+});
+
+export const toEngineRegistryView = (input: z.infer<typeof engineRegistrySchema>): EngineRegistryView => ({
+  dir: input.dir ?? null,
+  readable: input.readable === true,
+  count: input.count ?? null,
+  warnings: input.warnings ?? [],
+});
+
+const CACHE_MS = 10_000; // 与服务端的注册表缓存同量级；太短会打爆后端，太长看不到新引擎
+
+export const useEnginesStore = create<EnginesState>((set, get) => ({
+  engines: [],
+  activeId: null,
+  activeReason: null,
+  probe: null,
+  registry: null,
+  loading: false,
+  error: null,
+  loadedAt: null,
+
+  load: async (options) => {
+    const state = get();
+    if (state.loading) return;
+    if (!options?.force && state.loadedAt && Date.now() - state.loadedAt < CACHE_MS) return;
+    set({ loading: true, error: null });
+    try {
+      const response = await runtimeFetch('/api/engines');
+      if (!response.ok) throw new Error(`/api/engines 回了 ${response.status}`);
+      const parsed = enginesResponseSchema.safeParse(await response.json());
+      if (!parsed.success) throw new Error(`/api/engines 的形状不认识：${parsed.error.issues[0]?.message ?? '未知'}`);
+
+      const data = parsed.data;
+      const active = data.active ?? null;
+      set({
+        engines: (data.engines ?? []).map(toEngineDescriptorView),
+        activeId: active?.engine ? active.engine.id : null,
+        activeReason: active?.reason ?? null,
+        probe: active?.probe ? toEngineProbeView(active.probe) : null,
+        registry: data.registry ? toEngineRegistryView(data.registry) : null,
+        loading: false,
+        loadedAt: Date.now(),
+      });
+    } catch (error) {
+      // 引擎端点挂了不该让设置页崩 —— 记下错误，界面显示"读不到"，其余照常
+      set({ loading: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  },
+}));

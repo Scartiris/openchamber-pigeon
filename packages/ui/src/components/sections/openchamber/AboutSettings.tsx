@@ -10,6 +10,7 @@ import { OpenChamberLogo } from '@/components/ui/OpenChamberLogo';
 import { useI18n } from '@/lib/i18n';
 import { runtimeFetch } from '@/lib/runtime-fetch';
 import { InstanceServiceUrls } from './InstanceServiceUrls';
+import { EngineSummary } from './EngineSummary';
 import {
   SettingsSection,
   SETTINGS_BRAND_TITLE_CLASS,
@@ -284,6 +285,9 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({ initialUpdateDialo
           <span className={SETTINGS_FIELD_LABEL_CLASS}>{t('settings.openchamber.about.field.instanceUrls')}</span>
           <InstanceServiceUrls />
         </div>
+
+        {/* 引擎一览：M4 注册表的用户可见面（加引擎 = 丢一个 json，这里就能看到） */}
+        <EngineSummary />
 
         <div className="flex items-center gap-4 px-4 py-4">
           <a
