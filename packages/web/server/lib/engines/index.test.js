@@ -1,0 +1,166 @@
+import { describe, expect, test } from 'bun:test';
+import { createEnginesRuntime } from './index.js';
+
+/**
+ * 运行时这一层要钉住的是「**同步**快照」这条约定：
+ * `/health` 是同步处理器（docker 每 30s 探一次 + 界面轮询），它不能去读目录、更不能打网络。
+ * 所以：异步那边刷新缓存，`/health` 读缓存；缓存没热起来时必须是 **null**，
+ * 而不是编一个看起来正常的默认值 —— 后者会让"注册表读挂了"在监控上完全看不出来。
+ */
+
+const quiet = { warn: () => {}, log: () => {}, error: () => {} };
+
+const runtimeWith = ({ files = {}, settings = {}, probeBody = { healthy: true, version: '9.9.9' }, ...rest } = {}) => {
+  const calls = { readdir: 0, readFile: 0, fetch: 0 };
+  const runtime = createEnginesRuntime({
+    env: {},
+    logger: quiet,
+    fsPromises: {
+      readdir: async () => { calls.readdir += 1; return Object.keys(files); },
+      readFile: async (file) => {
+        calls.readFile += 1;
+        const name = String(file).split('/').pop();
+        if (!(name in files)) { const e = new Error('missing'); e.code = 'ENOENT'; throw e; }
+        return files[name];
+      },
+    },
+    readSettingsFromDiskMigrated: async () => settings,
+    getEngineBaseUrl: () => 'http://engine.test:4096',
+    getEngineAuthHeaders: () => ({ Authorization: 'Basic abc' }),
+    fetchImpl: async () => { calls.fetch += 1; return { ok: true, status: 200, json: async () => probeBody }; },
+    ...rest,
+  });
+  return { runtime, calls };
+};
+
+const descriptor = (over = {}) => JSON.stringify({
+  apiVersion: 1,
+  id: 'fake',
+  name: 'Fake',
+  protocol: 'opencode-v1',
+  endpoint: { healthPath: '/global/health' },
+  capabilities: ['sessions', 'streaming'],
+  ...over,
+});
+
+describe('engines runtime — 同步快照（/health 的约定）', () => {
+  test('还没热起来时是 null，不是编出来的默认值', () => {
+    const { runtime } = runtimeWith();
+    expect(runtime.getCachedSnapshot()).toBe(null);
+  });
+
+  test('getSnapshot 之后同步读得到同一份', async () => {
+    const { runtime } = runtimeWith();
+    const snapshot = await runtime.getSnapshot();
+    expect(runtime.getCachedSnapshot()).toBe(snapshot);
+    expect(snapshot.active.id).toBe('opencode');
+    expect(snapshot.engines.map((e) => e.id)).toEqual(['opencode']);
+  });
+
+  test('描述符目录描述得出来 —— 放一个文件就多一个引擎，无需改代码', async () => {
+    const { runtime } = runtimeWith({ files: { 'codex.json': descriptor({ id: 'codex', name: 'Codex' }) } });
+    const snapshot = await runtime.getSnapshot();
+    expect(snapshot.engines.map((e) => e.id)).toEqual(['codex', 'opencode']);
+    // 有多个候选时不猜：仍然回落内置
+    expect(snapshot.active.id).toBe('opencode');
+    expect(snapshot.activeReason).toBe('builtin-default-with-alternatives');
+  });
+
+  test('设置里的 engine 决定谁是当前引擎', async () => {
+    const { runtime } = runtimeWith({
+      files: { 'codex.json': descriptor({ id: 'codex' }) },
+      settings: { engine: 'codex' },
+    });
+    const snapshot = await runtime.getSnapshot();
+    expect(snapshot.active.id).toBe('codex');
+    expect(snapshot.activeReason).toBe('requested');
+  });
+
+  test('目录读不出来也只记 warning，不抛（注册表坏了不该阻止服务跑）', async () => {
+    const { runtime } = runtimeWith({ fsPromisesBroken: true });
+    const broken = createEnginesRuntime({
+      env: {}, logger: quiet,
+      fsPromises: { readdir: async () => { throw new Error('EACCES: nope'); }, readFile: async () => '' },
+      readSettingsFromDiskMigrated: async () => ({}),
+      getEngineBaseUrl: () => '',
+      getEngineAuthHeaders: () => ({}),
+    });
+    const snapshot = await broken.getSnapshot();
+    expect(snapshot.engines.map((e) => e.id)).toEqual(['opencode']);
+    expect(snapshot.dirReadable).toBe(false);
+    expect(snapshot.warnings.join(' ')).toContain('EACCES');
+    expect(runtime.getCachedSnapshot()).toBe(null);
+  });
+
+  test('读设置抛异常时按"未指定引擎"处理', async () => {
+    const runtime = createEnginesRuntime({
+      env: {}, logger: quiet,
+      fsPromises: { readdir: async () => [], readFile: async () => '' },
+      readSettingsFromDiskMigrated: async () => { throw new Error('settings boom'); },
+      getEngineBaseUrl: () => '',
+      getEngineAuthHeaders: () => ({}),
+    });
+    const snapshot = await runtime.getSnapshot();
+    expect(snapshot.active.id).toBe('opencode');
+    expect(snapshot.requestedId).toBe(null);
+  });
+});
+
+describe('engines runtime — 缓存', () => {
+  test('描述符目录在 TTL 内只读一次；force 穿透', async () => {
+    const { runtime, calls } = runtimeWith({ registryCacheMs: 60_000 });
+    await runtime.getSnapshot();
+    await runtime.getSnapshot();
+    expect(calls.readdir).toBe(1);
+    await runtime.getSnapshot({ force: true });
+    expect(calls.readdir).toBe(2);
+  });
+
+  test('TTL 过期后重读', async () => {
+    let clock = 0;
+    const { runtime, calls } = runtimeWith({ registryCacheMs: 10, now: () => clock });
+    await runtime.getSnapshot();
+    clock = 5;
+    await runtime.getSnapshot();
+    expect(calls.readdir).toBe(1);
+    clock = 11;
+    await runtime.getSnapshot();
+    expect(calls.readdir).toBe(2);
+  });
+
+  test('探测结果短缓存；force 与地址变化都会穿透', async () => {
+    let clock = 0;
+    const { runtime, calls } = runtimeWith({ probeCacheMs: 1000, now: () => clock });
+    await runtime.probeActive();
+    expect(calls.fetch).toBe(1);
+    const cached = await runtime.probeActive();
+    expect(calls.fetch).toBe(1);
+    expect(cached.cached).toBe(true);
+    clock = 1001;
+    await runtime.probeActive();
+    expect(calls.fetch).toBe(2);
+    await runtime.probeActive({ force: true });
+    expect(calls.fetch).toBe(3);
+  });
+
+  test('探测真的带回了版本（前端要用它显示内核版本）', async () => {
+    const { runtime } = runtimeWith({ probeBody: { healthy: true, version: '1.18.34' } });
+    const result = await runtime.probeActive();
+    expect(result.probe.ok).toBe(true);
+    expect(result.probe.version).toBe('1.18.34');
+    expect(result.engine.id).toBe('opencode');
+  });
+
+  test('引擎地址取不到时探测失败但**不抛**（引擎还没起来是常态）', async () => {
+    const runtime = createEnginesRuntime({
+      env: {}, logger: quiet,
+      fsPromises: { readdir: async () => [], readFile: async () => '' },
+      readSettingsFromDiskMigrated: async () => ({}),
+      getEngineBaseUrl: () => { throw new Error('OpenCode port is not available'); },
+      getEngineAuthHeaders: () => ({}),
+    });
+    const result = await runtime.probeActive();
+    expect(result.probe.ok).toBe(false);
+    expect(result.probe.error).toContain('引擎地址');
+  });
+});

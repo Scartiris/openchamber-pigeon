@@ -136,6 +136,7 @@ export const createFeatureRoutesRuntime = (dependencies) => {
       agentMemoryRuntime,
       isAgentMemoryEnabled,
       sessionKnowledgeRuntime,
+      enginesRuntime,
       scheduledTasksRuntime,
       scheduledTaskService,
       openChamberSessionService,
@@ -390,6 +391,10 @@ export const createFeatureRoutesRuntime = (dependencies) => {
     registerProjectSetupRoutes(app, { projectConfigRuntime });
     registerAgentMemoryRoutes(app, { agentMemoryRuntime, isAgentMemoryEnabled });
     registerSessionKnowledgeRoutes(app, { sessionKnowledgeRuntime });
+
+    // 引擎注册表（M4）：`/api/engines` 与 `/api/engines/active`。纯增量 ——
+    // 它只**读**描述符目录并**探**一次已经连上的引擎，不碰既有的启动/代理路径。
+    enginesRuntime?.registerRoutes?.(app);
 
     registerSessionFoldersRoutes(app, {
       fsPromises,

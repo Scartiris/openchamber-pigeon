@@ -58,6 +58,7 @@ import { createSettingsNormalizationRuntime } from './lib/opencode/settings-norm
 import { createSettingsHelpers } from './lib/opencode/settings-helpers.js';
 import { createThemeRuntime } from './lib/opencode/theme-runtime.js';
 import { createFeatureRoutesRuntime } from './lib/opencode/feature-routes-runtime.js';
+import { createEnginesRuntime } from './lib/engines/index.js';
 import { parseServeCliOptions } from './lib/opencode/cli-options.js';
 import {
   registerAuthAndAccessRoutes,
@@ -1747,6 +1748,26 @@ async function main(options = {}) {
   // /api/system/info resolves port + tunnel URL lazily at request time.
   let tunnelRuntimeContextHolder = null;
 
+  // 引擎注册表（M4）：把「当前用哪个 agent 引擎、它声称有什么能力」变成可查询的数据。
+  // 它**不接管**引擎的启动/停止（那仍然归 lifecycle 的既有路径），只做三件事：
+  // 读描述符目录、决定谁是当前引擎、按描述符探一次健康。这是"以后加引擎不用改应用代码"的落点。
+  const enginesRuntime = createEnginesRuntime({
+    env: process.env,
+    fsPromises,
+    readSettingsFromDiskMigrated,
+    getEngineBaseUrl: () => {
+      // 外部引擎（OPENCODE_HOST）时 state.openCodeBaseUrl 是那个 origin；否则按端口拼。
+      if (openCodeBaseUrl) return openCodeBaseUrl;
+      try {
+        return buildOpenCodeUrl('');
+      } catch {
+        return '';
+      }
+    },
+    getEngineAuthHeaders: () => getOpenCodeAuthHeaders(),
+    logger: console,
+  });
+
   const bootstrapResult = bootstrapRuntime.setupBaseRoutes(app, {
     process,
     openchamberVersion: OPENCHAMBER_VERSION,
@@ -1784,6 +1805,23 @@ async function main(options = {}) {
         desktopNotifyEnabled: ENV_DESKTOP_NOTIFY,
         planModeExperimentalEnabled: PLAN_MODE_EXPERIMENT_ENABLED,
         apiOnly,
+        // 引擎注册表快照（**纯增量**：老字段一个没动）。同步读缓存 —— `/health` 是热路径，
+        // 不能在这里读目录或打网络。真探测在 `/api/engines/active`。
+        engine: (() => {
+          const snapshot = enginesRuntime.getCachedSnapshot();
+          if (!snapshot) return null;
+          return { ...snapshot.active, activeReason: snapshot.activeReason, requestedId: snapshot.requestedId };
+        })(),
+        engineRegistry: (() => {
+          const snapshot = enginesRuntime.getCachedSnapshot();
+          if (!snapshot) return null;
+          return {
+            dir: snapshot.dir,
+            dirReadable: snapshot.dirReadable,
+            count: snapshot.engines.length,
+            warnings: snapshot.warnings,
+          };
+        })(),
       };
     },
     // Port this instance serves on and the active tunnel's public URL (if
@@ -1958,6 +1996,7 @@ async function main(options = {}) {
     createFsSearchRuntime: createFsSearchRuntimeFactory,
     openchamberDataDir: OPENCHAMBER_DATA_DIR,
     openchamberVersion: OPENCHAMBER_VERSION,
+    enginesRuntime,
     builtInExtensionsDir: options.builtInExtensionsDir,
     openchamberUserConfigRoot: OPENCHAMBER_USER_CONFIG_ROOT,
     managedChatsRoot: OPENCHAMBER_CHATS_DIR,

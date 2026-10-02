@@ -252,6 +252,18 @@ export const createSettingsHelpers = (dependencies) => {
       const normalized = normalizeDirectoryPath(candidate.opencodeBinary).trim();
       result.opencodeBinary = normalized;
     }
+
+    // 当前生效的 agent 引擎 id（M4 引擎注册表）。空串 = 清掉这个选择、回落到内置 opencode。
+    // 这里**不校验 id 是否真的存在于描述符目录** —— 那件事归引擎注册表管（它还会在解析不出
+    // 时回落内置并给出原因）。设置层只保证"落在盘上的是一个规整的 id 字符串"，
+    // 否则会出现"设置被拒绝 → 用户以为选了、实际没选"这种更难查的状态。
+    //
+    // ⚠️ 这一处刻意用 `typeof`，与上面 100 多行同类分支保持一致，**不要**改成 import zod：
+    //    本模块被 `imports from the packed @openchamber/web tarball` 那条测试单独解包后
+    //    import（不装依赖），任何裸模块名都会让那条测试失败（实测：zod → Cannot find package）。
+    if (typeof candidate.engine === 'string') {
+      result.engine = candidate.engine.trim();
+    }
     if (typeof candidate.workStatusPanelEnabled === 'boolean') {
       result.workStatusPanelEnabled = candidate.workStatusPanelEnabled;
     }

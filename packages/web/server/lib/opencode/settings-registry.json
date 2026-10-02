@@ -46,6 +46,9 @@
     "opencodeBinary": {
       "scope": "instance"
     },
+    "engine": {
+      "scope": "instance"
+    },
     "projects": {
       "scope": "instance"
     },

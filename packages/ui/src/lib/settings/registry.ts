@@ -253,6 +253,9 @@ export const SETTINGS_REGISTRY = {
   lastDirectory: field({ scope: 'instance', adopt: 'bootstrap-only', parse: parseNonEmptyString }),
   homeDirectory: field({ scope: 'instance', parse: parseNonEmptyString }),
   opencodeBinary: field({ scope: 'instance', parse: parseTrimmedString }),
+  // 当前生效的 agent 引擎 id（M4 引擎注册表）。空串 = 交回注册表自己决定：
+  // 描述符只有一个就用它，否则回落内置 opencode。见 server/lib/engines/registry.js。
+  engine: field({ scope: 'instance', parse: parseTrimmedString }),
   projects: field<ProjectEntry[]>({ scope: 'instance', parse: parseProjects }),
   activeProjectId: field({ scope: 'instance', adopt: 'bootstrap-only', parse: parseNonEmptyString }),
   securityScopedBookmarks: field({ scope: 'instance', surfaces: ['desktop'], parse: parseStringList }),

@@ -1,0 +1,138 @@
+/**
+ * 引擎运行时：把「注册表 + 探测」组装成宿主能用的三个动作 —— 快照、活动引擎、探测。
+ *
+ * 两条性能/稳定性上的取舍（都是刻意的）：
+ *   1) `/health` 是热路径（docker 每 30s 探一次、界面也在轮询），所以快照**只读描述符、
+ *      不做网络探测** —— 描述符里已经有 UI 需要的全部声明；
+ *   2) 目录读取与网络探测各自带一个短缓存（默认 10s / 5s），免得每次请求都去碰磁盘或引擎。
+ *      两个缓存的时长分开：描述符几乎不变，探测结果变得快。
+ */
+
+import { z } from 'zod';
+import { DEFAULT_ENGINES_DIR, asNonEmptyString, loadEngineDescriptors, resolveActiveEngine } from './registry.js';
+import { BUILTIN_OPENCODE_DESCRIPTOR, describeEngineForApi } from './descriptor.js';
+import { probeEngine } from './probe.js';
+import { registerEngineRoutes } from './routes.js';
+
+const DEFAULT_REGISTRY_CACHE_MS = 10_000;
+const DEFAULT_PROBE_CACHE_MS = 5_000;
+
+export const createEnginesRuntime = ({
+  env = process.env,
+  fsPromises,
+  readSettingsFromDiskMigrated = async () => ({}),
+  getEngineBaseUrl = () => '',
+  getEngineAuthHeaders = () => ({}),
+  logger = console,
+  fetchImpl,
+  registryCacheMs = DEFAULT_REGISTRY_CACHE_MS,
+  probeCacheMs = DEFAULT_PROBE_CACHE_MS,
+  now = () => Date.now(),
+} = {}) => {
+  let registryCache = null; // { at, value }
+  let probeCache = null; // { at, key, value }
+  // `/health` 是同步处理器，而读目录/读设置都是异步的 —— 所以额外维护一份**同步可读**的
+  // 最近快照：异步那边刷新它，`/health` 直接读。读不到时给 null（而不是编一个假的默认值）。
+  let cachedSnapshot = null;
+
+  const readRequestedEngineId = async () => {
+    try {
+      const settings = await readSettingsFromDiskMigrated();
+      return asNonEmptyString(settings?.engine) || null;
+    } catch (error) {
+      logger.warn?.(`[engines] 读设置失败，按"未指定引擎"处理：${error?.message ?? error}`);
+      return null;
+    }
+  };
+
+  const getRegistry = async ({ force = false } = {}) => {
+    const at = now();
+    if (!force && registryCache && at - registryCache.at < registryCacheMs) return registryCache.value;
+    const loaded = await loadEngineDescriptors({
+      dir: asNonEmptyString(env?.OC_ENGINES_DIR) || DEFAULT_ENGINES_DIR,
+      readdir: (...args) => fsPromises.readdir(...args),
+      readFile: (...args) => fsPromises.readFile(...args),
+      logger,
+    });
+    const requestedId = await readRequestedEngineId();
+    const { engine, reason } = resolveActiveEngine({ descriptors: loaded.descriptors, requestedId, env });
+    const value = {
+      ...loaded,
+      requestedId,
+      activeEngineId: engine.id,
+      activeReason: reason,
+      builtinId: BUILTIN_OPENCODE_DESCRIPTOR.id,
+    };
+    registryCache = { at, value };
+    return value;
+  };
+
+  const resolveBaseUrl = () => {
+    try {
+      return z.string().catch('').parse(getEngineBaseUrl());
+    } catch {
+      // 引擎还没起来时 buildOpenCodeUrl 会抛 —— 快照不该因此失败
+      return '';
+    }
+  };
+
+  const resolveAuthHeaders = () => {
+    try {
+      return z.record(z.string(), z.string()).catch({}).parse(getEngineAuthHeaders());
+    } catch {
+      return {};
+    }
+  };
+
+  /** 只读描述符的快照 —— 给 `/health` 与 `/api/engines` 用。 */
+  const getSnapshot = async ({ force = false } = {}) => {
+    const registry = await getRegistry({ force });
+    const active = registry.descriptors.find((d) => d.id === registry.activeEngineId) ?? BUILTIN_OPENCODE_DESCRIPTOR;
+    const snapshot = {
+      dir: registry.dir,
+      dirReadable: registry.dirReadable,
+      warnings: registry.warnings,
+      requestedId: registry.requestedId,
+      activeReason: registry.activeReason,
+      active: describeEngineForApi(active),
+      engines: registry.descriptors.map(describeEngineForApi),
+    };
+    cachedSnapshot = snapshot;
+    return snapshot;
+  };
+
+  /** 同步读最近一次快照（可能还没热起来 → null）。 */
+  const getCachedSnapshot = () => cachedSnapshot;
+
+  /** 真去问一次引擎 —— 给 `/api/engines/active` 用；带短缓存。 */
+  const probeActive = async ({ force = false } = {}) => {
+    const registry = await getRegistry({ force });
+    const active = registry.descriptors.find((d) => d.id === registry.activeEngineId) ?? BUILTIN_OPENCODE_DESCRIPTOR;
+    const baseUrl = resolveBaseUrl();
+    const key = `${active.id}|${baseUrl}`;
+    const at = now();
+    if (!force && probeCache && probeCache.key === key && at - probeCache.at < probeCacheMs) {
+      return { engine: describeEngineForApi(active), probe: probeCache.value, cached: true };
+    }
+    const probe = await probeEngine({
+      descriptor: active,
+      baseUrl,
+      authHeaders: resolveAuthHeaders(),
+      fetchImpl,
+      now,
+    });
+    probeCache = { at, key, value: probe };
+    return { engine: describeEngineForApi(active), probe, cached: false };
+  };
+
+  const registerRoutes = (app) => {
+    // 先把快照热起来（fire-and-forget）：`/health` 是同步的，启动后第一次被探时
+    // 不该还报 null。失败只记日志 —— 引擎注册表读不出来不该阻止服务启动。
+    void getSnapshot().catch((error) => {
+      logger.warn?.(`[engines] 预热引擎注册表失败：${error?.message ?? error}`);
+    });
+    return registerEngineRoutes(app, { getSnapshot, probeActive });
+  };
+
+  return { getSnapshot, getCachedSnapshot, probeActive, registerRoutes };
+};
