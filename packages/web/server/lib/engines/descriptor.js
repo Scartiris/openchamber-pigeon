@@ -55,6 +55,11 @@ const descriptorSchema = z.object({
   surface: z.enum(ENGINE_SURFACES).optional(),
   endpoint: z.object({
     healthPath: z.string().trim().startsWith('/', 'healthPath 必须以 / 开头').optional(),
+    // 这个引擎**自己的**地址。不写 = 用宿主那一个引擎的地址（向后兼容：内置 opencode 就是这么工作的）。
+    // 多个引擎并存时**必须**写它，否则探测分不清谁是谁。
+    url: z.string().trim().url('endpoint.url 必须是一个完整 URL（例：http://codex-engine:4096）')
+      .refine((value) => /^https?:\/\//i.test(value), 'endpoint.url 只支持 http / https')
+      .optional(),
   }).passthrough().optional(),
   auth: z.object({
     type: z.enum(['none', 'basic']).optional(),
@@ -162,7 +167,11 @@ export const normalizeEngineDescriptor = (raw, { source = null } = {}) => {
     capabilitiesApiVersion: ENGINE_CAPABILITIES_API_VERSION,
   };
   // 「有才加」的属性用显式赋值，不用条件展开 —— 后者会把"没有这个字段"藏进一个空对象里
-  if (value.endpoint?.healthPath) descriptor.endpoint = { healthPath: value.endpoint.healthPath };
+  if (value.endpoint?.healthPath || value.endpoint?.url) {
+    descriptor.endpoint = {};
+    if (value.endpoint.healthPath) descriptor.endpoint.healthPath = value.endpoint.healthPath;
+    if (value.endpoint.url) descriptor.endpoint.url = value.endpoint.url.replace(/\/+$/, '');
+  }
   if (Object.keys(versionProbe).length > 0) descriptor.versionProbe = versionProbe;
 
   return { descriptor: Object.freeze(descriptor), warnings };
@@ -194,6 +203,7 @@ export const describeEngineForApi = (descriptor) => {
     canServeChat: canServeChat(capabilities),
     missingForChat: missingForChat(capabilities),
     healthPath: descriptor.endpoint?.healthPath ?? null,
+    endpointUrl: descriptor.endpoint?.url ?? null,
     authType: descriptor.auth?.type ?? 'none',
   };
   if (descriptor.versionProbe) api.versionProbe = { ...descriptor.versionProbe };

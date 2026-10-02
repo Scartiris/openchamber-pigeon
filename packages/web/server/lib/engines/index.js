@@ -71,11 +71,24 @@ export const createEnginesRuntime = ({
 
   const resolveBaseUrl = () => {
     try {
-      return z.string().catch('').parse(getEngineBaseUrl());
+      return z.string().catch('').parse(getEngineBaseUrl()).replace(/\/+$/, '');
     } catch {
       // 引擎还没起来时 buildOpenCodeUrl 会抛 —— 快照不该因此失败
       return '';
     }
+  };
+
+  /**
+   * 这个引擎该探测哪个地址。
+   *
+   * 描述符写了 `endpoint.url` 就用它（多引擎并存时**必须**写）；没写就回落到宿主那一个引擎
+   * —— 内置 opencode 就是这么工作的，所以这条是**向后兼容**的。
+   * 加这个之前，探测永远打宿主那一个地址，于是 `probe.ok` 分不清是谁在应答
+   * （2026-10-03 的 M4 验收里就明确记着这个坑）。
+   */
+  const resolveBaseUrlFor = (descriptor) => {
+    const own = asNonEmptyString(descriptor?.endpoint?.url);
+    return own ? own.replace(/\/+$/, '') : resolveBaseUrl();
   };
 
   const resolveAuthHeaders = () => {
@@ -128,7 +141,7 @@ export const createEnginesRuntime = ({
   const probeActive = async ({ force = false } = {}) => {
     const registry = await getRegistry({ force });
     const active = registry.descriptors.find((d) => d.id === registry.activeEngineId) ?? BUILTIN_OPENCODE_DESCRIPTOR;
-    const baseUrl = resolveBaseUrl();
+    const baseUrl = resolveBaseUrlFor(active);
     const key = `${active.id}|${baseUrl}`;
     const at = now();
     if (!force && probeCache && probeCache.key === key && at - probeCache.at < probeCacheMs) {
@@ -141,8 +154,10 @@ export const createEnginesRuntime = ({
       fetchImpl,
       now,
     });
-    probeCache = { at, key, value: probe };
-    return { engine: describeEngineForApi(active), probe, cached: false };
+    // 把"探的是哪个地址"一起回出去 —— 多引擎并存时这是判读 probe.ok 的前提
+    const value = { ...probe, baseUrl: baseUrl || null, source: asNonEmptyString(active?.endpoint?.url) ? 'descriptor' : 'host' };
+    probeCache = { at, key, value };
+    return { engine: describeEngineForApi(active), probe: value, cached: false };
   };
 
   const registerRoutes = (app) => {

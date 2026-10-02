@@ -205,6 +205,13 @@ describe('engines runtime — 缓存', () => {
     expect(result.engine.id).toBe('opencode');
   });
 
+  test('探测会报出"探的是哪个地址、地址从哪来"（多引擎并存时判读 probe.ok 的前提）', async () => {
+    const { runtime } = runtimeWith();
+    const result = await runtime.probeActive();
+    expect(result.probe.baseUrl).toBe('http://engine.test:4096');
+    expect(result.probe.source).toBe('host'); // 内置 opencode 没有自己的 url → 用宿主的
+  });
+
   test('引擎地址取不到时探测失败但**不抛**（引擎还没起来是常态）', async () => {
     const runtime = createEnginesRuntime({
       env: {}, logger: quiet,
@@ -216,5 +223,56 @@ describe('engines runtime — 缓存', () => {
     const result = await runtime.probeActive();
     expect(result.probe.ok).toBe(false);
     expect(result.probe.error).toContain('引擎地址');
+  });
+});
+
+describe('engines runtime — 每个引擎探自己的地址（per-engine endpoint）', () => {
+  test('描述符写了 endpoint.url 就用它，不用宿主的', async () => {
+    const seen = [];
+    const runtime = createEnginesRuntime({
+      env: {}, logger: quiet,
+      fsPromises: {
+        readdir: async () => ['codex.json'],
+        readFile: async () => descriptor({ id: 'codex', endpoint: { healthPath: '/global/health', url: 'http://codex-engine:4096' } }),
+      },
+      readSettingsFromDiskMigrated: async () => ({ engine: 'codex' }),
+      getEngineBaseUrl: () => 'http://host-engine:9999',
+      getEngineAuthHeaders: () => ({}),
+      fetchImpl: async (url) => { seen.push(url); return { ok: true, status: 200, json: async () => ({ version: '9' }) }; },
+    });
+    const result = await runtime.probeActive();
+    expect(result.engine.id).toBe('codex');
+    expect(seen).toEqual(['http://codex-engine:4096/global/health']);
+    expect(result.probe.baseUrl).toBe('http://codex-engine:4096');
+    expect(result.probe.source).toBe('descriptor');
+  });
+
+  test('两个引擎各自的地址互不串（一个死一个活，活的那个不受影响）', async () => {
+    const hit = [];
+    const files = {
+      'a-dead.json': descriptor({ id: 'a-dead', endpoint: { healthPath: '/global/health', url: 'http://dead:1' } }),
+      'b-live.json': descriptor({ id: 'b-live', endpoint: { healthPath: '/global/health', url: 'http://live:2' } }),
+    };
+    const make = (engineId) => createEnginesRuntime({
+      env: {}, logger: quiet,
+      fsPromises: { readdir: async () => Object.keys(files), readFile: async (f) => files[String(f).split('/').pop()] },
+      readSettingsFromDiskMigrated: async () => ({ engine: engineId }),
+      getEngineBaseUrl: () => 'http://host:0',
+      getEngineAuthHeaders: () => ({}),
+      fetchImpl: async (url) => {
+        hit.push(url);
+        if (url.includes('dead')) { const e = new Error('connect ECONNREFUSED'); throw e; }
+        return { ok: true, status: 200, json: async () => ({ version: 'live-1' }) };
+      },
+    });
+
+    const dead = await make('a-dead').probeActive();
+    expect(dead.probe.ok).toBe(false);
+    expect(dead.probe.error).toContain('ECONNREFUSED');
+
+    const live = await make('b-live').probeActive();
+    expect(live.probe.ok).toBe(true);
+    expect(live.probe.version).toBe('live-1');
+    expect(hit).toEqual(['http://dead:1/global/health', 'http://live:2/global/health']);
   });
 });

@@ -54,6 +54,23 @@ describe('engine descriptor — 接受的形状', () => {
       type: 'basic', username: 'opencode', passwordEnv: 'OPENCODE_SERVER_PASSWORD',
     });
   });
+
+  test('endpoint.url 是这个引擎自己的地址（多引擎并存的前提）', () => {
+    const { descriptor } = normalizeEngineDescriptor(valid({ endpoint: { healthPath: '/global/health', url: 'http://codex-engine:4096' } }));
+    expect(descriptor.endpoint.url).toBe('http://codex-engine:4096');
+    expect(describeEngineForApi(descriptor).endpointUrl).toBe('http://codex-engine:4096');
+  });
+
+  test('endpoint.url 末尾的斜杠被归一化（免得拼出 //global/health）', () => {
+    const { descriptor } = normalizeEngineDescriptor(valid({ endpoint: { healthPath: '/h', url: 'http://x:1///' } }));
+    expect(descriptor.endpoint.url).toBe('http://x:1');
+  });
+
+  test('不写 endpoint.url 时它缺席（= 用宿主那一个引擎的地址，向后兼容）', () => {
+    const { descriptor } = normalizeEngineDescriptor(valid());
+    expect(descriptor.endpoint.url).toBeUndefined();
+    expect(describeEngineForApi(descriptor).endpointUrl).toBe(null);
+  });
 });
 
 describe('engine descriptor — 拒绝的形状（每一条都要说清哪不对）', () => {
@@ -77,6 +94,8 @@ describe('engine descriptor — 拒绝的形状（每一条都要说清哪不对
   test('opencode-v1 缺 healthPath', () => rejects(valid({ endpoint: {} }), 'healthPath'));
   test('healthPath 不以 / 开头', () => rejects(valid({ endpoint: { healthPath: 'global/health' } }), 'healthPath'));
   test('未知 surface', () => rejects(valid({ surface: 'inline' }), 'surface'));
+  test('endpoint.url 不是 URL', () => rejects(valid({ endpoint: { healthPath: '/h', url: 'codex-engine:4096' } }), 'endpoint.url'));
+  test('endpoint.url 不是 http(s)', () => rejects(valid({ endpoint: { healthPath: '/h', url: 'ftp://x:1' } }), 'http'));
 
   test('capabilities 里混进非字符串 → 整个描述符拒绝（schema 在边界上把关）', () => {
     rejects(valid({ capabilities: ['sessions', 42] }), 'capabilities');
