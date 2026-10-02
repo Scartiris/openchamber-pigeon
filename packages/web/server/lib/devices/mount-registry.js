@@ -138,9 +138,33 @@ export const createDeviceMountRegistry = ({ fsPromises, path, storePath, mountPa
   };
 
   /**
+   * Is `target` an actual mount, not merely an existing directory?
+   *
+   * The host helper does `mkdir -p` on the mount root before running sshfs, so
+   * the bare directory is left behind whenever the device is offline or the
+   * mount was unmounted. Reporting `ready` for that directory told the sidebar
+   * a dead device was healthy (verified against the real node on 2026-10-02:
+   * helper logged FAILED, `mountpoint` said no, and the API still answered
+   * `ready`). A real sshfs mount is a different filesystem than its parent, so
+   * compare device ids instead of trusting the directory entry.
+   */
+  const isRealMount = async (target) => {
+    const [stat, parentStat] = await Promise.all([
+      fsPromises.stat(target),
+      fsPromises.stat(path.dirname(target)).catch(() => null),
+    ]);
+    if (!stat.isDirectory()) return false;
+    // No parent to compare against (unusual layout): keep the old behaviour
+    // rather than declaring a working mount dead.
+    if (!parentStat) return true;
+    return stat.dev !== parentStat.dev;
+  };
+
+  /**
    * Health for a mount root as the container sees it.
-   * - `ready`: mountRoot is a readable directory
-   * - `mounting`: registered and enabled but not a directory yet (host timer pending or stale)
+   * - `ready`: mountRoot is an actual mount (device id differs from its parent)
+   * - `mounting`: registered and enabled but not really mounted yet (host timer
+   *   pending, device offline, or a stale/leftover directory)
    * - `disabled`: registry entry exists but enabled=false
    * - `absent`: no registry entry
    */
@@ -156,8 +180,7 @@ export const createDeviceMountRegistry = ({ fsPromises, path, storePath, mountPa
       };
     }
     try {
-      const stat = await fsPromises.stat(entry.mountRoot);
-      const ready = stat.isDirectory();
+      const ready = await isRealMount(entry.mountRoot);
       return {
         state: ready ? 'ready' : 'mounting',
         mountRoot: entry.mountRoot,

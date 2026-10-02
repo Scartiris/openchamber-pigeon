@@ -59,28 +59,49 @@ describe('mount registry', () => {
     expect(health.enabled).toBe(true);
   });
 
-  test('health is ready when mountRoot is a directory', async () => {
-    const mountRoot = path.join(tempDir, 'mnt');
-    await fs.promises.mkdir(mountRoot, { recursive: true });
+  test('health stays not-ready when the mount root exists but nothing is mounted', async () => {
+    // 真机实测（2026-10-02）：宿主机助手先 mkdir -p 出挂载点，设备离线或已卸载时
+    // 那个空目录还在，旧的 stat().isDirectory() 判定会把它报成 ready —— 侧栏于是给
+    // 一台掉线的设备亮绿灯。这里的目录与其父目录同一 filesystem，必须判成 mounting。
+    const mountParent = path.join(tempDir, 'mounts');
+    await fs.promises.mkdir(path.join(mountParent, 'dev_abc'), { recursive: true });
     const custom = createDeviceMountRegistry({
       fsPromises: fs.promises,
       path,
       storePath: path.join(tempDir, 'device-mounts.json'),
-      mountParent: tempDir,
+      mountParent,
     });
-    await custom.upsertMount({
-      deviceId: 'dev_abc',
-      remoteRoot: 'C:/Users/alice',
-      ssh,
+    await custom.upsertMount({ deviceId: 'dev_abc', remoteRoot: 'C:/Users/alice', ssh });
+    const health = await custom.healthFor('dev_abc');
+    expect(health.state).toBe('mounting');
+    expect(String(health.mountRoot).replace(/\\/g, '/')).toBe(
+      path.join(mountParent, 'dev_abc').replace(/\\/g, '/'),
+    );
+  });
+
+  test('health is ready when the mount root really is a separate filesystem', async () => {
+    // 单元测试造不出真挂载，所以只把 stat 换掉：mountRoot 报出与父目录不同的 dev，
+    // 等价于 sshfs 挂上之后的形态。真挂载的正例在真机验收里（README-DEVICE-MOUNTS.md T7-2/3）。
+    const mountParent = path.join(tempDir, 'mounts');
+    const fsPromises = Object.create(fs.promises);
+    const custom = createDeviceMountRegistry({
+      fsPromises,
+      path,
+      storePath: path.join(tempDir, 'device-mounts.json'),
+      mountParent,
     });
-    // Force mountRoot to the real directory we created (slug still under parent).
-    // healthFor stats mountRoot = <parent>/<slug>.
-    await fs.promises.mkdir(path.join(tempDir, 'dev_abc'), { recursive: true });
+    await custom.upsertMount({ deviceId: 'dev_abc', remoteRoot: 'C:/Users/alice', ssh });
+    // 注册表自己拼 mountRoot（正斜杠），测试必须用同一个字符串，否则 stub 命不中。
+    const mountRoot = `${String(mountParent).replace(/\/+$/, '')}/dev_abc`;
+    await fs.promises.mkdir(mountRoot, { recursive: true });
+    const realStat = fs.promises.stat.bind(fs.promises);
+    fsPromises.stat = async (target) => {
+      const stat = await realStat(target);
+      if (String(target) === mountRoot) return { isDirectory: () => true, dev: stat.dev + 1 };
+      return stat;
+    };
     const health = await custom.healthFor('dev_abc');
     expect(health.state).toBe('ready');
-    expect(String(health.mountRoot).replace(/\\/g, '/')).toBe(
-      path.join(tempDir, 'dev_abc').replace(/\\/g, '/'),
-    );
   });
 
   test('disable marks enabled=false and health disabled', async () => {
