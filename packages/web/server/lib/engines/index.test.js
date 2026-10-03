@@ -160,6 +160,62 @@ describe('engines runtime — 快照会自己跟上（stale-while-revalidate）'
   });
 });
 
+describe('engines runtime — 多引擎路由：getActiveEngineOwnUrl（代理层用）', () => {
+  /**
+   * 这个访问器在**每个代理请求**上被调用，所以它必须便宜：只读缓存、不探测、不 I/O。
+   * 语义：返回"当前生效的引擎**自己**声明的地址"，没有就 null（= 按宿主原路走，行为与加它之前一致）。
+   */
+
+  test('快照还没热 → null（代理按原路走，不会指到空地址）', () => {
+    const { runtime } = runtimeWith();
+    expect(runtime.getActiveEngineOwnUrl()).toBe(null);
+  });
+
+  test('内置 opencode 没写 endpoint.url → null（**默认行为不变**的关键）', async () => {
+    const { runtime } = runtimeWith();
+    await runtime.getSnapshot();
+    expect(runtime.getActiveEngineOwnUrl()).toBe(null);
+  });
+
+  test('生效的引擎写了地址 → 返回它（结尾斜杠归一化）', async () => {
+    const { runtime } = runtimeWith({
+      files: { 'codex.json': descriptor({ id: 'codex', endpoint: { healthPath: '/global/health', url: 'http://oc-codex-adapter:4096/' } }) },
+      settings: { engine: 'codex' },
+    });
+    await runtime.getSnapshot();
+    expect(runtime.getActiveEngineOwnUrl()).toBe('http://oc-codex-adapter:4096');
+  });
+
+  test('**不探测**：调用它不会发任何 HTTP（这是它能放在热路径上的前提）', async () => {
+    const { runtime, calls } = runtimeWith({
+      files: { 'codex.json': descriptor({ id: 'codex', endpoint: { healthPath: '/global/health', url: 'http://oc-codex-adapter:4096' } }) },
+      settings: { engine: 'codex' },
+    });
+    await runtime.getSnapshot();
+    const before = calls.fetch;
+    runtime.getActiveEngineOwnUrl();
+    runtime.getActiveEngineOwnUrl();
+    expect(calls.fetch).toBe(before);
+  });
+
+  test('切引擎后跟着变（缓存过期时后台重算，不需要重启）', async () => {
+    let engine = 'opencode';
+    const { runtime } = runtimeWith({
+      files: { 'codex.json': descriptor({ id: 'codex', endpoint: { healthPath: '/global/health', url: 'http://oc-codex-adapter:4096' } }) },
+      readSettingsFromDiskMigrated: async () => ({ engine }),
+      registryCacheMs: 0, // 让每次读都算过期
+    });
+    await runtime.getSnapshot();
+    expect(runtime.getActiveEngineOwnUrl()).toBe(null);
+
+    engine = 'codex';
+    // 过期后 getCachedSnapshot() 会**在后台**重算；同步这一次读到的还是手上那份
+    runtime.getActiveEngineOwnUrl();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(runtime.getActiveEngineOwnUrl()).toBe('http://oc-codex-adapter:4096');
+  });
+});
+
 describe('engines runtime — 缓存', () => {
   test('描述符目录在 TTL 内只读一次；force 穿透', async () => {
     const { runtime, calls } = runtimeWith({ registryCacheMs: 60_000 });

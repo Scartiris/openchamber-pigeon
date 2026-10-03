@@ -22,6 +22,9 @@ export const createServerUtilsRuntime = (dependencies) => {
     setOpenCodeNotReadySince,
     clearLastOpenCodeError,
     getLoginShellPath,
+    // 「当前生效的引擎自己声明了地址吗」——代理层用它做多引擎路由（见 proxy.js 的 resolveProxyTarget）。
+    // 默认 () => null：不注入时行为与加这个参数之前完全一致。
+    resolveActiveEngineUrl = () => null,
   } = dependencies;
 
   const setOpenCodePort = (port) => {
@@ -215,6 +218,7 @@ export const createServerUtilsRuntime = (dependencies) => {
       ensureOpenCodeApiPrefix,
       getSseUpstreamStallTimeoutMs: getUpstreamStallTimeoutMs,
       getUiNotificationClients,
+      resolveActiveEngineUrl,
     });
   };
 

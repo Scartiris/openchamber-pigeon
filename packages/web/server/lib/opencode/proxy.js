@@ -71,6 +71,39 @@ export const createOpenCodeProxyAgent = (target) => (
     : new http.Agent(OPENCODE_AGENT_OPTIONS)
 );
 
+/** 去掉首尾空白与结尾斜杠；空值/非字符串 → null（"没给"而不是"给了个空的"）。 */
+export const normalizeProxyTarget = (candidate) => {
+  if (typeof candidate !== 'string') {
+    return null;
+  }
+
+  const trimmed = candidate.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  return trimmed.replace(/\/+$/, '');
+};
+
+/**
+ * **代理目标怎么挑**（纯函数，好直接测）。
+ *
+ * 优先级（2026-10-03 加的**多引擎路由**）：
+ *   ① `engineOwnUrl` —— 当前生效的引擎**自己声明**的地址（描述符里的 `endpoint.url`，
+ *      例如 codex 适配器 `http://oc-codex-adapter:4096`）。有它才让「选引擎」真的有意义。
+ *   ② `openCodePortUrl` —— 宿主自己管着的那个 opencode（本地端口）。
+ *   ③ `externalBaseUrl` —— 外部引擎（`OPENCODE_HOST`）。
+ *   ④ `fallback` —— 兜底常量。
+ *
+ * 内置 opencode **没有**自己的地址，所以默认情况落到 ②/③ —— 与加这个函数之前**完全一致**。
+ */
+export const pickProxyTarget = ({ engineOwnUrl, openCodePortUrl, externalBaseUrl, fallback }) => (
+  normalizeProxyTarget(engineOwnUrl)
+  ?? normalizeProxyTarget(openCodePortUrl)
+  ?? normalizeProxyTarget(externalBaseUrl)
+  ?? fallback
+);
+
 /**
  * Lazily resolves the proxy agent, memoized per scheme.
  *
@@ -289,6 +322,9 @@ export const registerOpenCodeProxy = (app, deps) => {
     getSseUpstreamStallTimeoutMs = () => SSE_UPSTREAM_STALL_TIMEOUT_MS,
     readWorktreeBootstrapStatus = getWorktreeBootstrapStatus,
     WORKTREE_READY_TIMEOUT_MS = 5 * 60 * 1000,
+    // 「当前生效的引擎**自己**声明了地址吗」——由引擎注册表提供，**必须便宜**（只读缓存）。
+    // 默认 () => null = 永远按宿主原来的路走，所以不注入时行为与加这个参数之前完全一致。
+    resolveActiveEngineUrl = () => null,
   } = deps;
 
   if (app.get('opencodeProxyConfigured')) {
@@ -364,45 +400,45 @@ export const registerOpenCodeProxy = (app, deps) => {
     proxyReq.write(body);
   };
 
-  const normalizeProxyTarget = (candidate) => {
-    if (typeof candidate !== 'string') {
-      return null;
-    }
-
-    const trimmed = candidate.trim();
-    if (!trimmed) {
-      return null;
-    }
-
-    return trimmed.replace(/\/+$/, '');
-  };
+  // 归一化在模块级（`normalizeProxyTarget`）—— 代理目标决策也用它，两处必须同一套规则。
 
   // Keep generic proxy requests on the same upstream base URL that health checks
   // and direct fetch helpers use. This avoids split-brain state where /health
   // succeeds against an external host but /api/* still proxies to 127.0.0.1.
+  //
+  // 2026-10-03：**多引擎路由** —— 当前生效的引擎如果自己声明了地址，就把引擎请求发到它那儿。
+  // 决策本身在模块级的 `pickProxyTarget`（纯函数，单独测）；这里只负责把三个来源凑齐：
+  //   · 引擎注册表（只读缓存，不探测、不 I/O，所以热路径没有新增往返；抛了也当"没声明"）；
+  //   · 本地 opencode 端口（原来就有，`buildOpenCodeUrl` 在端口未知时会抛）；
+  //   · 外部 `OPENCODE_HOST`。
   const resolveProxyTarget = () => {
     const runtimeState = getRuntime();
+
+    let engineOwnUrl = null;
+    try {
+      engineOwnUrl = resolveActiveEngineUrl();
+    } catch {
+      // 引擎注册表读不出来 → 当作"没声明"，走宿主原路（绝不因此弄坏代理）
+    }
 
     // `buildOpenCodeUrl` throws while the port is unknown, and the port is
     // nulled on several runtime paths (health-check failure, failed restart),
     // not just cold start. Checking first keeps a degraded OpenCode from
     // making every proxied request pay for a thrown-and-caught exception.
+    let openCodePortUrl = null;
     if (runtimeState.openCodePort) {
       try {
-        const resolved = normalizeProxyTarget(buildOpenCodeUrl('/', ''));
-        if (resolved) {
-          return resolved;
-        }
+        openCodePortUrl = buildOpenCodeUrl('/', '');
       } catch {
       }
     }
 
-    const externalBase = normalizeProxyTarget(runtimeState.openCodeBaseUrl);
-    if (externalBase) {
-      return externalBase;
-    }
-
-    return FALLBACK_PROXY_TARGET;
+    return pickProxyTarget({
+      engineOwnUrl,
+      openCodePortUrl,
+      externalBaseUrl: runtimeState.openCodeBaseUrl,
+      fallback: FALLBACK_PROXY_TARGET,
+    });
   };
 
   const normalizeProxyTimeout = (value) => {
@@ -739,6 +775,17 @@ export const registerOpenCodeProxy = (app, deps) => {
 
     if (!isStillWaiting(getRuntime())) {
       return next();
+    }
+
+    // 当前生效的引擎自己声明了地址（例如 codex 适配器）→ 这个"等 opencode 就绪"的闸门
+    // 对它没有意义：它等的那个引擎根本不是 opencode。不跳过的话，opencode 一旦没就绪，
+    // 发往适配器的请求会被白白按住最多 6 秒。
+    try {
+      if (normalizeProxyTarget(resolveActiveEngineUrl())) {
+        return next();
+      }
+    } catch {
+      // 读不出来就按原样继续（走下面的 hold）
     }
 
     const holdStartedAt = performance.now();

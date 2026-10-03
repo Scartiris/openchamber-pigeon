@@ -160,6 +160,23 @@ export const createEnginesRuntime = ({
     return { engine: describeEngineForApi(active), probe: value, cached: false };
   };
 
+  /**
+   * 同步问一句：当前生效的引擎**自己**声明了地址吗？（没声明 → null）
+   *
+   * 给**代理层**用 —— 每个请求都要问一次，所以这里**只读缓存、绝不 I/O、绝不探测**：
+   *   · 探测一次要发 HTTP，放在请求路径上等于给每个请求加一次往返；
+   *   · 顺手调 `getCachedSnapshot()`，过期就在**后台**重算（stale-while-revalidate），
+   *     于是改了 `engine` 设置之后，代理目标最迟一个缓存周期就跟上，不用重启。
+   *
+   * 返回 null 的语义是"**按宿主原来的路走**"（内置 opencode 就是这种），
+   * 所以默认行为与加这个函数之前**完全一致**。
+   */
+  const getActiveEngineOwnUrl = () => {
+    getCachedSnapshot();
+    const own = asNonEmptyString(cachedSnapshot?.active?.endpointUrl);
+    return own ? own.replace(/\/+$/, '') : null;
+  };
+
   const registerRoutes = (app) => {
     // 先把快照热起来（fire-and-forget）：`/health` 是同步的，启动后第一次被探时
     // 不该还报 null。失败只记日志 —— 引擎注册表读不出来不该阻止服务启动。
@@ -169,5 +186,5 @@ export const createEnginesRuntime = ({
     return registerEngineRoutes(app, { getSnapshot, probeActive });
   };
 
-  return { getSnapshot, getCachedSnapshot, probeActive, registerRoutes };
+  return { getSnapshot, getCachedSnapshot, probeActive, getActiveEngineOwnUrl, registerRoutes };
 };

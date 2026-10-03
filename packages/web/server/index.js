@@ -686,10 +686,20 @@ Object.defineProperties(openCodeNetworkState, {
   openCodeApiDetectionTimer: { get: () => openCodeApiDetectionTimer, set: (value) => { openCodeApiDetectionTimer = value; } },
 });
 
+// 引擎注册表运行时是在**后面**才建的（它依赖读设置、读描述符目录），而网络层与代理层现在就要一个
+// "当前生效的引擎自己声明了地址吗"的读取器 —— 所以这里用**晚绑定**：先把引用留空，
+// 建好之后再指过去。两处都在**请求时**才调用它，所以运行时一定已经就位。
+// 这样既不用重排启动顺序（那会牵动一堆初始化依赖），也不会在启动窗口里读到半成品。
+let enginesRuntimeRef = null;
+const resolveActiveEngineUrl = () => enginesRuntimeRef?.getActiveEngineOwnUrl?.() ?? null;
+
 const openCodeNetworkRuntime = createOpenCodeNetworkRuntime({
   state: openCodeNetworkState,
   getOpenCodeAuthHeaders,
   configuredOpenCodeHostname: ENV_CONFIGURED_OPENCODE_HOSTNAME,
+  // 多引擎路由的接缝：`buildOpenCodeUrl` 是全仓问"引擎在哪"的唯一函数（约 30 个模块用它），
+  // 所以当前生效的引擎自己声明了地址时，所有引擎请求一起改道。晚绑定见下面 enginesRuntimeRef 的注释。
+  resolveActiveEngineUrl: () => enginesRuntimeRef?.getActiveEngineOwnUrl?.() ?? null,
 });
 
 const waitForReady = (...args) => openCodeNetworkRuntime.waitForReady(...args);
@@ -1022,6 +1032,8 @@ const processForwardedEventPayload = (payload, emitSyntheticEvent) => {
 };
 
 
+// 晚绑定的另一半见上面 `enginesRuntimeRef` 的注释：网络层（buildOpenCodeUrl）与代理层
+// 都是按请求读它的，所以这里指过去之后就全部生效。
 const serverUtilsRuntime = createServerUtilsRuntime({
   fs,
   os,
@@ -1041,6 +1053,8 @@ const serverUtilsRuntime = createServerUtilsRuntime({
   ensureOpenCodeApiPrefix,
   getUpstreamStallTimeoutMs,
   getUiNotificationClients: () => uiNotificationClients,
+  // 多引擎路由：让 /api/* 的代理目标跟着"当前生效的引擎"走（没声明地址就按原路）
+  resolveActiveEngineUrl,
   getOpenCodePort: () => openCodePort,
   setOpenCodePortState: (value) => {
     openCodePort = value;
@@ -1767,6 +1781,10 @@ async function main(options = {}) {
     getEngineAuthHeaders: () => getOpenCodeAuthHeaders(),
     logger: console,
   });
+
+  // 晚绑定的另一半：代理层现在能读到"当前生效的引擎自己声明的地址"了。
+  // 放在这里（而不是 createServerUtilsRuntime 那里）是因为注册表运行时此刻才建好。
+  enginesRuntimeRef = enginesRuntime;
 
   const bootstrapResult = bootstrapRuntime.setupBaseRoutes(app, {
     process,
