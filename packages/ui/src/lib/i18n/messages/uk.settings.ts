@@ -592,6 +592,12 @@ export const settingsDict = {
   "settings.openchamber.about.field.version": "Версія",
   "settings.openchamber.about.field.openCodeVersion": "Версія OpenCode",
   // 引擎一览（M4 注册表的用户可见面）。能力 id 刻意不翻译：它们是契约词表，译了反而对不上文档。
+  'settings.openchamber.about.engine.action.switch': 'Змінити рушій',
+  'settings.openchamber.about.engine.state.switching': 'Зміна…',
+  'settings.openchamber.about.engine.state.cannotServeChatOption': '(чат недоступний)',
+  'settings.openchamber.about.engine.hint.sessionListChanges': 'Зміна замінює весь список сеансів — у кожного рушія свої сеанси, сторінку буде перезавантажено.',
+  'settings.openchamber.about.engine.error.switchFailed': 'Не вдалося змінити: {{error}}',
+  // 引擎一览（M4 注册表的用户可见面）。能力 id 刻意不翻译：它们是契约词表，译了反而对不上文档。
   'settings.openchamber.about.engine.field.active': 'Активний рушій',
   'settings.openchamber.about.engine.field.registered': 'Зареєстровані рушії',
   'settings.openchamber.about.engine.field.probe': 'Перевірка рушія',

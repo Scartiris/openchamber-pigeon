@@ -587,6 +587,12 @@ export const settingsDict = {
   'settings.openchamber.about.field.version': '版本',
   'settings.openchamber.about.field.openCodeVersion': 'OpenCode 版本',
   // 引擎一览（M4 注册表的用户可见面）。能力 id 刻意不翻译：它们是契约词表，译了反而对不上文档。
+  'settings.openchamber.about.engine.action.switch': '切換引擎',
+  'settings.openchamber.about.engine.state.switching': '切換中…',
+  'settings.openchamber.about.engine.state.cannotServeChatOption': '（不能進聊天流）',
+  'settings.openchamber.about.engine.hint.sessionListChanges': '切換會換掉整個會話清單 —— 不同引擎有各自的會話，頁面會重新載入。',
+  'settings.openchamber.about.engine.error.switchFailed': '切換失敗：{{error}}',
+  // 引擎一览（M4 注册表的用户可见面）。能力 id 刻意不翻译：它们是契约词表，译了反而对不上文档。
   'settings.openchamber.about.engine.field.active': '目前引擎',
   'settings.openchamber.about.engine.field.registered': '已註冊的引擎',
   'settings.openchamber.about.engine.field.probe': '引擎探測',

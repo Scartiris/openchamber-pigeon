@@ -623,6 +623,12 @@ export const settingsDict = {
   'settings.openchamber.about.field.version': 'バージョン',
   'settings.openchamber.about.field.openCodeVersion': 'OpenCode バージョン',
   // 引擎一览（M4 注册表的用户可见面）。能力 id 刻意不翻译：它们是契约词表，译了反而对不上文档。
+  'settings.openchamber.about.engine.action.switch': 'エンジンを切り替え',
+  'settings.openchamber.about.engine.state.switching': '切り替え中…',
+  'settings.openchamber.about.engine.state.cannotServeChatOption': '（チャット不可）',
+  'settings.openchamber.about.engine.hint.sessionListChanges': '切り替えるとセッション一覧が丸ごと入れ替わります（エンジンごとに別のセッション）。ページを再読み込みします。',
+  'settings.openchamber.about.engine.error.switchFailed': '切り替えに失敗：{{error}}',
+  // 引擎一览（M4 注册表的用户可见面）。能力 id 刻意不翻译：它们是契约词表，译了反而对不上文档。
   'settings.openchamber.about.engine.field.active': '使用中のエンジン',
   'settings.openchamber.about.engine.field.registered': '登録済みエンジン',
   'settings.openchamber.about.engine.field.probe': 'エンジン疎通確認',

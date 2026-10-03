@@ -97,8 +97,10 @@ type EnginesState = {
   registry: EngineRegistryView | null;
   loading: boolean;
   error: string | null;
+  switching: boolean;
   loadedAt: number | null;
   load: (options?: { force?: boolean }) => Promise<void>;
+  setActiveEngine: (engineId: string) => Promise<{ ok: boolean; error?: string }>;
 };
 
 // ---------- 域类型映射（已解析过的输入，这里只做形状搬运） ----------
@@ -138,6 +140,7 @@ export const useEnginesStore = create<EnginesState>((set, get) => ({
   registry: null,
   loading: false,
   error: null,
+  switching: false,
   loadedAt: null,
 
   load: async (options) => {
@@ -165,6 +168,43 @@ export const useEnginesStore = create<EnginesState>((set, get) => ({
     } catch (error) {
       // 引擎端点挂了不该让设置页崩 —— 记下错误，界面显示"读不到"，其余照常
       set({ loading: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  },
+
+  /**
+   * 切引擎：写 `engine` 设置 → 刷新注册表。
+   *
+   * 三条刻意的行为：
+   *   · **同一个引擎不重复写**（省一次没意义的落盘）；
+   *   · 写完**强制刷新**（`load({force:true})`）—— 后端在 PUT 里已经同步刷过引擎快照，
+   *     所以这里刷完，界面显示的引擎与代理真正在用的引擎是**同一个**，不会出现"界面说切了、请求还发给旧的"；
+   *   · **失败要能说出来**：返回 `{ok:false,error}`，由界面显示，而不是静默当成功
+   *     （选了个连不上的引擎会明确失败，这是有意的语义 —— 见 ops/split/verify-engines.sh 里的说明）。
+   */
+  setActiveEngine: async (engineId) => {
+    const state = get();
+    if (!engineId) return { ok: false, error: 'engine id is required' };
+    if (engineId === state.activeId) return { ok: true };
+    if (!state.engines.some((engine) => engine.id === engineId)) {
+      return { ok: false, error: `unknown engine: ${engineId}` };
+    }
+
+    set({ switching: true, error: null });
+    try {
+      const response = await runtimeFetch('/api/config/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ engine: engineId }),
+      });
+      if (!response.ok) throw new Error(`写设置回了 ${response.status}`);
+
+      await get().load({ force: true });
+      set({ switching: false });
+      return { ok: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      set({ switching: false, error: message });
+      return { ok: false, error: message };
     }
   },
 }));

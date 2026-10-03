@@ -2326,6 +2326,12 @@ export const settingsDict = {
   'settings.remoteInstances.relay.toast.linkCopied': 'Lien d’association copié',
   'settings.openchamber.about.field.openCodeVersion': 'Version d’OpenCode',
   // 引擎一览（M4 注册表的用户可见面）。能力 id 刻意不翻译：它们是契约词表，译了反而对不上文档。
+  'settings.openchamber.about.engine.action.switch': 'Changer de moteur',
+  'settings.openchamber.about.engine.state.switching': 'Changement…',
+  'settings.openchamber.about.engine.state.cannotServeChatOption': '(chat indisponible)',
+  'settings.openchamber.about.engine.hint.sessionListChanges': 'Le changement remplace toute la liste des sessions — chaque moteur a les siennes, la page sera rechargée.',
+  'settings.openchamber.about.engine.error.switchFailed': 'Échec du changement : {{error}}',
+  // 引擎一览（M4 注册表的用户可见面）。能力 id 刻意不翻译：它们是契约词表，译了反而对不上文档。
   'settings.openchamber.about.engine.field.active': 'Moteur actif',
   'settings.openchamber.about.engine.field.registered': 'Moteurs enregistrés',
   'settings.openchamber.about.engine.field.probe': 'Sonde du moteur',

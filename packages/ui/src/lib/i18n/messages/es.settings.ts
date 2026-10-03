@@ -592,6 +592,12 @@ export const settingsDict = {
   "settings.openchamber.about.field.version": "Versión",
   "settings.openchamber.about.field.openCodeVersion": "Versión de OpenCode",
   // 引擎一览（M4 注册表的用户可见面）。能力 id 刻意不翻译：它们是契约词表，译了反而对不上文档。
+  'settings.openchamber.about.engine.action.switch': 'Cambiar motor',
+  'settings.openchamber.about.engine.state.switching': 'Cambiando…',
+  'settings.openchamber.about.engine.state.cannotServeChatOption': '(no puede servir el chat)',
+  'settings.openchamber.about.engine.hint.sessionListChanges': 'El cambio reemplaza toda la lista de sesiones — cada motor tiene las suyas y la página se recargará.',
+  'settings.openchamber.about.engine.error.switchFailed': 'Error al cambiar: {{error}}',
+  // 引擎一览（M4 注册表的用户可见面）。能力 id 刻意不翻译：它们是契约词表，译了反而对不上文档。
   'settings.openchamber.about.engine.field.active': 'Motor activo',
   'settings.openchamber.about.engine.field.registered': 'Motores registrados',
   'settings.openchamber.about.engine.field.probe': 'Sondeo del motor',

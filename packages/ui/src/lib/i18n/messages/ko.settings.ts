@@ -590,6 +590,12 @@ export const settingsDict = {
   'settings.openchamber.about.field.version': '버전',
   'settings.openchamber.about.field.openCodeVersion': 'OpenCode 버전',
   // 引擎一览（M4 注册表的用户可见面）。能力 id 刻意不翻译：它们是契约词表，译了反而对不上文档。
+  'settings.openchamber.about.engine.action.switch': '엔진 전환',
+  'settings.openchamber.about.engine.state.switching': '전환 중…',
+  'settings.openchamber.about.engine.state.cannotServeChatOption': '(채팅 불가)',
+  'settings.openchamber.about.engine.hint.sessionListChanges': '전환하면 세션 목록이 통째로 바뀝니다 — 엔진마다 세션이 따로 있으며 페이지가 다시 로드됩니다.',
+  'settings.openchamber.about.engine.error.switchFailed': '전환 실패: {{error}}',
+  // 引擎一览（M4 注册表的用户可见面）。能力 id 刻意不翻译：它们是契约词表，译了反而对不上文档。
   'settings.openchamber.about.engine.field.active': '현재 엔진',
   'settings.openchamber.about.engine.field.registered': '등록된 엔진',
   'settings.openchamber.about.engine.field.probe': '엔진 상태 확인',

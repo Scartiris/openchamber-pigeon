@@ -618,6 +618,12 @@ export const settingsDict = {
   'settings.openchamber.about.field.version': 'Sürüm',
   'settings.openchamber.about.field.openCodeVersion': 'OpenCode sürümü',
   // 引擎一览（M4 注册表的用户可见面）。能力 id 刻意不翻译：它们是契约词表，译了反而对不上文档。
+  'settings.openchamber.about.engine.action.switch': 'Motoru değiştir',
+  'settings.openchamber.about.engine.state.switching': 'Değiştiriliyor…',
+  'settings.openchamber.about.engine.state.cannotServeChatOption': '(sohbet sunulamaz)',
+  'settings.openchamber.about.engine.hint.sessionListChanges': 'Değiştirme tüm oturum listesini yeniler — her motorun kendi oturumları vardır ve sayfa yeniden yüklenir.',
+  'settings.openchamber.about.engine.error.switchFailed': 'Değiştirme başarısız: {{error}}',
+  // 引擎一览（M4 注册表的用户可见面）。能力 id 刻意不翻译：它们是契约词表，译了反而对不上文档。
   'settings.openchamber.about.engine.field.active': 'Etkin motor',
   'settings.openchamber.about.engine.field.registered': 'Kayıtlı motorlar',
   'settings.openchamber.about.engine.field.probe': 'Motor yoklaması',
