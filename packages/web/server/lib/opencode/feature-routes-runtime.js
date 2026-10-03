@@ -197,6 +197,11 @@ export const createFeatureRoutesRuntime = (dependencies) => {
       refreshOpenCodeAfterConfigChange,
       buildOpenCodeUrl,
       getOpenCodeAuthHeaders,
+      // 设置写完后同步刷一次「当前引擎」快照：代理目标读的是缓存，
+      // 不刷的话改了 `engine` 之后头几个请求还会发给上一个引擎（2026-10-03 实测踩到）。
+      refreshEnginesAfterSettingsWrite: async () => {
+        await enginesRuntime?.getSnapshot?.({ force: true });
+      },
     });
 
     registerProjectIconRoutes(app, {

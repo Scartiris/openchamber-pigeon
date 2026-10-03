@@ -33,6 +33,11 @@ export const registerOpenCodeRoutes = (app, dependencies) => {
     refreshOpenCodeAfterConfigChange,
     buildOpenCodeUrl,
     getOpenCodeAuthHeaders,
+    // 设置写完之后刷新「当前引擎」快照 —— 默认 noop。
+    // 为什么需要它：代理目标读的是**缓存**里的引擎快照（stale-while-revalidate，10s），
+    // 所以不刷新的话，改了 `engine` 之后**头几个请求还会发给上一个引擎**。
+    // 让它在这里同步刷一次，语义就变成"PUT 返回时切换已经生效"（2026-10-03 实测踩到）。
+    refreshEnginesAfterSettingsWrite = async () => {},
     fsPromises = fs.promises,
   } = dependencies;
 
@@ -460,6 +465,14 @@ ${desktopReturn ? `<a class="return" href="openchamber://focus/mcp-auth">${escap
   app.put('/api/config/settings', async (req, res) => {
     try {
       const updated = await persistSettings(req.body ?? {}, { surface: settingsSurfaceOf(req) });
+      // 改的可能是 `engine`：同步刷一次引擎快照，让"切引擎"在 PUT 返回时就生效
+      // （否则代理目标要等一个缓存周期才跟上，头几个请求仍发给上一个引擎）。
+      // 失败只记日志：刷新不了不该让"设置已保存"变成 500。
+      try {
+        await refreshEnginesAfterSettingsWrite();
+      } catch (error) {
+        console.error('[API:PUT /api/config/settings] 刷新引擎快照失败（设置已保存）:', error?.message ?? error);
+      }
       res.json(updated);
     } catch (error) {
       console.error('[API:PUT /api/config/settings] Failed to save settings:', error);
