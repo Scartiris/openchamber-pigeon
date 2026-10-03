@@ -45,6 +45,11 @@ export const engineProbeSchema = z.object({
   source: z.string().nullable().optional(),
 }).passthrough();
 
+/**
+ * ⚠️ 这个 schema 已经**不用了**：真实响应里没有嵌套的 `registry` 对象，目录字段在顶层。
+ * 保留导出只是为了不破坏可能引用它的旧测试；新代码请用 `enginesResponseSchema`。
+ * @deprecated 用 `enginesResponseSchema` + `toEngineRegistryView`。
+ */
 export const engineRegistrySchema = z.object({
   dir: z.string().nullable().optional(),
   readable: z.boolean().optional(),
@@ -52,14 +57,36 @@ export const engineRegistrySchema = z.object({
   warnings: z.array(z.string()).optional(),
 }).passthrough();
 
+/**
+ * `/api/engines` 的**真实形状**（2026-10-03 用 `ops/split/dump-engines-shape.sh` 从服务器取的原文）：
+ *
+ *   { dir, dirReadable, warnings, requestedId, activeReason,
+ *     active: <描述符>, engines: [<描述符>, …] }
+ *
+ * 🔴 **我第一版是照"以为的形状"写的**：把 `active` 当成 `{engine, probe, reason}`、
+ * 把目录信息当成 `registry: {dir, readable, count, warnings}` —— 而真实响应里
+ * `active` **就是描述符本身**、目录字段**在顶层**、**根本没有 `registry` 这个键**。
+ * 因为字段全 `.optional()` + `.passthrough()`，解析"成功"了，于是 `activeId` 恒为 null
+ * —— 界面显示「当前引擎：未知」（用户就是这么发现的）。**又是"照推的写"这一类错**。
+ *
+ * 而且 **`probe` 不在这个端点**：它只出现在 `/api/engines/active`（`{engine, probe, cached}`）。
+ * 所以 `load()` 要**两个端点都取**再合并。
+ */
 export const enginesResponseSchema = z.object({
   engines: z.array(engineDescriptorSchema).optional(),
-  active: z.object({
-    engine: engineDescriptorSchema.nullable().optional(),
-    probe: engineProbeSchema.nullable().optional(),
-    reason: z.string().nullable().optional(),
-  }).passthrough().nullable().optional(),
-  registry: engineRegistrySchema.nullable().optional(),
+  /** 当前生效的引擎 —— 直接就是描述符，不是包装对象 */
+  active: engineDescriptorSchema.nullable().optional(),
+  activeReason: z.string().nullable().optional(),
+  requestedId: z.string().nullable().optional(),
+  dir: z.string().nullable().optional(),
+  dirReadable: z.boolean().optional(),
+  warnings: z.array(z.string()).optional(),
+}).passthrough();
+
+/** `/api/engines/active`：`{ engine, probe, cached }` */
+export const activeEngineResponseSchema = z.object({
+  engine: engineDescriptorSchema.nullable().optional(),
+  probe: engineProbeSchema.nullable().optional(),
 }).passthrough();
 
 // ---------- 域类型 ----------
@@ -123,10 +150,17 @@ export const toEngineProbeView = (input: z.infer<typeof engineProbeSchema>): Eng
   source: input.source ?? null,
 });
 
-export const toEngineRegistryView = (input: z.infer<typeof engineRegistrySchema>): EngineRegistryView => ({
+/**
+ * 目录信息来自 `/api/engines` 的**顶层**字段（`dir` / `dirReadable` / `warnings`），
+ * 不是嵌套的 `registry` 对象 —— 第一版推错了，见上面那段说明。
+ * `count` 用列表长度即可（服务端没有单独的 count）。
+ */
+export const toEngineRegistryView = (
+  input: z.infer<typeof enginesResponseSchema>,
+): EngineRegistryView => ({
   dir: input.dir ?? null,
-  readable: input.readable === true,
-  count: input.count ?? null,
+  readable: input.dirReadable === true,
+  count: input.engines?.length ?? null,
   warnings: input.warnings ?? [],
 });
 
@@ -149,19 +183,32 @@ export const useEnginesStore = create<EnginesState>((set, get) => ({
     if (!options?.force && state.loadedAt && Date.now() - state.loadedAt < CACHE_MS) return;
     set({ loading: true, error: null });
     try {
-      const response = await runtimeFetch('/api/engines');
-      if (!response.ok) throw new Error(`/api/engines 回了 ${response.status}`);
-      const parsed = enginesResponseSchema.safeParse(await response.json());
+      // 两个端点都要取：注册表与"当前是哪个"在 /api/engines，**探活只在 /api/engines/active**
+      const [listResponse, activeResponse] = await Promise.all([
+        runtimeFetch('/api/engines'),
+        runtimeFetch('/api/engines/active'),
+      ]);
+      if (!listResponse.ok) throw new Error(`/api/engines 回了 ${listResponse.status}`);
+      const parsed = enginesResponseSchema.safeParse(await listResponse.json());
       if (!parsed.success) throw new Error(`/api/engines 的形状不认识：${parsed.error.issues[0]?.message ?? '未知'}`);
 
+      // 探活失败不算致命：注册表本身还能显示（少一段"引擎探活"而已）
+      let probeView: EngineProbeView | null = null;
+      if (activeResponse.ok) {
+        const parsedActive = activeEngineResponseSchema.safeParse(await activeResponse.json());
+        if (parsedActive.success && parsedActive.data.probe) {
+          probeView = toEngineProbeView(parsedActive.data.probe);
+        }
+      }
+
       const data = parsed.data;
-      const active = data.active ?? null;
       set({
         engines: (data.engines ?? []).map(toEngineDescriptorView),
-        activeId: active?.engine ? active.engine.id : null,
-        activeReason: active?.reason ?? null,
-        probe: active?.probe ? toEngineProbeView(active.probe) : null,
-        registry: data.registry ? toEngineRegistryView(data.registry) : null,
+        // active 就是描述符本身（第一版误当成 {engine:…}，于是这里恒为 null）
+        activeId: data.active?.id ?? null,
+        activeReason: data.activeReason ?? null,
+        probe: probeView,
+        registry: toEngineRegistryView(data),
         loading: false,
         loadedAt: Date.now(),
       });

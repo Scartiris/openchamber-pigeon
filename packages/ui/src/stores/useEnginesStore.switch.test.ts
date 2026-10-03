@@ -12,13 +12,27 @@ type PutCall = { url: string; body: string };
 let putCalls: PutCall[] = [];
 let putOk = true;
 
+/**
+ * `/api/engines` 的**真实形状**：`active` 就是描述符本身、目录字段在**顶层**、没有 `registry` 键。
+ * （第一版这里用的是我推的形状，于是测试全绿而线上坏掉 —— 见 useEnginesStore.realshape.test.ts）
+ */
 const enginesPayload = (activeId: string) => ({
+  dir: '/etc/oc-engines',
+  dirReadable: true,
+  warnings: [],
+  requestedId: activeId,
+  activeReason: 'requested',
   engines: [
     { id: 'opencode', name: 'opencode', capabilities: ['sessions', 'streaming'], canServeChat: true },
     { id: 'codex', name: 'Codex', capabilities: ['sessions', 'streaming', 'parts'], canServeChat: true, endpointUrl: 'http://oc-codex-adapter:4096' },
   ],
-  active: { engine: { id: activeId, name: activeId, capabilities: ['sessions', 'streaming'], canServeChat: true } },
-  registry: { dir: '/etc/oc-engines', readable: true, count: 2, warnings: [] },
+  active: { id: activeId, name: activeId, capabilities: ['sessions', 'streaming'], canServeChat: true },
+});
+
+/** `/api/engines/active` 的形状：探活只在这个端点 */
+const activePayload = (activeId: string) => ({
+  engine: { id: activeId, name: activeId, capabilities: ['sessions', 'streaming'], canServeChat: true },
+  probe: { ok: true, status: 200, version: '1.18.33', latencyMs: 3, error: null, baseUrl: 'http://ocsplit-engine:4096', source: 'host' },
 });
 
 // 类型靠推断（别标 unknown —— anti-slop 的 no-known-value-widening 会拦）
@@ -29,6 +43,10 @@ mock.module('@/lib/runtime-fetch', () => ({
     if (init?.method === 'PUT') {
       putCalls.push({ url, body: String(init.body ?? '') });
       return { ok: putOk, status: putOk ? 200 : 500, json: async () => ({}) };
+    }
+    // load() 现在会**同时**取 /api/engines 与 /api/engines/active（探活只在后者）
+    if (url.includes('/api/engines/active')) {
+      return { ok: true, status: 200, json: async () => activePayload(listResponse.active.id) };
     }
     return { ok: true, status: 200, json: async () => listResponse };
   },
