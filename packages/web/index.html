@@ -601,37 +601,27 @@
     </script>
 
     <!--
-      「部署之后点什么都没反应」的自愈（2026-10-03 用户实测踩到）。
+      「部署之后点什么都没反应」的**提示**（2026-10-03）。
 
       机制：前端包的文件名带内容哈希，**每次部署都会变**。浏览器里还开着的**旧页面**
       在点某个懒加载的路由（比如设置页）时，会去取**旧 chunk 名** —— 那些文件在新容器里
-      已经不存在了 → 动态 import 失败 → 现象就是"点了没反应"（或白屏），而控制台之外看不出原因。
+      已经不存在了 → 动态 import 失败 → 现象就是"点了没反应"（或白屏）。
 
-      Vite 对这种情况会派发 `vite:preloadError`。这里**自动重载一次**去拿新的 index.html，
-      而不是把这个谜留给用户。只重载一次（sessionStorage 打标），避免服务器真出问题时无限刷新。
+      ⚠️ **这里刻意只警告、不自动重载。** 第一版是"自动重载一次"，结果能**无限循环**：
+      `main.tsx` 在**模块一执行**时就清掉标记（那时应用还没渲染、懒加载 chunk 还没开始加载），
+      于是「chunk 失败 → 重载 → 标记被清 → chunk 又失败 → 再重载」停不下来，
+      用户看到的就是**一直转圈**（2026-10-03 实测踩到，已回退）。
+      现在改由部署侧解决：`oc-split-deploy.sh` 每次部署后都会**保留旧包的静态资源**
+      （见 ops/split/restore-old-assets.sh），旧页面取旧 chunk 依然能取到，根本不会走到这里。
     -->
     <script>
-      (function () {
-        var RELOAD_FLAG = 'oc.chunkReloadAttempted';
-        window.addEventListener('vite:preloadError', function (event) {
-          var alreadyTried = false;
-          try {
-            alreadyTried = sessionStorage.getItem(RELOAD_FLAG) === '1';
-          } catch (error) {
-            // 隐私模式/禁用存储：拿不到标记就**不重载**，宁可让用户手动刷新，也不要冒无限刷新的险
-            return;
-          }
-          if (alreadyTried) return;
-          try {
-            sessionStorage.setItem(RELOAD_FLAG, '1');
-          } catch (error) {
-            return;
-          }
-          if (event && typeof event.preventDefault === 'function') event.preventDefault();
-          console.warn('[openchamber] 页面资源已过期（部署换过包），自动重载一次');
-          window.location.reload();
-        });
-      })();
+      window.addEventListener('vite:preloadError', function (event) {
+        // 不 preventDefault、不重载 —— 让错误照常冒出来（控制台能看见），但绝不自动刷新。
+        console.warn(
+          '[openchamber] 页面资源已过期（部署换过包）。请手动刷新一次（Ctrl+R）；' +
+          '若仍失败，说明旧包资源没保留住，检查 ops/split/restore-old-assets.sh。'
+        );
+      });
     </script>
 
     <script type="module" src="/src/main.tsx"></script>
