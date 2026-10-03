@@ -600,6 +600,40 @@
       }
     </script>
 
+    <!--
+      「部署之后点什么都没反应」的自愈（2026-10-03 用户实测踩到）。
+
+      机制：前端包的文件名带内容哈希，**每次部署都会变**。浏览器里还开着的**旧页面**
+      在点某个懒加载的路由（比如设置页）时，会去取**旧 chunk 名** —— 那些文件在新容器里
+      已经不存在了 → 动态 import 失败 → 现象就是"点了没反应"（或白屏），而控制台之外看不出原因。
+
+      Vite 对这种情况会派发 `vite:preloadError`。这里**自动重载一次**去拿新的 index.html，
+      而不是把这个谜留给用户。只重载一次（sessionStorage 打标），避免服务器真出问题时无限刷新。
+    -->
+    <script>
+      (function () {
+        var RELOAD_FLAG = 'oc.chunkReloadAttempted';
+        window.addEventListener('vite:preloadError', function (event) {
+          var alreadyTried = false;
+          try {
+            alreadyTried = sessionStorage.getItem(RELOAD_FLAG) === '1';
+          } catch (error) {
+            // 隐私模式/禁用存储：拿不到标记就**不重载**，宁可让用户手动刷新，也不要冒无限刷新的险
+            return;
+          }
+          if (alreadyTried) return;
+          try {
+            sessionStorage.setItem(RELOAD_FLAG, '1');
+          } catch (error) {
+            return;
+          }
+          if (event && typeof event.preventDefault === 'function') event.preventDefault();
+          console.warn('[openchamber] 页面资源已过期（部署换过包），自动重载一次');
+          window.location.reload();
+        });
+      })();
+    </script>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

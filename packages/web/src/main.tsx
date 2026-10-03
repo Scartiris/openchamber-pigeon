@@ -76,6 +76,20 @@ const registerPwaServiceWorker = (): void => {
   });
 };
 
+/**
+ * 「资源过期 → 自动重载」那个标记要在这里清掉（见 index.html 里的 vite:preloadError 处理器）。
+ *
+ * 走到这一行说明**新的包已经成功跑起来了** —— 此时清掉标记，下一次部署再遇到
+ * "旧页面取旧 chunk" 时还能再自愈一次。不清的话标记会一直留着，自愈只生效一次。
+ */
+const clearStaleChunkReloadFlag = (): void => {
+  try {
+    sessionStorage.removeItem('oc.chunkReloadAttempted');
+  } catch {
+    // 隐私模式/禁用存储：没有标记也无所谓
+  }
+};
+
 const unregisterDevelopmentServiceWorkers = (): void => {
   runWhenDocumentCanRegisterServiceWorker(() => {
     void navigator.serviceWorker.getRegistrations()
@@ -115,6 +129,8 @@ if (import.meta.hot) {
 
 if (import.meta.env.PROD) {
   registerPwaServiceWorker();
+  // 新的包已经跑起来了 → 允许下一次"资源过期"再自愈一次
+  clearStaleChunkReloadFlag();
 } else {
   unregisterDevelopmentServiceWorkers();
 }
