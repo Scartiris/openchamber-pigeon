@@ -139,6 +139,7 @@ export const settingsDict = {
   'settings.page.tunnel.title': 'Harici Tunnel',
   'settings.page.tunnel.description': 'Bu örneği uzak bir tunnel üzerinden erişime açın.',
   'settings.page.about.title': 'Hakkında',
+  'settings.page.engine.title': 'Motor',
   'settings.page.memorySettings.title': 'Bellek ayarları',
   'settings.page.memorySettings.description': 'OpenViking bellek deposunun bağlantısı ve hazır durumu.',
   'settings.page.memoryBrowse.title': 'Bellek tarayıcısı',

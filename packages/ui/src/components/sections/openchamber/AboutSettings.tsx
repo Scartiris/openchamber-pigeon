@@ -10,7 +10,6 @@ import { OpenChamberLogo } from '@/components/ui/OpenChamberLogo';
 import { useI18n } from '@/lib/i18n';
 import { runtimeFetch } from '@/lib/runtime-fetch';
 import { InstanceServiceUrls } from './InstanceServiceUrls';
-import { EngineSummary } from './EngineSummary';
 import {
   SettingsSection,
   SETTINGS_BRAND_TITLE_CLASS,
@@ -286,8 +285,11 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({ initialUpdateDialo
           <InstanceServiceUrls />
         </div>
 
-        {/* 引擎一览：M4 注册表的用户可见面（加引擎 = 丢一个 json，这里就能看到） */}
-        <EngineSummary />
+        {/*
+          引擎一览**不在这里**：这一页（「关于」）的可见性是 `ctx.isMobile`，
+          放这儿的话桌面版根本没有入口 —— 用户问"切换按钮在哪"就是这个原因（2026-10-03 实测）。
+          已挪到独立的「引擎」设置页（`settings` 里 slug = `engine`，桌面/移动都可见）。
+        */}
 
         <div className="flex items-center gap-4 px-4 py-4">
           <a

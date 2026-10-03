@@ -121,6 +121,7 @@ export const settingsDict = {
   'settings.page.voice.title': 'Sprache',
   'settings.page.tunnel.title': 'Remote-Tunnel',
   'settings.page.about.title': 'Über',
+  'settings.page.engine.title': 'Engine',
   'settings.page.memorySettings.title': 'Speichereinstellungen',
   'settings.page.memorySettings.description': 'Verbindung und Bereitschaft des OpenViking-Speichers.',
   'settings.page.memoryBrowse.title': 'Speicher durchsuchen',

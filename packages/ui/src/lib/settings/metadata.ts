@@ -27,6 +27,8 @@ export type SettingsPageSlug =
   | 'voice'
   | 'tunnel'
   | 'about'
+  // 引擎：看/切换 agent 引擎（M4 注册表的用户可见面）。桌面与移动都要能到。
+  | 'engine'
   | 'integrations'
   | 'memory-browse'
   | 'knowledge-settings'
@@ -89,6 +91,7 @@ const SETTINGS_TITLE_KEYS = {
   'knowledge-browse': 'settings.page.knowledgeBrowse.title',
   devices: 'settings.page.devices.title',
   extensions: 'settings.page.extensions.title',
+  engine: 'settings.page.engine.title',
 } as const satisfies Record<SettingsPageSlug, I18nKey>;
 
 export function settingsPageTitleKey(slug: SettingsPageSlug): I18nKey {
@@ -246,6 +249,11 @@ export const SETTINGS_PAGE_METADATA: readonly SettingsPageMeta[] = [
   { slug: 'voice', title: '语音', group: 'general', kind: 'single', keywords: ['tts', 'speech', 'voice'], isAvailable: (ctx) => !ctx.isVSCode },
   { slug: 'tunnel', title: '外部隧道', group: 'projects', kind: 'single', keywords: ['tunnel', 'external', 'cloudflare', 'qr', 'remote', 'mobile', 'share'], isAvailable: (ctx) => !ctx.isVSCode },
   { slug: 'about', title: '关于', group: 'general', kind: 'single', keywords: ['about', 'version', 'updates', 'release', 'changelog'], isAvailable: (ctx) => ctx.isMobile && !ctx.isVSCode },
+  // 引擎：看当前在用哪个 agent 引擎、有哪些已注册、切到另一个。
+  // ⚠️ **必须 `() => true`**：第一版把这块放进了「关于」页，而「关于」是 `ctx.isMobile` 才可见的
+  // —— 于是**桌面版根本没有入口**（用户问"切换按钮在哪"就是这个原因，2026-10-03 实测踩到）。
+  // 引擎是 OpenCode 侧的事，归 opencode 组，桌面与移动都要能到。
+  { slug: 'engine', title: '引擎', group: 'opencode', kind: 'single', description: '当前在用的 agent 引擎，以及已注册的其它引擎。', keywords: ['engine', 'engines', 'agent', 'codex', 'opencode', 'switch', '引擎', '切换'] },
   { slug: 'integrations', title: '集成', group: 'general', kind: 'single', keywords: ['integration', 'connect', 'oauth', 'github', 'linear', 'extension'], isAvailable: (ctx) => !ctx.isVSCode },
   // OpenViking：记忆侧只留浏览（设置与浏览重复，已删 memory-settings）。
   // 知识库暂仍保留「设置 + 浏览」两页；浏览页是 split，需要整页宽度。

@@ -2159,6 +2159,7 @@ export const settingsDict = {
   'settings.view.nav.group.opencode': 'OpenCode',
   'settings.view.nav.group.content': 'Bibliothèque',
   'settings.page.about.title': 'À propos',
+  'settings.page.engine.title': 'Moteur',
   'settings.page.memorySettings.title': 'Paramètres de mémoire',
   'settings.page.memorySettings.description': 'Connexion et disponibilité du stockage de mémoire OpenViking.',
   'settings.page.memoryBrowse.title': 'Navigateur de mémoire',

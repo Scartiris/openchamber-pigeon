@@ -1363,6 +1363,7 @@ export const settingsDict = {
   'settings.page.tunnel.title': 'Tunel zewnętrzny',
   'settings.page.tunnel.description': 'Udostępnij tę instancję przez zdalny tunel.',
   'settings.page.about.title': 'O aplikacji',
+  'settings.page.engine.title': 'Silnik',
   'settings.page.memorySettings.title': 'Ustawienia pamięci',
   'settings.page.memorySettings.description': 'Połączenie i gotowość magazynu pamięci OpenViking.',
   'settings.page.memoryBrowse.title': 'Przeglądarka pamięci',

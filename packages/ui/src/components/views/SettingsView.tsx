@@ -50,6 +50,7 @@ import { ExtensionsPage } from '@/components/sections/extensions/ExtensionsPage'
 import type { OpenChamberSection } from '@/components/sections/openchamber/types';
 import { OpenChamberPage } from '@/components/sections/openchamber/OpenChamberPage';
 import { AboutSettings } from '@/components/sections/openchamber/AboutSettings';
+import { EngineSummary } from '@/components/sections/openchamber/EngineSummary';
 import { SettingsPageLayout } from '@/components/sections/shared/SettingsPageLayout';
 import {
   SETTINGS_SECTION_TITLE_CLASS,
@@ -125,6 +126,7 @@ const pageOrder: SettingsPageSlug[] = [
   'tunnel',
   'git',
   // 'opencode' group — OpenCode
+  'engine',
   'providers',
   'agents',
   'behavior',
@@ -683,6 +685,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
         return (
           <SettingsPageLayout title={t('settings.page.about.title')} showSaveStatus={false}>
             <AboutSettings />
+          </SettingsPageLayout>
+        );
+      case 'engine':
+        return (
+          <SettingsPageLayout title={t('settings.page.engine.title')} showSaveStatus={false}>
+            <EngineSummary />
           </SettingsPageLayout>
         );
       case 'magic-prompts':

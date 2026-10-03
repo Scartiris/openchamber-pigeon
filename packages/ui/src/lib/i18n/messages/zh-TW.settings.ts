@@ -137,6 +137,7 @@ export const settingsDict = {
   'settings.page.tunnel.title': '外部通道',
   'settings.page.tunnel.description': '透過遠端通道公開此實例。',
   'settings.page.about.title': '關於',
+  'settings.page.engine.title': '引擎',
   'settings.page.memorySettings.title': '記憶設定',
   'settings.page.memorySettings.description': 'OpenViking 記憶庫的連線與就緒狀態。',
   'settings.page.memoryBrowse.title': '記憶瀏覽',
